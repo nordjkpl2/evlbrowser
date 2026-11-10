@@ -11,9 +11,9 @@ npm start
 npm test
 ```
 
-Para testar o descarte de abas sem esperar 10 minutos (aba de fundo descartada após 20 s):
+/Para testar o descarte de abas sem esperar 10 minutos (aba de fundo descarta após 20 s):
 
-```
+```text
 :: cmd
 set EVL_DISCARD_SECONDS=20 && npm start
 
@@ -21,8 +21,7 @@ set EVL_DISCARD_SECONDS=20 && npm start
 $env:EVL_DISCARD_SECONDS=20; npm start
 ```
 
-Abra 2 abas, volte para a primeira e espere: a aba de fundo fica "apagada" na barra
-(descartada) e o número de MB no canto direito cai. Clicar nela recarrega a página.
+/Mapa ai que o claude fez
 
 ## Atalhos
 
@@ -35,24 +34,7 @@ Abra 2 abas, volte para a primeira e espere: a aba de fundo fica "apagada" na ba
 | Ctrl+Shift+I | DevTools da aba ativa |
 | F12 | DevTools da interface do navegador |
 
-## JavaScript para quem vem de C
-
-| Em C | Em JavaScript |
-|---|---|
-| `#include "x.h"` | `const x = require('./x')` |
-| o que o `.h` expõe | `module.exports = { ... }` |
-| `int n = 5;` / constante | `let n = 5;` / `const n = 5;` (sem tipos) |
-| `struct` | objeto: `{ id: 1, title: 'oi' }` |
-| array + tamanho | `[1, 2, 3]` (já sabe seu tamanho: `.length`) |
-| ponteiro de função / callback | funções são valores: `(x) => x + 1` |
-| `malloc` / `free` | não existe: o *garbage collector* libera sozinho |
-| `printf` | `console.log(...)` |
-| `NULL` | `null` ou `undefined` |
-| `==` | prefira sempre `===` (compara sem converter tipos) |
-
-Duas ideias importantes do Electron:
-
-- **Processo principal** (`main.js`, `src/`): roda em Node, controla janelas e abas. É o `main()`.
+- **Processo principal** (`main.js`, `src/`): roda em Node, controla janelas e abas. `main()`.
 - **Páginas** (`ui/` e cada aba): processos isolados, sem acesso ao computador. Pedem coisas
   ao principal mandando mensagens (IPC), parecido com um syscall. A ponte é o `preload.js`.
 
