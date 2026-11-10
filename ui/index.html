@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <!-- A interface só roda scripts e estilos que estão nesta pasta. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src https: http: data:">
+  <title>Evl Browser</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="tabs" role="tablist" aria-label="Abas">
+    <button id="new-tab" class="icon-btn" type="button" title="Nova aba (Ctrl+T)" aria-label="Nova aba">+</button>
+  </div>
+
+  <div id="toolbar">
+    <button id="back" class="icon-btn" type="button" title="Voltar" aria-label="Voltar">&larr;</button>
+    <button id="forward" class="icon-btn" type="button" title="Avançar" aria-label="Avançar">&rarr;</button>
+    <button id="reload" class="icon-btn" type="button" title="Recarregar (Ctrl+R)" aria-label="Recarregar">&#8635;</button>
+    <input id="address" type="text" spellcheck="false" autocomplete="off"
+           aria-label="Endereço ou busca" placeholder="Digite um endereço ou faça uma busca">
+    <span id="mem" title="Memória usada pelo Evl Browser (aproximada)">-- MB</span>
+  </div>
+
+  <script src="ui.js"></script>
+</body>
+</html>
