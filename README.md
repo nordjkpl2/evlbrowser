@@ -1,16 +1,14 @@
 # Evl Browser
 
-Navegador feito com Electron (HTML + CSS + JavaScript), com foco em **usar pouca RAM**.
-Base bonita e rápida primeiro; segurança de navegação reforçada depois, no estilo Firefox.
+Webbrowser made using electron html css and javascript with focus in using lower ram
+firefox style running in chromium and NS Nord Suite Engines
 
-## Como rodar
+/Build
 
-No terminal, dentro da pasta do projeto (`D:\dev\evl browser`):
-
-```
-npm install     # só na primeira vez (baixa o Electron para node_modules/)
-npm start       # abre o navegador
-npm test        # roda os testes da barra de endereço
+```text
+npm install
+npm start
+npm test
 ```
 
 Para testar o descarte de abas sem esperar 10 minutos (aba de fundo descartada após 20 s):
