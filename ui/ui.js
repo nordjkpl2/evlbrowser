@@ -2,15 +2,22 @@
 // Lógica da interface. Roda como uma página web comum; tudo que precisa do
 // "mundo de fora" passa por window.evl (definido em preload.js).
 
-const tabsEl = document.getElementById('tabs');
-const newTabBtn = document.getElementById('new-tab');
-const backBtn = document.getElementById('back');
-const forwardBtn = document.getElementById('forward');
-const reloadBtn = document.getElementById('reload');
-const addressEl = document.getElementById('address');
-const memEl = document.getElementById('mem');
+const $ = (id) => document.getElementById(id);
 
-// ---------- desenhar o estado recebido do main.js ----------
+const tabsEl = $('tabs');
+const newTabBtn = $('new-tab');
+const backBtn = $('back');
+const forwardBtn = $('forward');
+const reloadBtn = $('reload');
+const addressEl = $('address');
+const memEl = $('mem');
+const pageBlank = $('page-blank');
+const pageSettings = $('page-settings');
+
+let current = null; // último estado recebido
+let lastKey = ''; // para pular redesenho quando nada mudou
+
+// ---------- barra de abas ----------
 
 function makeTab(t) {
   const el = document.createElement('div');
@@ -63,17 +70,132 @@ function makeTab(t) {
   return el;
 }
 
-function render(state) {
-  tabsEl.querySelectorAll('.tab').forEach((n) => n.remove());
-  for (const t of state.tabs) tabsEl.insertBefore(makeTab(t), newTabBtn);
+function showAddress() {
+  const active = current?.tabs.find((t) => t.id === current.activeId);
+  // Aba em branco mostra a barra vazia; as outras mostram o endereço.
+  addressEl.value = active && active.kind !== 'blank' ? active.url : '';
+}
 
-  backBtn.disabled = !state.canGoBack;
-  forwardBtn.disabled = !state.canGoForward;
+function render(state) {
+  current = state;
+
+  // Só refaz a tela se o estado mudou de verdade.
+  const key = JSON.stringify(state);
+  if (key !== lastKey) {
+    lastKey = key;
+
+    tabsEl.querySelectorAll('.tab').forEach((n) => n.remove());
+    for (const t of state.tabs) tabsEl.insertBefore(makeTab(t), newTabBtn);
+
+    const web = state.activeKind === 'web';
+    backBtn.disabled = !web || !state.canGoBack;
+    forwardBtn.disabled = !web || !state.canGoForward;
+
+    pageBlank.hidden = state.activeKind !== 'blank';
+    pageSettings.hidden = state.activeKind !== 'settings';
+    if (state.activeKind === 'settings') startPolling();
+    else stopPolling();
+  }
 
   // Não sobrescreve o que a pessoa está digitando.
-  const active = state.tabs.find((t) => t.id === state.activeId);
-  if (document.activeElement !== addressEl) addressEl.value = active ? active.url : '';
+  if (document.activeElement !== addressEl) showAddress();
 }
+
+// ---------- tela de Configurações ----------
+// Só consulta o main.js enquanto a tela está visível (a cada 2 s).
+
+let pollTimer = null;
+
+function startPolling() {
+  if (pollTimer) return;
+  refreshSettings();
+  pollTimer = setInterval(refreshSettings, 2000);
+}
+
+function stopPolling() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+async function refreshSettings() {
+  const report = await window.evl.settingsReport();
+  if (!report) return;
+
+  $('s-engine').textContent = report.search.name;
+  $('s-engine-url').textContent = report.search.url;
+
+  $('s-total').textContent = String(report.totalMB);
+  const rows = report.processes.map((p) => {
+    const tr = document.createElement('tr');
+    const name = document.createElement('td');
+    name.textContent = p.label;
+    name.title = p.label;
+    const type = document.createElement('td');
+    type.textContent = p.type;
+    const mb = document.createElement('td');
+    mb.className = 'num';
+    mb.textContent = String(p.mb);
+    tr.append(name, type, mb);
+    return tr;
+  });
+  $('s-procs').replaceChildren(...rows);
+
+  $('s-live').textContent = String(report.tabs.live);
+  $('s-sleeping').textContent = String(report.tabs.sleeping);
+  $('s-discarded').textContent = String(report.tabs.discarded);
+  $('s-discard').textContent = `${report.policy.discardMinutes} min`;
+  $('s-budget').textContent = `${report.policy.budgetMB} MB`;
+}
+
+// ---------- menu lateral e busca das Configurações ----------
+
+const navItems = [...document.querySelectorAll('.nav-item')];
+const cards = [...document.querySelectorAll('.card')];
+const searchEl = $('s-search');
+const panelTitle = $('panel-title');
+const noResults = $('no-results');
+let panel = 'search'; // categoria aberta
+
+function showPanel(name) {
+  panel = name;
+  searchEl.value = '';
+  noResults.hidden = true;
+  for (const item of navItems) {
+    const on = item.dataset.panel === name;
+    if (on) {
+      item.setAttribute('aria-current', 'true');
+      panelTitle.textContent = item.textContent;
+    } else {
+      item.removeAttribute('aria-current');
+    }
+  }
+  for (const card of cards) card.hidden = card.dataset.panel !== name;
+}
+
+// A busca procura em todos os cartões, de qualquer categoria.
+function searchSettings() {
+  const q = searchEl.value.trim().toLowerCase();
+  if (!q) {
+    showPanel(panel);
+    return;
+  }
+  navItems.forEach((item) => item.removeAttribute('aria-current'));
+  panelTitle.textContent = 'Resultados da busca';
+  let found = 0;
+  for (const card of cards) {
+    const text = `${card.textContent} ${card.dataset.keywords}`.toLowerCase();
+    card.hidden = !text.includes(q);
+    if (!card.hidden) found++;
+  }
+  noResults.hidden = found > 0;
+}
+
+navItems.forEach((item) => item.addEventListener('click', () => showPanel(item.dataset.panel)));
+searchEl.addEventListener('input', searchSettings);
+searchEl.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') showPanel(panel);
+});
+showPanel('search');
 
 // ---------- ações ----------
 
@@ -81,6 +203,7 @@ newTabBtn.addEventListener('click', () => window.evl.newTab());
 backBtn.addEventListener('click', () => window.evl.back());
 forwardBtn.addEventListener('click', () => window.evl.forward());
 reloadBtn.addEventListener('click', () => window.evl.reload());
+memEl.addEventListener('click', () => window.evl.openSettings());
 
 addressEl.addEventListener('focus', () => addressEl.select());
 addressEl.addEventListener('keydown', (event) => {
@@ -89,6 +212,7 @@ addressEl.addEventListener('keydown', (event) => {
     addressEl.blur();
   } else if (event.key === 'Escape') {
     addressEl.blur();
+    showAddress();
   }
 });
 

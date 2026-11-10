@@ -9,18 +9,91 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="tabs" role="tablist" aria-label="Abas">
-    <button id="new-tab" class="icon-btn" type="button" title="Nova aba (Ctrl+T)" aria-label="Nova aba">+</button>
-  </div>
+  <header id="chrome">
+    <div id="tabs" role="tablist" aria-label="Abas">
+      <button id="new-tab" class="icon-btn" type="button" title="Nova aba (Ctrl+T)" aria-label="Nova aba">+</button>
+    </div>
 
-  <div id="toolbar">
-    <button id="back" class="icon-btn" type="button" title="Voltar" aria-label="Voltar">&larr;</button>
-    <button id="forward" class="icon-btn" type="button" title="Avançar" aria-label="Avançar">&rarr;</button>
-    <button id="reload" class="icon-btn" type="button" title="Recarregar (Ctrl+R)" aria-label="Recarregar">&#8635;</button>
-    <input id="address" type="text" spellcheck="false" autocomplete="off"
-           aria-label="Endereço ou busca" placeholder="Digite um endereço ou faça uma busca">
-    <span id="mem" title="Memória usada pelo Evl Browser (aproximada)">-- MB</span>
-  </div>
+    <div id="toolbar">
+      <button id="back" class="icon-btn" type="button" title="Voltar" aria-label="Voltar">&larr;</button>
+      <button id="forward" class="icon-btn" type="button" title="Avançar" aria-label="Avançar">&rarr;</button>
+      <button id="reload" class="icon-btn" type="button" title="Recarregar (Ctrl+R)" aria-label="Recarregar">&#8635;</button>
+      <input id="address" type="text" spellcheck="false" autocomplete="off"
+             aria-label="Endereço ou busca" placeholder="Digite um endereço ou faça uma busca">
+      <button id="mem" type="button" title="Memória do Evl Browser. Clique para abrir as Configurações (Ctrl+,)"
+              aria-label="Abrir Configurações">-- MB</button>
+    </div>
+  </header>
+
+  <!-- Telas internas: só aparecem quando a aba ativa é "em branco" ou "configurações".
+       Em aba web a interface tem só 80 px de altura e elas ficam fora da tela. -->
+  <main id="page-blank" class="screen" hidden>
+    <h1 class="logo">EVL</h1>
+    <p class="hint"><kbd>Ctrl</kbd> + <kbd>L</kbd> foca a barra de endereço</p>
+  </main>
+
+  <main id="page-settings" class="screen" hidden aria-labelledby="settings-title">
+    <nav class="side" aria-label="Categorias de configurações">
+      <h1 id="settings-title">Configurações</h1>
+      <button class="nav-item" type="button" data-panel="search">Pesquisa</button>
+      <button class="nav-item" type="button" data-panel="memory">Memória</button>
+      <button class="nav-item" type="button" data-panel="tabs">Abas e economia</button>
+    </nav>
+
+    <div class="content">
+      <div class="content-inner">
+        <input id="s-search" type="search" spellcheck="false" autocomplete="off"
+               aria-label="Procurar em configurações" placeholder="Procurar em configurações">
+        <h2 id="panel-title">Pesquisa</h2>
+        <p id="no-results" class="hint" hidden>Nenhuma configuração encontrada.</p>
+
+        <section class="card" data-panel="search"
+                 data-keywords="busca pesquisa motor buscador duckduckgo endereço">
+          <h3>Motor de busca</h3>
+          <p class="hint">Usado quando o que você digita na barra de endereço não parece um endereço.</p>
+          <dl>
+            <dt>Motor de busca</dt>
+            <dd id="s-engine">—</dd>
+            <dt>Endereço de busca</dt>
+            <dd id="s-engine-url" class="mono">—</dd>
+          </dl>
+          <p class="hint">Para trocar, edite SEARCH_NAME e SEARCH_URL em src/config.js.</p>
+        </section>
+
+        <section class="card" data-panel="memory"
+                 data-keywords="memória ram processos gpu interface página uso total mb">
+          <h3>Uso de memória</h3>
+          <p class="total"><span id="s-total" class="mono">—</span> MB no total
+            <span class="hint">· atualiza a cada 2 s enquanto esta tela está aberta</span></p>
+          <table>
+            <caption class="sr-only">Memória usada por cada processo</caption>
+            <thead>
+              <tr><th scope="col">Processo</th><th scope="col">Tipo</th><th scope="col" class="num">MB</th></tr>
+            </thead>
+            <tbody id="s-procs"></tbody>
+          </table>
+        </section>
+
+        <section class="card" data-panel="tabs"
+                 data-keywords="abas descarte dormindo descartadas orçamento economia ram política">
+          <h3>Economia de RAM</h3>
+          <p class="hint">Abas de fundo ficam dormindo e, depois de um tempo parado, são descartadas.</p>
+          <dl>
+            <dt>Ativa</dt>
+            <dd id="s-live" class="mono">—</dd>
+            <dt>Dormindo (na memória)</dt>
+            <dd id="s-sleeping" class="mono">—</dd>
+            <dt>Descartadas (sem RAM)</dt>
+            <dd id="s-discarded" class="mono">—</dd>
+            <dt>Descarta aba de fundo após</dt>
+            <dd id="s-discard" class="mono">—</dd>
+            <dt>Orçamento de memória</dt>
+            <dd id="s-budget" class="mono">—</dd>
+          </dl>
+        </section>
+      </div>
+    </div>
+  </main>
 
   <script src="ui.js"></script>
 </body>

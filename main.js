@@ -3,27 +3,58 @@
 
 const { app, BaseWindow, WebContentsView, Menu, ipcMain, session } = require('electron');
 const path = require('path');
+const cfg = require('./src/config');
 const { TabManager } = require('./src/tabs');
-const { startMemoryPolicy, totalMemoryMB } = require('./src/memory');
-const { UI_HEIGHT } = require('./src/config');
+const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory');
+
+// Chromium só com o que o navegador precisa (listas em src/config.js).
+// Precisa vir ANTES do app ficar pronto.
+for (const name of cfg.CHROMIUM_OFF_SWITCHES) app.commandLine.appendSwitch(name);
+if (cfg.CHROMIUM_OFF_FEATURES.length > 0) {
+  app.commandLine.appendSwitch('disable-features', cfg.CHROMIUM_OFF_FEATURES.join(','));
+}
 
 let win = null;
-let ui = null; // a interface fixa (abas + barra de endereço)
+let ui = null; // a interface (abas, barra de endereço, Nova aba e Configurações)
 let tabs = null;
-let stopPolicy = null;
+let policy = null;
 
 // Permissões que um site pode usar por enquanto. Todo o resto é negado até
 // termos uma tela de pedido de permissão (como o Firefox).
 const ALLOWED_PERMISSIONS = new Set(['fullscreen', 'clipboard-sanitized-write']);
 
-function layoutAll() {
-  const { width } = win.getContentBounds();
-  ui.setBounds({ x: 0, y: 0, width, height: UI_HEIGHT });
-  tabs.layout();
-}
-
 function send(channel, payload) {
   if (ui && !ui.webContents.isDestroyed()) ui.webContents.send(channel, payload);
+}
+
+// ---------- estado -> interface ----------
+// Páginas disparam muitos eventos seguidos (título, ícone, loading...).
+// Juntamos tudo e mandamos UMA atualização, no máximo a cada 30 ms.
+
+let statePending = false;
+let lastSample = 0;
+
+function onTabsChanged() {
+  if (statePending) return;
+  statePending = true;
+  setTimeout(flushState, 30);
+}
+
+function flushState() {
+  statePending = false;
+  if (!tabs) return;
+  send('state', tabs.snapshot());
+  sampleMemory(false);
+  policy?.refresh();
+}
+
+// O número de MB no canto NÃO tem timer: é atualizado quando algo acontece
+// (no máximo a cada 3 s), quando a janela ganha foco e quando a política roda.
+function sampleMemory(force) {
+  const now = Date.now();
+  if (!force && now - lastSample < 3000) return;
+  lastSample = now;
+  send('memory', totalMemoryMB());
 }
 
 function focusAddress() {
@@ -62,6 +93,9 @@ function onShortcut(input) {
     case 'r':
       tabs.reload();
       return true;
+    case ',':
+      tabs.openSettings();
+      return true;
     default:
       return false;
   }
@@ -83,6 +117,7 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
+      spellcheck: false, // a interface não precisa de corretor ortográfico
     },
   });
   win.contentView.addChildView(ui);
@@ -95,19 +130,30 @@ function createWindow() {
     if (onShortcut(input)) event.preventDefault();
   });
 
-  tabs = new TabManager(win, (snapshot) => send('state', snapshot), onShortcut);
+  tabs = new TabManager(win, ui, onTabsChanged, onShortcut);
+  policy = startMemoryPolicy(tabs, (mb) => send('memory', mb));
 
-  win.on('resize', layoutAll);
-  layoutAll();
+  win.on('resize', () => tabs.layout());
+  win.on('focus', () => sampleMemory(false));
 
-  tabs.create(); // primeira aba
-  stopPolicy = startMemoryPolicy(tabs, (mb) => send('memory', mb));
+  tabs.create(); // primeira aba (em branco, sem processo extra)
 
   win.on('closed', () => {
-    stopPolicy?.();
+    policy?.stop();
     tabs?.destroyAll();
-    win = ui = tabs = null;
+    win = ui = tabs = policy = null;
   });
+}
+
+// Tudo que a tela de Configurações mostra.
+function settingsReport() {
+  const minutes = Math.round((cfg.DISCARD_AFTER_MS / 60000) * 10) / 10;
+  return {
+    ...processReport(tabs, ui.webContents),
+    tabs: tabs.stats(),
+    policy: { discardMinutes: minutes, budgetMB: cfg.MEMORY_BUDGET_MB },
+    search: { name: cfg.SEARCH_NAME, url: cfg.SEARCH_URL },
+  };
 }
 
 // ---------- mensagens vindas da interface (IPC) ----------
@@ -119,7 +165,7 @@ const isId = (id) => Number.isInteger(id);
 ipcMain.on('ui:ready', (event) => {
   if (!fromUi(event)) return;
   send('state', tabs.snapshot());
-  send('memory', totalMemoryMB());
+  sampleMemory(true);
 });
 ipcMain.on('tab:new', (event) => {
   if (!fromUi(event)) return;
@@ -138,6 +184,8 @@ ipcMain.on('nav:go', (event, text) => {
 ipcMain.on('nav:back', (event) => fromUi(event) && tabs.back());
 ipcMain.on('nav:forward', (event) => fromUi(event) && tabs.forward());
 ipcMain.on('nav:reload', (event) => fromUi(event) && tabs.reload());
+ipcMain.on('settings:open', (event) => fromUi(event) && tabs.openSettings());
+ipcMain.handle('settings:report', (event) => (fromUi(event) ? settingsReport() : null));
 
 // ---------- ciclo de vida do app ----------
 

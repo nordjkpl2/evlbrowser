@@ -1,5 +1,10 @@
-// Gerencia as abas. Cada aba é uma WebContentsView (uma "página filha"
-// desenhada dentro da janela). É aqui que a RAM é economizada:
+// Gerencia as abas. Existem 3 tipos:
+//
+//   web       -> uma WebContentsView (página de internet de verdade)
+//   blank     -> "Nova aba": desenhada pela própria interface, SEM processo extra
+//   settings  -> Configurações: desenhada pela própria interface, SEM processo extra
+//
+// Estados de uma aba web (é aqui que a RAM é economizada):
 //
 //   ativa      -> view na janela, página viva
 //   sleeping   -> view fora da janela (escondida), página ainda viva na memória
@@ -8,18 +13,18 @@
 // Clicar numa aba "discarded" recria a página e carrega a URL de novo.
 
 const { WebContentsView } = require('electron');
-const path = require('path');
-const { pathToFileURL } = require('url');
 const { toUrl } = require('./url');
 const { UI_HEIGHT } = require('./config');
 
-const NEWTAB_URL = pathToFileURL(path.join(__dirname, '..', 'ui', 'newtab.html')).href;
+const SETTINGS_URL = 'evl://settings';
 
 class TabManager {
-  // win: a BaseWindow. onChange(snapshot): chamado sempre que algo muda.
+  // win: a BaseWindow. ui: a WebContentsView da interface.
+  // onChange(): chamado sempre que algo muda (sem argumentos; use snapshot()).
   // onShortcut(input): chamado para teclas digitadas dentro das páginas.
-  constructor(win, onChange, onShortcut) {
+  constructor(win, ui, onChange, onShortcut) {
     this.win = win;
+    this.ui = ui;
     this.onChange = onChange;
     this.onShortcut = onShortcut;
     this.tabs = new Map(); // id -> tab (o Map guarda a ordem de criação)
@@ -29,22 +34,22 @@ class TabManager {
 
   // ---------- criar / ativar / fechar ----------
 
-  // Sem argumento abre a página "Nova aba". Com argumento, passa pelo toUrl().
+  // Sem argumento abre uma aba em branco. Com argumento, passa pelo toUrl().
   create(rawUrl) {
-    const url = rawUrl ? toUrl(rawUrl) : NEWTAB_URL;
+    if (!rawUrl) return this._add({ kind: 'blank', title: 'Nova aba', url: '' });
+    const url = toUrl(rawUrl);
     if (!url) return null;
-    const tab = {
-      id: this.nextId++,
-      url,
-      title: rawUrl ? url : 'Nova aba',
-      favicon: '',
-      loading: false,
-      view: null,
-      lastActive: Date.now(),
-    };
-    this.tabs.set(tab.id, tab);
-    this.activate(tab.id);
-    return tab.id;
+    return this._add({ kind: 'web', title: url, url });
+  }
+
+  openSettings() {
+    for (const tab of this.tabs.values()) {
+      if (tab.kind === 'settings') {
+        this.activate(tab.id);
+        return tab.id;
+      }
+    }
+    return this._add({ kind: 'settings', title: 'Configurações', url: SETTINGS_URL });
   }
 
   activate(id) {
@@ -59,10 +64,16 @@ class TabManager {
 
     this.activeId = id;
     tab.lastActive = Date.now();
-    this._ensureView(tab); // recria a página se estava "discarded"
-    this.win.contentView.addChildView(tab.view);
-    this.layout();
-    tab.view.webContents.focus();
+
+    if (tab.kind === 'web') {
+      this._ensureView(tab); // recria a página se estava "discarded"
+      this.win.contentView.addChildView(tab.view);
+      this.layout();
+      tab.view.webContents.focus();
+    } else {
+      this.layout();
+      this.ui.webContents.focus();
+    }
     this._changed();
   }
 
@@ -90,12 +101,26 @@ class TabManager {
   // ---------- navegação da aba ativa ----------
 
   navigate(input) {
-    const url = toUrl(input);
+    const text = String(input ?? '').trim();
+    if (text.toLowerCase() === SETTINGS_URL) {
+      this.openSettings();
+      return;
+    }
+    const url = toUrl(text);
     const tab = this.tabs.get(this.activeId);
     if (!url || !tab) return;
+
     tab.url = url;
-    if (tab.view) tab.view.webContents.loadURL(url);
-    else this._ensureView(tab);
+    if (tab.kind !== 'web') {
+      // aba em branco / configurações virando uma página de internet
+      tab.kind = 'web';
+      tab.title = url;
+      this.activate(tab.id);
+    } else if (tab.view) {
+      tab.view.webContents.loadURL(url);
+    } else {
+      this._ensureView(tab);
+    }
   }
 
   back() {
@@ -113,18 +138,17 @@ class TabManager {
 
   // ---------- política de memória (usada por memory.js) ----------
 
-  // Abas de fundo, com página viva, paradas há pelo menos `minIdleMs`,
-  // da mais antiga para a mais nova. Abas tocando áudio nunca entram.
+  // Abas web de fundo com página viva (candidatas a descarte).
+  backgroundViewTabs() {
+    return [...this.tabs.values()].filter((t) => t.id !== this.activeId && t.view);
+  }
+
+  // Dessas, as paradas há pelo menos `minIdleMs`, da mais antiga para a mais nova.
+  // Abas tocando áudio nunca entram.
   idleBackgroundTabs(minIdleMs) {
     const now = Date.now();
-    return [...this.tabs.values()]
-      .filter(
-        (t) =>
-          t.id !== this.activeId &&
-          t.view &&
-          !t.view.webContents.isCurrentlyAudible() &&
-          now - t.lastActive >= minIdleMs
-      )
+    return this.backgroundViewTabs()
+      .filter((t) => !t.view.webContents.isCurrentlyAudible() && now - t.lastActive >= minIdleMs)
       .sort((a, b) => a.lastActive - b.lastActive);
   }
 
@@ -137,10 +161,15 @@ class TabManager {
 
   // ---------- layout e estado ----------
 
+  // Aba web ativa: interface com 80 px no topo e a página embaixo.
+  // Aba em branco / configurações: a interface ocupa a janela inteira.
   layout() {
     const { width, height } = this.win.getContentBounds();
     const tab = this.tabs.get(this.activeId);
-    if (tab?.view) {
+    const web = tab?.kind === 'web';
+
+    this.ui.setBounds({ x: 0, y: 0, width, height: web ? UI_HEIGHT : height });
+    if (web && tab.view) {
       tab.view.setBounds({
         x: 0,
         y: UI_HEIGHT,
@@ -152,20 +181,44 @@ class TabManager {
 
   // Uma "foto" simples do estado, enviada para a interface desenhar.
   snapshot() {
+    const active = this.tabs.get(this.activeId);
     const nav = this._activeNav();
     return {
       activeId: this.activeId,
+      activeKind: active?.kind ?? 'blank',
       canGoBack: !!nav?.canGoBack(),
       canGoForward: !!nav?.canGoForward(),
       tabs: [...this.tabs.values()].map((t) => ({
         id: t.id,
+        kind: t.kind,
         title: t.title,
-        url: t.url === NEWTAB_URL ? '' : t.url,
+        url: t.url,
         favicon: t.favicon,
         loading: t.loading,
-        state: t.id === this.activeId ? 'active' : t.view ? 'sleeping' : 'discarded',
+        state:
+          t.id === this.activeId
+            ? 'active'
+            : t.kind !== 'web'
+              ? 'page'
+              : t.view
+                ? 'sleeping'
+                : 'discarded',
       })),
     };
+  }
+
+  // Contagens para a tela de Configurações.
+  stats() {
+    let live = 0;
+    let sleeping = 0;
+    let discarded = 0;
+    for (const t of this.tabs.values()) {
+      if (t.kind !== 'web') continue;
+      if (t.id === this.activeId) live++;
+      else if (t.view) sleeping++;
+      else discarded++;
+    }
+    return { total: this.tabs.size, live, sleeping, discarded };
   }
 
   destroyAll() {
@@ -175,12 +228,26 @@ class TabManager {
 
   // ---------- internos ----------
 
+  _add(props) {
+    const tab = {
+      id: this.nextId++,
+      favicon: '',
+      loading: false,
+      view: null,
+      lastActive: Date.now(),
+      ...props,
+    };
+    this.tabs.set(tab.id, tab);
+    this.activate(tab.id);
+    return tab.id;
+  }
+
   _activeNav() {
     return this.tabs.get(this.activeId)?.view?.webContents.navigationHistory;
   }
 
   _changed() {
-    this.onChange(this.snapshot());
+    this.onChange();
   }
 
   _ensureView(tab) {
@@ -245,4 +312,4 @@ class TabManager {
   }
 }
 
-module.exports = { TabManager, NEWTAB_URL };
+module.exports = { TabManager, SETTINGS_URL };

@@ -17,10 +17,26 @@ module.exports = {
   MEMORY_BUDGET_MB: 1500,
   PRESSURE_DISCARD_AFTER_MS: 60 * 1000,
 
-  // De quanto em quanto tempo a política de memória roda / o medidor atualiza.
-  CHECK_EVERY_MS: 10 * 1000,
-  METRICS_EVERY_MS: 5 * 1000,
+  // A política de memória só tem timer enquanto existe aba de fundo viva.
+  // Ela acorda no máximo a cada BUDGET_CHECK_MS e nunca em menos de MIN_WAIT_MS.
+  BUDGET_CHECK_MS: 30 * 1000,
+  MIN_WAIT_MS: 5 * 1000,
 
   // Buscador usado quando o texto digitado não parece um endereço.
+  // (Aparece em Configurações; para trocar, edite os dois campos.)
+  SEARCH_NAME: 'DuckDuckGo',
   SEARCH_URL: 'https://duckduckgo.com/?q=',
+
+  // Coisas do Chromium que um navegador leve não precisa. Aplicadas em main.js
+  // antes do app abrir. Para voltar ao padrão, esvazie as listas.
+  CHROMIUM_OFF_SWITCHES: [
+    'disable-background-networking', // serviços de rede de fundo (atualizações, telemetria...)
+    'disable-component-update', // atualização de componentes do Chromium em segundo plano
+    'disable-breakpad', // coleta de relatórios de falha
+    'no-pings', // pings de auditoria de links (<a ping>)
+  ],
+  CHROMIUM_OFF_FEATURES: [
+    'MediaRouter', // descoberta de Chromecast na rede
+    'OptimizationHints', // serviço de dicas de otimização
+  ],
 };

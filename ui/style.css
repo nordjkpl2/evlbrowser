@@ -18,14 +18,16 @@
 * { box-sizing: border-box; }
 
 html, body {
-  height: 80px; /* = UI_HEIGHT em src/config.js */
+  height: 100%;
   margin: 0;
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font: 13px/1 var(--font-ui);
+  font: 13px/1.4 var(--font-ui);
   user-select: none;
 }
+
+body { display: flex; flex-direction: column; }
 
 button, input { font: inherit; color: inherit; }
 
@@ -34,7 +36,20 @@ button, input { font: inherit; color: inherit; }
   outline-offset: 1px;
 }
 
-/* ---------- abas (38px) ---------- */
+.mono { font-family: var(--font-mono); }
+.hint { color: var(--muted); }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- topo: abas (38px) + barra de ferramentas (42px) = 80px ---------- */
+#chrome { flex: none; height: 80px; }
+
 #tabs {
   display: flex;
   align-items: flex-end;
@@ -100,7 +115,6 @@ button, input { font: inherit; color: inherit; }
 }
 .tab .close:hover { background: var(--border); color: var(--text); }
 
-/* ---------- barra de ferramentas (42px) ---------- */
 #toolbar {
   display: flex;
   align-items: center;
@@ -139,14 +153,148 @@ button, input { font: inherit; color: inherit; }
 #address:focus { border-color: var(--accent); outline: none; }
 #address::placeholder { color: var(--muted); }
 
+/* O número de MB é um botão: abre as Configurações. */
 #mem {
   flex: none;
-  min-width: 64px;
-  padding: 0 4px;
+  min-width: 68px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
   color: var(--accent);
   font: 12px var(--font-mono);
   text-align: right;
+  cursor: pointer;
+  transition: background var(--fast) ease, border-color var(--fast) ease;
 }
+#mem:hover { background: var(--surface-active); border-color: var(--border); }
+
+/* O atributo hidden sempre vence qualquer "display:" definido abaixo. */
+[hidden] { display: none !important; }
+
+/* ---------- telas internas (só visíveis com a interface em tela cheia) ---------- */
+.screen { flex: 1; min-height: 0; overflow: auto; }
+
+#page-blank {
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  text-align: center;
+}
+#page-blank .hint { margin: 0; }
+
+.logo {
+  margin: 0;
+  font-size: 56px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  text-shadow: 0 0 28px rgba(255, 180, 41, 0.35);
+}
+
+kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  font: 12px var(--font-mono);
+}
+
+/* ---------- Configurações (estilo Firefox: menu lateral + cartões) ---------- */
+#page-settings {
+  display: grid;
+  grid-template-columns: 252px 1fr;
+  overflow: hidden;
+  user-select: text;
+}
+
+.side {
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 12px;
+  border-right: 1px solid var(--border);
+}
+.side h1 {
+  margin: 0 0 20px;
+  padding: 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.nav-item {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin-bottom: 2px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--fast) ease;
+}
+.nav-item:hover { background: var(--surface); }
+.nav-item[aria-current="true"] { background: var(--surface-active); }
+.nav-item[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.content { min-height: 0; overflow: auto; }
+.content-inner {
+  max-width: 640px;
+  padding: 28px 32px 48px;
+}
+
+#s-search {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+#s-search:focus { border-color: var(--accent); outline: none; }
+#s-search::placeholder { color: var(--muted); }
+
+.content h2 { margin: 24px 0 16px; font-size: 20px; font-weight: 600; }
+
+.card {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.card h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+.card p { margin: 4px 0 12px; }
+.card p:last-child { margin-bottom: 0; }
+
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 24px;
+  margin: 0 0 12px;
+}
+dt { color: var(--muted); }
+dd { margin: 0; overflow-wrap: anywhere; }
+
+.total { font-size: 14px; }
+.total .mono { font-size: 28px; color: var(--accent); }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+th { color: var(--muted); font-weight: 600; }
+td:first-child { max-width: 260px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.num { text-align: right; font-family: var(--font-mono); }
+tbody tr:last-child td { border-bottom: 0; }
 
 @keyframes pulse {
   50% { opacity: 0.35; }

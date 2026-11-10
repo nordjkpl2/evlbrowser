@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('evl', {
   back: () => ipcRenderer.send('nav:back'),
   forward: () => ipcRenderer.send('nav:forward'),
   reload: () => ipcRenderer.send('nav:reload'),
+  openSettings: () => ipcRenderer.send('settings:open'),
+
+  // Pergunta ao main.js o relatório da tela de Configurações (devolve uma Promise).
+  settingsReport: () => ipcRenderer.invoke('settings:report'),
 
   // Eventos que vêm do main.js
   onState: (cb) => ipcRenderer.on('state', (_event, state) => cb(state)),
