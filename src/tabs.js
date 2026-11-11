@@ -14,7 +14,7 @@
 
 const { WebContentsView } = require('electron');
 const { toUrl } = require('./url');
-const { UI_HEIGHT, MENU_HEIGHT } = require('./config');
+const { UI_HEIGHT, MENU_HEIGHT, SUGGEST_HEIGHT } = require('./config');
 
 const SETTINGS_URL = 'evl://settings';
 
@@ -35,6 +35,7 @@ class TabManager {
     this.activeId = null;
     this.nextId = 1;
     this.menuOpen = false; // submenu do contador de memória (zoom + Configurações)
+    this.suggestOpen = false; // sugestões do histórico na barra de endereço
     this.history = history;
     this.closed = []; // abas web fechadas (para Ctrl+Shift+T), a mais recente no fim
   }
@@ -63,7 +64,8 @@ class TabManager {
     const tab = this.tabs.get(id);
     if (!tab) return;
 
-    this.menuOpen = false; // trocar de aba fecha o submenu (a página nova ficaria por cima dele)
+    this.menuOpen = false; // trocar de aba fecha o submenu e as sugestões
+    this.suggestOpen = false;
     const prev = this.tabs.get(this.activeId);
     if (prev && prev !== tab && prev.view) {
       this.win.contentView.removeChildView(prev.view); // vira "sleeping"
@@ -76,6 +78,7 @@ class TabManager {
     if (tab.kind === 'web') {
       this._ensureView(tab); // recria a página se estava "discarded"
       this.win.contentView.addChildView(tab.view);
+      this.win.contentView.addChildView(this.ui); // a interface fica sempre por cima (menu e sugestões)
       this.layout();
       tab.view.webContents.focus();
     } else {
@@ -211,13 +214,24 @@ class TabManager {
   }
 
   // Abre/fecha o submenu do contador de memória. Aberto, a interface cresce por
-  // cima da página (e vai para o topo da pilha de views) para caber o menu.
+  // cima da página (ela já fica no topo da pilha de views) para caber o menu.
   setMenu(open) {
     if (this.menuOpen === open) return;
     this.menuOpen = open;
-    if (open) this.win.contentView.addChildView(this.ui); // já é filha: só sobe para o topo
+    if (open) this.suggestOpen = false;
     this.layout();
     this._changed();
+  }
+
+  // Idem para a lista de sugestões. A interface controla; aqui só ajustamos a altura.
+  setSuggest(open) {
+    if (this.suggestOpen === open) return;
+    this.suggestOpen = open;
+    if (open && this.menuOpen) {
+      this.menuOpen = false;
+      this._changed();
+    }
+    this.layout();
   }
 
   // ---------- política de memória (usada por memory.js) ----------
@@ -252,7 +266,8 @@ class TabManager {
     const tab = this.tabs.get(this.activeId);
     const web = tab?.kind === 'web';
 
-    const uiHeight = web ? UI_HEIGHT + (this.menuOpen ? MENU_HEIGHT : 0) : height;
+    const extra = this.menuOpen ? MENU_HEIGHT : this.suggestOpen ? SUGGEST_HEIGHT : 0;
+    const uiHeight = web ? UI_HEIGHT + extra : height;
     this.ui.setBounds({ x: 0, y: 0, width, height: Math.min(uiHeight, height) });
     if (web && tab.view) {
       tab.view.setBounds({

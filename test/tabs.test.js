@@ -58,7 +58,7 @@ assert.strictEqual(tabs.snapshot().tabs.find((x) => x.id === a).state, 'sleeping
 assert.strictEqual(tabs.openSettings(), s, 'não duplica Configurações');
 assert.strictEqual(tabs.tabs.size, 2);
 tabs.navigate('evl://settings'); assert.strictEqual(tabs.tabs.size, 2);
-assert.strictEqual(attached.size, 0, 'aba web ficou fora da janela');
+assert.strictEqual([...attached].filter((v) => v !== ui).length, 0, 'aba web ficou fora da janela');
 
 // 4) política de memória sem timer quando não há candidata
 const { startMemoryPolicy, processReport } = require(root + '/src/memory.js');
@@ -141,7 +141,7 @@ tabs.activate(s);
 assert.strictEqual(tabs.snapshot().zoom, null, 'Configurações não tem zoom');
 
 // 10) submenu do contador de memória: a interface cresce por cima da página
-const { MENU_HEIGHT } = cfg;
+const { MENU_HEIGHT, SUGGEST_HEIGHT } = cfg;
 tabs.activate(a);
 assert.strictEqual(tabs.snapshot().menuOpen, false);
 tabs.setMenu(true);
@@ -149,6 +149,13 @@ assert.strictEqual(tabs.snapshot().menuOpen, true);
 assert.deepStrictEqual(ui.bounds, { x: 0, y: 0, width: 1000, height: 80 + MENU_HEIGHT });
 assert.ok(attached.has(ui), 'interface sobe para o topo');
 tabs.setMenu(false);
+assert.deepStrictEqual(ui.bounds, { x: 0, y: 0, width: 1000, height: 80 });
+tabs.setSuggest(true);
+assert.deepStrictEqual(ui.bounds, { x: 0, y: 0, width: 1000, height: 80 + SUGGEST_HEIGHT });
+tabs.setMenu(true);
+assert.deepStrictEqual(ui.bounds, { x: 0, y: 0, width: 1000, height: 80 + MENU_HEIGHT }, 'menu fecha as sugestões');
+tabs.setMenu(false);
+tabs.setSuggest(true); tabs.setSuggest(false);
 assert.deepStrictEqual(ui.bounds, { x: 0, y: 0, width: 1000, height: 80 });
 tabs.setMenu(true); tabs.activate(s);
 assert.strictEqual(tabs.snapshot().menuOpen, false, 'trocar de aba fecha o menu');

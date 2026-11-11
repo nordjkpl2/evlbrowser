@@ -19,6 +19,8 @@ const zoomInBtn = $('zoom-in');
 const zoomValBtn = $('zoom-val');
 const menuSettingsBtn = $('menu-settings');
 const menuHistoryBtn = $('menu-history');
+const chromeEl = $('chrome');
+const suggestEl = $('suggest');
 
 let current = null; // último estado recebido
 let lastKey = ''; // para pular redesenho quando nada mudou
@@ -115,6 +117,8 @@ function render(state) {
     lastKey = key;
 
     showMenu(state);
+    // linha de carregamento sob a barra, só enquanto a aba ativa carrega
+    chromeEl.classList.toggle('loading', !!state.tabs.find((t) => t.id === state.activeId)?.loading);
 
     tabsEl.querySelectorAll('.tab').forEach((n) => n.remove());
     for (const t of state.tabs) tabsEl.insertBefore(makeTab(t), newTabBtn);
@@ -247,10 +251,10 @@ async function loadHistory() {
       btn.title = item.url;
       const title = document.createElement('span');
       title.className = 'h-title';
-      title.textContent = item.title;
+      title.textContent = item.host || item.url;
       const url = document.createElement('span');
       url.className = 'h-url hint';
-      url.textContent = item.url;
+      url.textContent = item.title; // título da última página vista neste site
       const time = document.createElement('span');
       time.className = 'h-time hint';
       time.textContent = new Date(item.time).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
@@ -316,6 +320,71 @@ accentEl.addEventListener('contextmenu', (event) => {
   window.evl.setAccent(null);
 });
 
+// ---------- sugestões do histórico na barra de endereço ----------
+// Só pergunta ao main.js enquanto você digita; a busca roda na lista do histórico (no máximo
+// 500 sites, já em memória). Completa também o nome do site dentro da barra (parte selecionada).
+
+let sugs = [];
+let sel = -1; // linha escolhida com as setas (-1 = nenhuma)
+
+function closeSuggest() {
+  if (suggestEl.hidden && sugs.length === 0) return;
+  sugs = [];
+  sel = -1;
+  suggestEl.hidden = true;
+  window.evl.setSuggest(false);
+}
+
+function renderSuggest() {
+  if (sugs.length === 0) return closeSuggest();
+  const box = addressEl.getBoundingClientRect();
+  suggestEl.style.left = `${box.left}px`;
+  suggestEl.style.top = `${box.bottom + 4}px`;
+  suggestEl.style.width = `${box.width}px`;
+  suggestEl.replaceChildren(
+    ...sugs.map((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'sg-item';
+      row.setAttribute('role', 'option');
+      row.setAttribute('aria-selected', String(i === sel));
+      const host = document.createElement('span');
+      host.className = 'sg-host';
+      host.textContent = s.host;
+      const title = document.createElement('span');
+      title.className = 'sg-title hint';
+      title.textContent = s.title === s.host ? '' : s.title;
+      row.append(host, title);
+      row.addEventListener('mousedown', (event) => event.preventDefault()); // não tira o foco da barra
+      row.addEventListener('click', () => {
+        window.evl.navigate(s.url);
+        addressEl.blur();
+      });
+      return row;
+    })
+  );
+  suggestEl.hidden = false;
+  window.evl.setSuggest(true); // o main.js só ajusta a altura se mudou
+}
+
+async function updateSuggest(event) {
+  const typed = addressEl.value;
+  const list = typed.trim() ? await window.evl.suggest(typed) : [];
+  if (addressEl.value !== typed) return; // você digitou mais enquanto esperávamos
+  sugs = list;
+  sel = -1;
+  renderSuggest();
+
+  const first = sugs[0];
+  const deleting = /^delete/.test(event?.inputType ?? '');
+  if (!deleting && first && first.host.startsWith(typed.toLowerCase()) && addressEl.selectionStart === typed.length) {
+    addressEl.value = typed + first.host.slice(typed.length);
+    addressEl.setSelectionRange(typed.length, addressEl.value.length);
+  }
+}
+
+addressEl.addEventListener('input', updateSuggest);
+addressEl.addEventListener('blur', closeSuggest);
+
 // ---------- ações ----------
 
 newTabBtn.addEventListener('click', () => window.evl.newTab());
@@ -342,19 +411,33 @@ document.addEventListener('keydown', (event) => {
 addressEl.addEventListener('focus', () => addressEl.select());
 addressEl.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
-    window.evl.navigate(addressEl.value);
+    window.evl.navigate(sel >= 0 ? sugs[sel].url : addressEl.value);
     addressEl.blur();
   } else if (event.key === 'Escape') {
     addressEl.blur();
     showAddress();
+  } else if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && sugs.length > 0) {
+    event.preventDefault();
+    sel = event.key === 'ArrowDown' ? Math.min(sel + 1, sugs.length - 1) : Math.max(sel - 1, -1);
+    renderSuggest();
   }
 });
 
 // ---------- eventos do main.js ----------
 
 window.evl.onState(render);
+// O contador vira um medidor: enche conforme a RAM se aproxima do limite (MEMORY_BUDGET_MB)
+// e muda de cor perto dele.
+let budget = 0;
+window.evl.onBudget((mb) => {
+  budget = mb;
+});
 window.evl.onMemory((mb) => {
   memEl.textContent = `${mb} MB`;
+  if (!budget) return;
+  const p = Math.min(mb / budget, 1);
+  memEl.style.setProperty('--p', p.toFixed(3));
+  memEl.dataset.level = p >= 0.95 ? 'hot' : p >= 0.75 ? 'warn' : '';
 });
 window.evl.onFocusAddress(() => addressEl.focus());
 window.evl.onAccent(applyAccent);

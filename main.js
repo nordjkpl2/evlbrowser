@@ -9,9 +9,11 @@ const {
   ipcMain,
   session,
   nativeTheme,
+  clipboard,
 } = require('electron');
 const path = require('path');
 const cfg = require('./src/config');
+const { UI_HEIGHT } = cfg;
 const { createStore } = require('./src/settings');
 const { createHistory } = require('./src/history');
 const { TabManager } = require('./src/tabs');
@@ -19,7 +21,9 @@ const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memor
 
 // Chromium só com o que o navegador precisa (listas em src/config.js).
 // Precisa vir ANTES do app ficar pronto.
-for (const name of cfg.CHROMIUM_OFF_SWITCHES) app.commandLine.appendSwitch(name);
+for (const name of [...cfg.CHROMIUM_OFF_SWITCHES, ...cfg.CHROMIUM_FAST_SWITCHES]) app.commandLine.appendSwitch(name);
+// Para medir a GPU: `set EVL_NO_GPU=1 && npm start` roda sem aceleração de hardware.
+if (process.env.EVL_NO_GPU) app.disableHardwareAcceleration();
 if (cfg.CHROMIUM_OFF_FEATURES.length > 0) {
   app.commandLine.appendSwitch('disable-features', cfg.CHROMIUM_OFF_FEATURES.join(','));
 }
@@ -195,6 +199,36 @@ function createWindow() {
   // A interface nunca pode navegar para outro lugar nem abrir janelas.
   ui.webContents.on('will-navigate', (event) => event.preventDefault());
   ui.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+  // Botão direito num campo de texto (barra de endereço, busca das Configurações).
+  ui.webContents.on('context-menu', (_event, params) => {
+    if (!params.isEditable) return;
+    const f = params.editFlags;
+    const items = [
+      { role: 'undo', label: 'Desfazer', enabled: f.canUndo },
+      { role: 'redo', label: 'Refazer', enabled: f.canRedo },
+      { type: 'separator' },
+      { role: 'cut', label: 'Cortar', enabled: f.canCut },
+      { role: 'copy', label: 'Copiar', enabled: f.canCopy },
+      { role: 'paste', label: 'Colar', enabled: f.canPaste },
+    ];
+    if (params.y < UI_HEIGHT) {
+      // só na barra de endereço (a barra do topo tem UI_HEIGHT px)
+      items.push({
+        label: 'Colar e abrir',
+        enabled: f.canPaste,
+        click: () => {
+          const text = clipboard.readText().trim();
+          if (text) tabs.navigate(text);
+        },
+      });
+    }
+    items.push(
+      { role: 'delete', label: 'Excluir', enabled: f.canDelete },
+      { role: 'selectAll', label: 'Selecionar tudo', enabled: f.canSelectAll }
+    );
+    Menu.buildFromTemplate(items).popup({ window: win });
+  });
   ui.webContents.on('before-input-event', (event, input) => {
     if (onShortcut(input)) event.preventDefault();
   });
@@ -238,6 +272,7 @@ const isId = (id) => Number.isInteger(id);
 
 ipcMain.on('ui:ready', (event) => {
   if (!fromUi(event)) return;
+  send('budget', cfg.MEMORY_BUDGET_MB);
   send('accent', store.get('accent') ?? null);
   send('state', tabs.snapshot());
   sampleMemory(true);
@@ -265,6 +300,10 @@ ipcMain.on('history:open', (event, url) => {
   if (fromUi(event) && typeof url === 'string') tabs.create(url);
 });
 ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
+ipcMain.handle('history:suggest', (event, q) =>
+  fromUi(event) && typeof q === 'string' ? history.suggest(q.slice(0, 200)) : []
+);
+ipcMain.on('suggest:set', (event, open) => fromUi(event) && tabs.setSuggest(open === true));
 ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));
 ipcMain.on('zoom:set', (event, action) => {
   if (!fromUi(event)) return;

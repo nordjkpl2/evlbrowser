@@ -65,7 +65,26 @@ button, input { font: inherit; color: inherit; }
 }
 
 /* ---------- topo: abas (38px) + barra de ferramentas (42px) = 80px ---------- */
-#chrome { flex: none; height: 80px; background: var(--bg); }
+#chrome { position: relative; flex: none; height: 80px; background: var(--bg); }
+
+/* linha de carregamento: um brilho da cor principal corre sob a barra enquanto a página carrega */
+#chrome::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent) no-repeat;
+  background-size: 35% 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+#chrome.loading::after { opacity: 1; animation: sweep 1.1s linear infinite; }
+@keyframes sweep {
+  from { background-position: -35% 0; }
+  to { background-position: 135% 0; }
+}
 
 #tabs {
   display: flex;
@@ -178,20 +197,48 @@ button, input { font: inherit; color: inherit; }
   padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 6px;
-  background: transparent;
+  background-color: transparent;
+  /* medidor: o fundo enche conforme a RAM chega perto do limite (--p de 0 a 1) */
+  background-image: linear-gradient(90deg, var(--glow) calc(var(--p, 0) * 100%), transparent 0);
   color: var(--accent);
   font: 12px var(--font-mono);
   text-align: right;
   cursor: pointer;
   transition: background var(--fast) ease, border-color var(--fast) ease;
 }
-#mem:hover { background: var(--surface-active); border-color: var(--border); }
+#mem:hover { background-color: var(--surface-active); border-color: var(--border); }
+#mem[data-level="warn"] { color: #ff9f43; }
+#mem[data-level="hot"] { color: #ff5c5c; }
 
 /* O atributo hidden sempre vence qualquer "display:" definido abaixo. */
 [hidden] { display: none !important; }
 
 /* ---------- telas internas (só visíveis com a interface em tela cheia) ---------- */
 .screen { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
+
+/* ---------- sugestões do histórico ---------- */
+#suggest {
+  position: fixed;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+.sg-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.sg-item:hover,
+.sg-item[aria-selected="true"] { background: var(--surface-active); }
+.sg-item[aria-selected="true"] { box-shadow: inset 2px 0 0 var(--accent); }
+.sg-host { flex: none; }
+.sg-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
 
 /* ---------- submenu do contador de memória ---------- */
 #menu {
