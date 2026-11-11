@@ -57,10 +57,10 @@ test('renderização: flags do Chromium só para o que foi ligado', () => {
 });
 
 test('novas opções de velocidade: desligadas por padrão e viram flags', () => {
-  const { speedOptions, speedSwitches, speedFeatures } = require('../src/app/speed_options');
-  assert.deepStrictEqual(speedFeatures(speedOptions(null)), []);
+  const { speedOptions, speedSwitches, speedFeatures, parallelFeature } = require('../src/app/speed_options');
+  assert.deepStrictEqual(speedFeatures(speedOptions({ parallelDownloads: false })), []);
   const on = speedOptions({ parallelDownloads: true, zeroCopy: true, noSmoothScroll: true, rasterThreads: 9 });
-  assert.deepStrictEqual(speedFeatures(on), ['ParallelDownloading']);
+  assert.deepStrictEqual(speedFeatures(on), [parallelFeature(4)]);
   assert.deepStrictEqual(speedSwitches(on), [['enable-zero-copy'], ['disable-smooth-scrolling'], ['num-raster-threads', '4']]);
 });
 
@@ -68,6 +68,13 @@ test('renderização: novas flags', () => {
   const { speedOptions: so, speedSwitches: sw, speedFeatures: sf } = require('../src/app/speed_options');
   const o = so({ ignoreGpuBlocklist: true, forceSrgb: true, skiaGraphite: true, parallelDownloads: true });
   assert.deepStrictEqual(sw(o), [['ignore-gpu-blocklist'], ['force-color-profile', 'srgb']]);
-  assert.deepStrictEqual(sf(o), ['ParallelDownloading', 'SkiaGraphite']);
-  assert.deepStrictEqual(sf(so(null)), []);
+  assert.deepStrictEqual(sf(o), [require('../src/app/speed_options').parallelFeature(4), 'SkiaGraphite']);
+  assert.deepStrictEqual(sf(so({ parallelDownloads: false })), []);
+});
+
+test('downloads em paralelo: ligado por padrão, conexões limitadas e viram parâmetros', () => {
+  const { speedOptions: so, speedFeatures: sf, checkSpeedValue } = require('../src/app/speed_options');
+  assert.deepStrictEqual(sf(so(null)), ['ParallelDownloading<EvlDownloads.On:request_count/4/min_slice_size/524288/remaining_time/0']);
+  assert.match(sf(so({ downloadConnections: 99 }))[0], /request_count\/8\//);
+  assert.strictEqual(checkSpeedValue('downloadConnections', 1), 2);
 });

@@ -16,7 +16,8 @@ const SPEED_DEFAULTS = {
   imagesOff: false, // modo texto: não baixa imagens (páginas bem mais leves)
   rendererLimit: 0, // máximo de processos de páginas (0 = automático); menos processos = menos RAM
   jsMemoryMB: 0, // teto de memória do JavaScript por página (0 = automático)
-  parallelDownloads: false, // downloads grandes em várias conexões
+  parallelDownloads: true, // downloads grandes em várias conexões (bem mais rápido em servidores que limitam por conexão)
+  downloadConnections: 4, // quantas conexões por download quando o paralelo está ligado
   zeroCopy: false, // a placa de vídeo recebe as imagens sem cópia (rolagem mais fluida; pode falhar em drivers antigos)
   noSmoothScroll: false, // rolagem sem animação (resposta imediata, menos CPU)
   rasterThreads: 0, // threads que desenham a página (0 = automático)
@@ -26,8 +27,8 @@ const SPEED_DEFAULTS = {
   forceSrgb: false, // cores iguais em qualquer monitor (perfil sRGB)
   skiaGraphite: false, // novo motor de desenho do Chromium (experimental)
 };
-const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB', 'parallelDownloads', 'zeroCopy', 'noSmoothScroll', 'rasterThreads', 'ignoreGpuBlocklist', 'forceSrgb', 'skiaGraphite'];
-const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096], rasterThreads: [0, 4] };
+const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB', 'parallelDownloads', 'downloadConnections', 'zeroCopy', 'noSmoothScroll', 'rasterThreads', 'ignoreGpuBlocklist', 'forceSrgb', 'skiaGraphite'];
+const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096], rasterThreads: [0, 4], downloadConnections: [2, 8] };
 
 function speedOptions(raw) {
   const out = { ...SPEED_DEFAULTS };
@@ -72,7 +73,12 @@ function speedSwitches(o) {
   return out;
 }
 
-// Recursos (enable-features) ligados pelas opções.
-const speedFeatures = (o) => [o.parallelDownloads && 'ParallelDownloading', o.skiaGraphite && 'SkiaGraphite'].filter(Boolean);
+// Downloads em paralelo com parâmetros (sintaxe Feature<Estudo.Grupo:chave/valor do Chromium):
+// request_count = conexões; min_slice_size = pedaço mínimo (512 KB, o padrão é 1,3 MB);
+// remaining_time = 0: divide mesmo quando falta pouco (o padrão só divide se faltarem 2 s ou mais).
+const parallelFeature = (n) => `ParallelDownloading<EvlDownloads.On:request_count/${n}/min_slice_size/524288/remaining_time/0`;
 
-module.exports = { speedFeatures, speedSwitches, SPEED_DEFAULTS, RESTART, speedOptions, checkSpeedValue, readStartupSpeed, needsRestart };
+// Recursos (enable-features) ligados pelas opções.
+const speedFeatures = (o) => [o.parallelDownloads && parallelFeature(o.downloadConnections), o.skiaGraphite && 'SkiaGraphite'].filter(Boolean);
+
+module.exports = { parallelFeature, speedFeatures, speedSwitches, SPEED_DEFAULTS, RESTART, speedOptions, checkSpeedValue, readStartupSpeed, needsRestart };

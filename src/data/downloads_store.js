@@ -38,4 +38,8 @@ function createDownloads(store) {
   };
 }
 
-module.exports = { safeName, uniquePath, createDownloads, MAX_ITEMS };
+// Retomada automática quando a conexão cai: espera 1 s, 2 s, 4 s... (até 30 s), no máximo MAX_RETRIES vezes.
+const MAX_RETRIES = 8;
+const retryDelay = (tries) => Math.min(30000, 1000 * 2 ** Math.max(0, tries));
+
+module.exports = { safeName, uniquePath, createDownloads, retryDelay, MAX_ITEMS, MAX_RETRIES };

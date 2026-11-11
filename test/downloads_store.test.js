@@ -24,3 +24,10 @@ test('downloads: lista salva com limite', () => {
   d.clear();
   assert.deepStrictEqual(d.list(), []);
 });
+
+test('retomada automática: espera cresce e tem teto', () => {
+  const { retryDelay, MAX_RETRIES } = require('../src/data/downloads_store');
+  assert.deepStrictEqual([0, 1, 2, 3].map(retryDelay), [1000, 2000, 4000, 8000]);
+  assert.strictEqual(retryDelay(20), 30000);
+  assert.ok(MAX_RETRIES > 0);
+});

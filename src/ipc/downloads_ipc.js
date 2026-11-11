@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { safeName, uniquePath, createDownloads } = require('../data/downloads_store');
+const { safeName, uniquePath, createDownloads, retryDelay, MAX_RETRIES } = require('../data/downloads_store');
 
 // ctx: { ipcMain, fromUi, session, app, shell, dialog, store (settings.json), listStore (downloads.json), getWindow, notify(nome) }
 function registerDownloadsIpc({ ipcMain, fromUi, session, app, shell, dialog, store, listStore, getWindow, notify = () => {} }) {
@@ -33,16 +33,34 @@ function registerDownloadsIpc({ ipcMain, fromUi, session, app, shell, dialog, st
     } catch {}
     live.set(entry.id, { item, entry });
     notify(name);
-    item.on('updated', () => {
+    let tries = 0;
+    let retry = null;
+    let last = { t: Date.now(), bytes: 0 };
+    item.on('updated', (_e, st) => {
       entry.received = item.getReceivedBytes();
       entry.total = item.getTotalBytes();
       entry.paused = item.isPaused();
+      // velocidade: a do Chromium se houver; senão a média desde a última atualização
+      const now = Date.now();
+      const native = typeof item.getCurrentBytesPerSecond === 'function' ? item.getCurrentBytesPerSecond() : -1;
+      entry.speed = entry.paused ? 0 : native >= 0 ? native : Math.max(0, Math.round(((entry.received - last.bytes) * 1000) / Math.max(1, now - last.t)));
+      last = { t: now, bytes: entry.received };
+      // a conexão caiu: continua de onde parou (Range) em vez de falhar e recomeçar do zero
+      if (st === 'interrupted' && !retry && tries < MAX_RETRIES && item.canResume()) {
+        entry.speed = 0;
+        retry = setTimeout(() => {
+          retry = null;
+          tries++;
+          if (item.getState() === 'interrupted' && item.canResume()) item.resume();
+        }, retryDelay(tries));
+      } else if (st === 'progressing' && !entry.paused) tries = 0;
     });
     item.once('done', (_e, result) => {
+      clearTimeout(retry);
       live.delete(entry.id);
       const file = item.getSavePath();
       if (result === 'cancelled' && !file) return; // cancelou na janela "Salvar como": não entra na lista
-      done.add({ ...entry, paused: undefined, path: file, name: file ? path.basename(file) : name, received: item.getReceivedBytes(), state: result === 'completed' ? 'done' : result === 'cancelled' ? 'cancelled' : 'failed' });
+      done.add({ ...entry, paused: undefined, speed: undefined, path: file, name: file ? path.basename(file) : name, received: item.getReceivedBytes(), state: result === 'completed' ? 'done' : result === 'cancelled' ? 'cancelled' : 'failed' });
     });
   }
 

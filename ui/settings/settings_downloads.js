@@ -11,6 +11,14 @@ function dSize(bytes) {
   return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+// tempo restante curto: "45 s", "3 min", "1 h 20"
+function dTime(sec) {
+  if (!(sec > 0) || !Number.isFinite(sec)) return '';
+  if (sec < 60) return `${Math.ceil(sec)} s`;
+  if (sec < 3600) return `${Math.round(sec / 60)} min`;
+  return `${Math.floor(sec / 3600)} h ${String(Math.round((sec % 3600) / 60)).padStart(2, '0')}`;
+}
+
 function dRow(d) {
   const li = document.createElement('li');
   const name = document.createElement('span');
@@ -26,7 +34,9 @@ function dRow(d) {
       bar.max = d.total;
       bar.value = d.received;
     }
-    info.textContent = `${dSize(d.received)}${d.total > 0 ? ` / ${dSize(d.total)}` : ''}`;
+    const rate = !d.paused && d.speed > 0 ? `${dSize(d.speed)}/s` : '';
+    const left = rate && d.total > d.received ? dTime((d.total - d.received) / d.speed) : '';
+    info.textContent = [`${dSize(d.received)}${d.total > 0 ? ` / ${dSize(d.total)}` : ''}`, rate, left].filter(Boolean).join(' · ');
     li.append(name, bar, info, act(d.paused ? t('Continuar') : t('Pausar'), window.evl.downloadsPause), act(t('Cancelar'), window.evl.downloadsCancel));
     return li;
   }

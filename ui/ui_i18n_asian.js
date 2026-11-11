@@ -326,6 +326,8 @@ const WORDS_ZH_JA = [
   ['Endereços http:// viram https://, sem voltar atrás. Sites que só existem em http:// deixam de abrir (a rede local continua funcionando).', 'http:// 地址会变为 https://，且不回退。只有 http:// 的网站将无法打开（本地网络不受影响）。', 'http:// のアドレスは https:// になり、元には戻りません。http:// のみのサイトは開けなくなります（ローカルネットワークは引き続き使えます）。'],
   ['WebRTC sem conexão direta', 'WebRTC 禁用直连', 'WebRTC の直接接続なし'],
   ['O seu IP real nunca aparece em chamadas, nem usando VPN. Chamadas de vídeo podem falhar.', '你的真实 IP 在通话中永不暴露，使用 VPN 时也一样。视频通话可能失败。', '通話で実際の IP が表示されることはありません（VPN 使用時も同様）。ビデオ通話が失敗する場合があります。'],
+  ['Conexões por download', '每个下载的连接数', 'ダウンロードごとの接続数'],
+  ['Quantas partes o arquivo baixa ao mesmo tempo quando o download em paralelo está ligado. Mais conexões aceleram servidores lentos; 4 é um bom meio-termo.', '开启并行下载时，文件同时分几部分下载。连接越多，慢速服务器越快；4 是不错的折中。', '並列ダウンロードがオンのとき、ファイルを同時に何分割でダウンロードするか。接続が多いほど遅いサーバーで速くなります。4 がちょうどよい値です。'],
   ['Downloads em paralelo', '并行下载', '並列ダウンロード'],
   ['Arquivos grandes baixam em várias conexões ao mesmo tempo.', '大文件同时通过多个连接下载。', '大きなファイルを複数の接続で同時にダウンロードします。'],
   ['Imagens direto na placa de vídeo', '图像直接送入显卡', '画像をグラフィックカードへ直接転送'],

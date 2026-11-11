@@ -18,6 +18,7 @@ const SPEED_ROWS = [
   ['imagesOff', 'bool', 'Não carregar imagens', 'Modo texto: as páginas abrem bem mais rápido e gastam muito menos memória e internet, mas ficam sem fotos.', '', true, 'o', 5],
   // sem pontos na nota: ganho depende do computador (ficam desligadas por padrão)
   ['parallelDownloads', 'bool', 'Downloads em paralelo', 'Arquivos grandes baixam em várias conexões ao mesmo tempo.', '', true, 'o', 0],
+  ['downloadConnections', 'num', 'Conexões por download', 'Quantas partes o arquivo baixa ao mesmo tempo quando o download em paralelo está ligado. Mais conexões aceleram servidores lentos; 4 é um bom meio-termo.', '', true, 'o', 0],
   ['zeroCopy', 'bool', 'Imagens direto na placa de vídeo', 'Rolagem e vídeo mais fluidos (zero-copy). Desligue se aparecerem falhas na imagem.', '', true, 'o', 0],
   ['noSmoothScroll', 'bool', 'Rolagem sem animação', 'A página responde na hora à roda do mouse e gasta menos CPU.', '', true, 'o', 0],
   ['rasterThreads', 'num', 'Threads de desenho', 'Quantas threads desenham a página. Mais threads aceleram páginas pesadas em processadores com vários núcleos. 0 = automático.', '', true, 'o', 0],
