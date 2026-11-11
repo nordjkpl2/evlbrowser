@@ -138,6 +138,13 @@
         </svg>
         <span>Senhas</span>
       </button>
+      <button class="nav-item" type="button" data-panel="privacy">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>
+        </svg>
+        <span>Privacidade</span>
+      </button>
       <button class="nav-item" type="button" data-panel="adblock">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -219,6 +226,31 @@
           </div>
         </section>
 
+        <section class="card" data-panel="appearance">
+          <h3>Texto</h3>
+          <p class="hint">Tamanho e fonte da interface do Evl (não muda os sites).</p>
+          <div class="font-row">
+            <label>Tamanho da fonte
+              <select id="f-size">
+                <option value="0.9">Pequena</option>
+                <option value="1">Normal</option>
+                <option value="1.15">Grande</option>
+                <option value="1.3">Muito grande</option>
+              </select>
+            </label>
+            <label>Fonte
+              <select id="f-family">
+                <option value="system">Sistema (padrão)</option>
+                <option value="arial">Arial</option>
+                <option value="verdana">Verdana</option>
+                <option value="georgia">Georgia</option>
+                <option value="times">Times New Roman</option>
+                <option value="mono">Monoespaçada</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
         <section class="card color-card" data-panel="appearance">
           <input id="accent" type="color" value="#ffb429"
                  aria-label="Cor principal do navegador. Clique para escolher; botão direito volta ao padrão"
@@ -294,6 +326,25 @@
           <ul id="p-list"></ul>
         </section>
 
+        <section class="card" data-panel="privacy">
+          <h3>Privacidade</h3>
+          <p class="hint">Tudo aqui roda dentro do navegador e foi pensado para não atrasar as páginas: pedidos de rastreio são cortados antes de baixar.</p>
+          <ul id="v-list"></ul>
+          <div class="form-actions">
+            <button id="v-clear" class="white-btn" type="button">Limpar cache e dados de sites agora</button>
+          </div>
+          <p id="v-status" class="hint" role="status" hidden></p>
+        </section>
+
+        <section class="card" data-panel="privacy">
+          <h3>Sempre ativo</h3>
+          <ul class="v-always hint">
+            <li>Câmera, microfone, localização e notificações são negados por padrão.</li>
+            <li>Sem telemetria, sincronização de conta nem relatórios de falha do Chromium.</li>
+            <li>Sites não recebem o seu histórico, favoritos nem senhas (só a senha do próprio site, ao clicar).</li>
+          </ul>
+        </section>
+
         <section class="card" data-panel="adblock">
           <div class="card-head">
             <h3>Bloqueador de anúncios</h3>
@@ -302,6 +353,13 @@
           <p class="hint">Bloqueia anúncios e rastreadores de terceiros antes de baixarem, o que também economiza dados e memória.</p>
           <p class="hint"><span id="ab-count">0</span> <span>bloqueados nesta sessão</span></p>
           <p class="hint">Não bloqueia anúncios dentro de vídeos (por exemplo, os do YouTube).</p>
+          <h3>Sites permitidos</h3>
+          <p class="hint">Nestes sites o bloqueador fica desligado (use se algum site quebrar).</p>
+          <form id="ab-form">
+            <input id="ab-site" type="text" spellcheck="false" autocomplete="off" aria-label="Site permitido" placeholder="exemplo.com">
+            <button class="white-btn" type="submit">Permitir</button>
+          </form>
+          <ul id="ab-allow"></ul>
         </section>
 
         <section class="card" data-panel="extensions">
@@ -335,12 +393,6 @@
 
   <script src="ui_i18n_languages.js"></script>
   <script src="ui_main.js"></script>
-  <script src="settings_cookies.js"></script>
-  <script src="settings_search_engines.js"></script>
-  <script src="settings_extensions.js"></script>
-  <script src="settings_adblock.js"></script>
-  <script src="settings_passwords.js"></script>
-  <script src="settings_bookmarks.js"></script>
   <script src="ui_boot.js"></script>
 </body>
 </html>

@@ -31,13 +31,20 @@ function loadPreload(hostname, adblockOn) {
 test('YouTube com o bloqueador ligado: filtro no mundo da página, CSS e escuta de cliques', () => {
   const { calls, listeners } = loadPreload('www.youtube.com', true);
   assert.ok(calls.world && typeof calls.world.func === 'function');
-  assert.ok(calls.css[0].includes('ytd-ad-slot-renderer'));
+  assert.ok(calls.css.some((c) => c.includes('ytd-ad-slot-renderer')));
   assert.ok(listeners.includes('pointerdown'));
 });
 
 test('bloqueador desligado ou outro site: nada do YouTube é instalado', () => {
   assert.strictEqual(loadPreload('www.youtube.com', false).calls.world, null);
   assert.strictEqual(loadPreload('exemplo.com', true).calls.world, null);
+});
+
+test('qualquer site: esconde caixas de anúncio só com o bloqueador ligado', () => {
+  const on = loadPreload('exemplo.com', true).calls;
+  assert.strictEqual(on.css.length, 1);
+  assert.ok(on.css[0].includes('adsbygoogle'));
+  assert.strictEqual(loadPreload('exemplo.com', false).calls.css.length, 0);
 });
 
 test('o filtro tira adPlacements/playerAds/adSlots só de respostas de player', async () => {

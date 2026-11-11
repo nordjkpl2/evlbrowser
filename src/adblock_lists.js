@@ -30,6 +30,17 @@ tremorhub.com videologygroup.com beachfront.com connatix.com
 disqusads.com zedo.com yldbt.com ib.adnxs.com smaato.net smaato.com mookie1.com
 rfihub.com rfihub.net w55c.net adgrx.com bttrack.com btloader.com
 pixel.facebook.com pixel.wp.com stats.wp.com
+adbrite.com adbutler.com adition.com adkernel.com admixer.net adotmob.com adroll.com adspeed.net adthrive.com
+adtelligent.com advertserve.com ay.delivery bannerflow.com bidr.io brealtime.com buysellads.com carbonads.net
+cpmstar.com dianomi.com dotomi.com emxdgt.com eyereturn.com gumgum.com innovid.com jivox.com kargo.com
+kixer.com lockerdome.com loopme.me mathtag.com mediavine.com mxptint.net nexac.com onetag-sys.com pbstck.com
+pippio.com pixfuture.net publir.com pubmine.com quantcast.com rhythmone.com richaudience.com rtbhouse.com
+sitescout.com sonobi.com tidaltv.com tribalfusion.com undertone.com viglink.com adnxs.net ads.yahoo.com
+analytics.yahoo.com bat.bing.com clarity.ms owneriq.net amazon-adsystem.com adsymptotic.com adform.net
+coinhive.com coin-hive.com jsecoin.com cryptoloot.pro minero.cc webmine.pro authedmine.com ppoi.org
+adnium.com adriver.ru yandexadexchange.net an.yandex.ru mc.yandex.ru adfox.ru marketgid.com
+ads-api.twitter.com static.ads-twitter.com cdn.mxpnl.com api.mixpanel.com sentry-cdn.com
+rubiconproject.net tapad.com nr-data.net imrworldwide.com comscore.com sb.scorecardresearch.com
 `
   .split(/\s+/)
   .filter(Boolean);
@@ -51,4 +62,16 @@ const BLOCK_PATHS = [
   ['facebook.com', '/tr/'],
 ];
 
-module.exports = { BLOCK_DOMAINS, BLOCK_PATHS };
+// Subdomínios com cara de anúncio/rastreio ("ads.exemplo.com"): só valem para pedidos de TERCEIROS.
+const BLOCK_LABELS = new Set([
+  'ads', 'adserver', 'adservice', 'adsystem', 'adx', 'adtech', 'banners', 'pagead', 'tracker', 'tracking',
+  'trk', 'telemetry', 'beacon', 'pixel',
+]);
+
+// Trechos de endereço típicos de anúncio: também só para pedidos de TERCEIROS.
+const BLOCK_THIRD_PARTY_PATHS = [
+  '/pagead/', '/adserver', '/adframe', '/adsbygoogle', 'google_ad', '/doubleclick/', '/prebid', 'ad-banner',
+  '/advert/', '/adview', '/ads/js/', '/ads.js', '/show_ads',
+];
+
+module.exports = { BLOCK_DOMAINS, BLOCK_PATHS, BLOCK_LABELS, BLOCK_THIRD_PARTY_PATHS };

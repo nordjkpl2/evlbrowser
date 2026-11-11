@@ -56,6 +56,11 @@ contextBridge.exposeInMainWorld('evl', {
   extensionsRemove: (id) => ipcRenderer.invoke('extensions:remove', String(id)),
   suggest: (text) => ipcRenderer.invoke('history:suggest', String(text)),
   setSuggest: (open) => ipcRenderer.send('suggest:set', open === true),
+  setFont: (scale, family) => ipcRenderer.send('font:set', Number(scale), String(family)),
+  privacyGet: () => ipcRenderer.invoke('privacy:get'),
+  privacySet: (key, on) => ipcRenderer.invoke('privacy:set', String(key), on === true),
+  privacyClear: () => ipcRenderer.invoke('privacy:clear'),
+  adblockAllow: (site, add) => ipcRenderer.invoke('adblock:allow', String(site), add === true),
   setAccent: (color) => ipcRenderer.send('accent:set', color === null ? null : String(color)),
   setMenu: (open) => ipcRenderer.send('menu:set', open === true),
   zoom: (action) => ipcRenderer.send('zoom:set', String(action)), // 'in' | 'out' | 'reset'
@@ -69,6 +74,7 @@ contextBridge.exposeInMainWorld('evl', {
   onMemory: (cb) => ipcRenderer.on('memory', (_event, mb) => cb(mb)),
   onPanel: (cb) => ipcRenderer.on('panel', (_event, name) => cb(name)),
   onLang: (cb) => ipcRenderer.on('lang', (_event, lang) => cb(lang)),
+  onFont: (cb) => ipcRenderer.on('font', (_event, f) => cb(f)),
   onAccent: (cb) => ipcRenderer.on('accent', (_event, color) => cb(color)),
   onFocusAddress: (cb) => ipcRenderer.on('focus-address', () => cb()),
 });

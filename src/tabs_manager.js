@@ -38,7 +38,14 @@ class TabManager {
     this.menuOpen = false; // submenu do contador de memória (zoom + Configurações)
     this.suggestOpen = false; // sugestões do histórico na barra de endereço
     this.history = history;
+    this.webrtcPolicy = 'default_public_interface_only'; // o WebRTC não revela o IP da rede local
     this.closed = []; // abas web fechadas (para Ctrl+Shift+T), a mais recente no fim
+  }
+
+  // Política de IP do WebRTC para as páginas abertas e as próximas.
+  setWebrtcPolicy(policy) {
+    this.webrtcPolicy = policy;
+    for (const tab of this.tabs.values()) tab.view?.webContents.setWebRTCIPHandlingPolicy?.(policy);
   }
 
   // ---------- criar / ativar / fechar ----------
@@ -368,6 +375,7 @@ class TabManager {
       },
     });
     const wc = view.webContents;
+    wc.setWebRTCIPHandlingPolicy?.(this.webrtcPolicy);
 
     // target=_blank / window.open -> nova aba (e nunca uma janela solta).
     wc.setWindowOpenHandler(({ url }) => {

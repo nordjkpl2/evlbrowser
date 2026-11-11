@@ -41,6 +41,11 @@ module.exports = {
     'disable-component-update', // atualização de componentes do Chromium em segundo plano
     'disable-breakpad', // coleta de relatórios de falha
     'no-pings', // pings de auditoria de links (<a ping>)
+    'disable-domain-reliability', // relatórios de falhas de conexão enviados ao Google
+    'disable-client-side-phishing-detection', // envio de páginas para análise
+    'disable-sync', // sincronização de conta
+    'disable-default-apps',
+    'no-default-browser-check',
   ],
   // Flags de velocidade/RAM. process-per-site: abas do mesmo site dividem um processo
   // (menos RAM e abre mais rápido). Se algum site ficar instável, apague esta linha.
@@ -48,5 +53,10 @@ module.exports = {
   CHROMIUM_OFF_FEATURES: [
     'MediaRouter', // descoberta de Chromecast na rede
     'OptimizationHints', // serviço de dicas de otimização
+    'Translate', // tradução automática (consulta servidores)
+    'AutofillServerCommunication', // preenchimento consultando servidores
+    'NetworkTimeServiceQuerying', // consulta de hora na rede
+    'PrivacySandboxAdsAPIs', // APIs de anúncios do Chromium (Topics, FLEDGE)
+    'InterestFeedContentSuggestions',
   ],
 };

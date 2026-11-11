@@ -22,7 +22,7 @@ function fake() {
 }
 
 test('scripts da interface carregam na ordem e só usam window.evl que existe', () => {
-  assert.deepStrictEqual(scripts, ['ui_i18n_languages.js', 'ui_main.js', 'settings_cookies.js', 'settings_search_engines.js', 'settings_extensions.js', 'settings_adblock.js', 'settings_passwords.js', 'settings_bookmarks.js', 'ui_boot.js']);
+  assert.deepStrictEqual(scripts, ['ui_i18n_languages.js', 'ui_main.js', 'ui_boot.js']);
   const preload = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
   const api = new Set([...preload.matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]));
   const used = new Set();
@@ -44,7 +44,12 @@ test('scripts da interface carregam na ordem e só usam window.evl que existe', 
     NodeFilter: { SHOW_TEXT: 4 },
     console,
   });
-  for (const s of scripts) vm.runInContext(fs.readFileSync(path.join(ui, s), 'utf8'), ctx, { filename: s });
+  const load = (s) => vm.runInContext(fs.readFileSync(path.join(ui, s), 'utf8'), ctx, { filename: s });
+  scripts.forEach(load);
+  // as Configurações carregam sob demanda (ui_main.js); aqui carrega todas, na mesma ordem
+  const lazy = vm.runInContext('SETTINGS_SCRIPTS', ctx);
+  assert.ok(lazy.length >= 7 && lazy[0] === 'settings_search_engines.js');
+  lazy.forEach(load);
   // desenhar abas não pode quebrar (já houve um `t` da aba escondendo o t() de tradução)
   for (const kind of ['web', 'blank', 'settings']) {
     vm.runInContext(`makeTab({ id: 1, state: 'active', kind: '${kind}', title: 'x', url: 'u', favicon: null })`, ctx);
@@ -60,7 +65,7 @@ test('scripts da interface carregam na ordem e só usam window.evl que existe', 
     assert.strictEqual(marks(row[2]), marks(row[0]), `marcadores: ${row[0]}`);
     keys.add(row[0]);
   }
-  for (const s of scripts.filter((x) => x !== 'ui_i18n_languages.js')) {
+  for (const s of [...scripts, ...lazy].filter((x) => x !== 'ui_i18n_languages.js')) {
     for (const m of fs.readFileSync(path.join(ui, s), 'utf8').matchAll(/\bt\('((?:[^'\\]|\\.)+)'/g)) {
       assert.ok(keys.has(m[1]), `sem tradução: ${m[1]}`);
     }

@@ -1,30 +1,42 @@
-// Mensagens da categoria "Anúncios" das Configurações.
+// Mensagens da categoria "Anúncios" das Configurações (interruptor, contador, sites permitidos).
 
-// ctx: { ipcMain, fromUi, adblock, store, session }
-function registerAdblockIpc({ ipcMain, fromUi, adblock, store, session }) {
+const { normalizeSite } = require('../passwords_vault');
+
+const MAX_ALLOW = 200;
+
+// ctx: { ipcMain, fromUi, adblock, store, getNetwork }
+function registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork }) {
   const enabled = () => store.get('adblock') !== false; // ligado por padrão
+  const allowList = () => (Array.isArray(store.get('adblockAllow')) ? store.get('adblockAllow') : []);
+  const state = () => ({ enabled: enabled(), blocked: adblock.blocked, allow: allowList() });
+  adblock.setAllow(allowList());
 
-  // Liga/desliga a ESCUTA da rede: desligado, o Chromium nem chama o nosso código.
-  function apply() {
-    const requests = session.defaultSession.webRequest;
-    if (!enabled()) return requests.onBeforeRequest(null);
-    requests.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
-      callback({ cancel: adblock.check(details.url, details.resourceType, details.referrer) });
-    });
-  }
-
-  // Pergunta síncrona do preload das páginas (preload_web_pages.js): o reforço do YouTube segue o interruptor.
+  // Pergunta síncrona do preload das páginas (preload_web_pages.js): o reforço de dentro da página
+  // (esconder anúncios, YouTube) segue o interruptor e a lista de sites permitidos.
   ipcMain.on('adblock:enabled', (event) => {
-    event.returnValue = !fromUi(event) && enabled();
+    let host = '';
+    try {
+      host = new URL(event.senderFrame.url).hostname;
+    } catch {}
+    event.returnValue = !fromUi(event) && enabled() && !adblock.allowedHost(host);
   });
-  ipcMain.handle('adblock:get', (event) => (fromUi(event) ? { enabled: enabled(), blocked: adblock.blocked } : null));
+  ipcMain.handle('adblock:get', (event) => (fromUi(event) ? state() : null));
   ipcMain.handle('adblock:set', (event, on) => {
     if (!fromUi(event) || typeof on !== 'boolean') return null;
     store.set('adblock', on);
-    apply();
-    return { enabled: enabled(), blocked: adblock.blocked };
+    getNetwork().refresh();
+    return state();
   });
-  return { apply };
+  // Permitir/voltar a bloquear num site: add = true inclui, false remove.
+  ipcMain.handle('adblock:allow', (event, site, add) => {
+    const host = fromUi(event) && typeof site === 'string' ? normalizeSite(site) : null;
+    if (!host) return null;
+    const rest = allowList().filter((h) => h !== host);
+    const next = add === true ? [...rest, host].slice(-MAX_ALLOW) : rest;
+    store.set('adblockAllow', next);
+    adblock.setAllow(next);
+    return state();
+  });
 }
 
 module.exports = { registerAdblockIpc };

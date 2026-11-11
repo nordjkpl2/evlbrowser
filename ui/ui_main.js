@@ -143,12 +143,49 @@ function render(state) {
 
     pageBlank.hidden = state.activeKind !== 'blank';
     pageSettings.hidden = state.activeKind !== 'settings';
-    if (state.activeKind === 'settings') startPolling();
-    else stopPolling();
+    // As Configurações só carregam o código delas na primeira vez que são abertas.
+    if (state.activeKind === 'settings') {
+      ensureSettingsScripts().then(() => current?.activeKind === 'settings' && startPolling());
+    } else stopPolling();
   }
 
   // Não sobrescreve o que a pessoa está digitando.
   if (document.activeElement !== addressEl) showAddress();
+}
+
+// ---------- código das Configurações: carrega só quando abrir ----------
+// Cada categoria tem o seu arquivo; nada disto é lido enquanto você só navega.
+
+const SETTINGS_SCRIPTS = [
+  'settings_search_engines.js', // primeiro: define textButton, usado pelos outros
+  'settings_cookies.js',
+  'settings_extensions.js',
+  'settings_adblock.js',
+  'settings_passwords.js',
+  'settings_bookmarks.js',
+  'settings_privacy.js',
+];
+let settingsScripts = null;
+
+function ensureSettingsScripts() {
+  if (!settingsScripts) {
+    settingsScripts = SETTINGS_SCRIPTS.reduce(
+      (chain, src) =>
+        chain.then(
+          () =>
+            new Promise((resolve, reject) => {
+              const el = document.createElement('script');
+              el.src = src;
+              el.onload = resolve;
+              el.onerror = () => reject(new Error(`não carregou ${src}`));
+              document.head.append(el);
+            })
+        ),
+      Promise.resolve()
+    );
+    settingsScripts.catch(() => (settingsScripts = null)); // tenta de novo na próxima vez
+  }
+  return settingsScripts;
 }
 
 // ---------- tela de Configurações ----------
@@ -225,6 +262,7 @@ function showPanel(name) {
   if (name === 'adblock') loadAdblock();
   if (name === 'passwords') loadPasswords();
   if (name === 'bookmarks') loadBookmarks();
+  if (name === 'privacy') loadPrivacy();
 }
 
 // Ignora maiúsculas e acentos: "memoria" acha "Memória".
@@ -379,6 +417,36 @@ themeOptions.forEach((opt) =>
     window.evl.setTheme(opt.dataset.theme);
   })
 );
+
+// ---------- aparência: tamanho e fonte do texto da interface ----------
+// --ui-scale multiplica os tamanhos do style.css; --font-ui troca a fonte. Os sites não mudam.
+
+const FONTS = {
+  system: '"Segoe UI", system-ui, sans-serif',
+  arial: 'Arial, Helvetica, sans-serif',
+  verdana: 'Verdana, Geneva, sans-serif',
+  georgia: 'Georgia, "Times New Roman", serif',
+  times: '"Times New Roman", Times, serif',
+  mono: '"Cascadia Mono", Consolas, monospace',
+};
+const fontSizeEl = $('f-size');
+const fontFamilyEl = $('f-family');
+
+function applyFont(f) {
+  const scale = Number(f?.scale) || 1;
+  const family = FONTS[f?.family] ? f.family : 'system';
+  document.documentElement.style.setProperty('--ui-scale', String(scale));
+  document.documentElement.style.setProperty('--font-ui', FONTS[family]);
+  fontSizeEl.value = String(scale);
+  fontFamilyEl.value = family;
+}
+function saveFont() {
+  const f = { scale: Number(fontSizeEl.value), family: fontFamilyEl.value };
+  applyFont(f);
+  window.evl.setFont(f.scale, f.family);
+}
+fontSizeEl.addEventListener('change', saveFont);
+fontFamilyEl.addEventListener('change', saveFont);
 
 // ---------- aparência: cor principal ----------
 // Troca só as variáveis --accent e --glow da interface (as páginas dos sites não mudam).

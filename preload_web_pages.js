@@ -106,17 +106,29 @@ function startYoutubeAdSkipper() {
   }, 400);
 }
 
-if (/(^|\.)youtube\.com$/.test(location.hostname)) {
+// Esconde caixas de anúncio vazias (só seletores seguros, para não quebrar sites).
+const GENERIC_HIDE_CSS = `
+ins.adsbygoogle, amp-ad, amp-embed[type="taboola"], [id^="div-gpt-ad"], [id^="google_ads_iframe"],
+iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"], iframe[src*="adservice.google"],
+.OUTBRAIN, [id^="taboola-"], .taboola-widget, [data-ad-slot], [data-google-query-id]:not(body):not(html)
+{ display: none !important; }
+`;
+
+// uma única consulta por página (só em http/https); YouTube ganha as regras extras
+if (/^https?:$/.test(location.protocol)) {
   let on = false;
   try {
-    on = ipcRenderer.sendSync('adblock:enabled') === true; // bloqueador ligado nas Configurações?
+    on = ipcRenderer.sendSync('adblock:enabled') === true; // ligado nas Configurações e site não permitido?
   } catch {}
   if (on) {
-    try {
-      contextBridge.executeInMainWorld({ func: youtubeMainWorldShield });
-    } catch {}
-    webFrame.insertCSS(YT_HIDE_CSS);
-    startYoutubeAdSkipper();
+    webFrame.insertCSS(GENERIC_HIDE_CSS);
+    if (/(^|\.)youtube\.com$/.test(location.hostname)) {
+      try {
+        contextBridge.executeInMainWorld({ func: youtubeMainWorldShield });
+      } catch {}
+      webFrame.insertCSS(YT_HIDE_CSS);
+      startYoutubeAdSkipper();
+    }
   }
 }
 

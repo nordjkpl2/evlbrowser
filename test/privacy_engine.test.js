@@ -1,0 +1,71 @@
+const test = require('node:test');
+const assert = require('node:assert');
+const { cleanUrl, isThirdParty, siteOf, privacyOptions } = require('../src/privacy_engine');
+const { createNetworkHub } = require('../src/network_hub');
+
+test('cleanUrl tira rastreadores e deixa o resto; sem mudança devolve null', () => {
+  assert.strictEqual(cleanUrl('https://a.com/p?id=1&utm_source=x&fbclid=abc&UTM_medium=y'), 'https://a.com/p?id=1');
+  assert.strictEqual(cleanUrl('https://a.com/p?utm_source=x'), 'https://a.com/p');
+  assert.strictEqual(cleanUrl('https://a.com/p?id=1'), null);
+  assert.strictEqual(cleanUrl('https://a.com/p'), null);
+  assert.strictEqual(cleanUrl('javascript:alert(1)?utm_x=1'), null);
+});
+
+test('siteOf e isThirdParty (com sufixos de dois níveis)', () => {
+  assert.strictEqual(siteOf('a.b.exemplo.com.br'), 'exemplo.com.br');
+  assert.strictEqual(siteOf('www.exemplo.com'), 'exemplo.com');
+  assert.strictEqual(siteOf('localhost'), 'localhost');
+  assert.strictEqual(isThirdParty('https://cdn.exemplo.com/x.js', 'https://www.exemplo.com/'), false);
+  assert.strictEqual(isThirdParty('https://ads.outro.net/x.js', 'https://www.exemplo.com/'), true);
+  assert.strictEqual(isThirdParty('https://ads.outro.net/x.js', ''), false);
+});
+
+test('privacyOptions ignora lixo e mantém os padrões', () => {
+  const o = privacyOptions({ stripParams: false, sendDnt: 'sim', xyz: 1 });
+  assert.strictEqual(o.stripParams, false);
+  assert.strictEqual(o.sendDnt, true);
+  assert.strictEqual(o.clearOnExit, false);
+  assert.strictEqual(privacyOptions(null).blockThirdPartyCookies, true);
+});
+
+function fakeSession() {
+  const handlers = {};
+  const reg = (name) => (filter, fn) => (handlers[name] = fn ?? null, filter === null ? (handlers[name] = null) : 0);
+  return {
+    handlers,
+    defaultSession: { webRequest: { onBeforeRequest: reg('req'), onBeforeSendHeaders: reg('send'), onHeadersReceived: reg('recv') } },
+  };
+}
+const run = (fn, details) => new Promise((resolve) => fn(details, resolve));
+
+test('hub: só registra o que está ligado e aplica as regras', async () => {
+  const session = fakeSession();
+  const adblock = { check: (url) => url.includes('doubleclick') };
+  let ads = true;
+  let p = { stripParams: true, blockThirdPartyCookies: true, sendDnt: true };
+  const hub = createNetworkHub({ session, adblock, getAdblockOn: () => ads, getPrivacy: () => p });
+  hub.refresh();
+
+  // página principal: tira rastreadores (redireciona); anúncio de terceiro: cancela
+  assert.deepStrictEqual(await run(session.handlers.req, { resourceType: 'mainFrame', method: 'GET', url: 'https://a.com/?utm_x=1' }), { redirectURL: 'https://a.com/' });
+  assert.deepStrictEqual(await run(session.handlers.req, { resourceType: 'mainFrame', method: 'POST', url: 'https://a.com/?utm_x=1' }), {});
+  assert.deepStrictEqual(await run(session.handlers.req, { resourceType: 'script', url: 'https://x.doubleclick.net/a.js', referrer: 'https://a.com/' }), { cancel: true });
+
+  // cabeçalhos: DNT/GPC sempre; Cookie some só em pedido de terceiro
+  const sent = await run(session.handlers.send, { resourceType: 'script', url: 'https://t.net/a.js', referrer: 'https://a.com/', requestHeaders: { Cookie: 'x=1', Accept: '*/*' } });
+  assert.deepStrictEqual(sent.requestHeaders, { Accept: '*/*', DNT: '1', 'Sec-GPC': '1' });
+  const own = await run(session.handlers.send, { resourceType: 'script', url: 'https://cdn.a.com/a.js', referrer: 'https://a.com/', requestHeaders: { cookie: 'x=1' } });
+  assert.strictEqual(own.requestHeaders.cookie, 'x=1');
+
+  // Set-Cookie de terceiro some
+  const recv = await run(session.handlers.recv, { resourceType: 'image', url: 'https://t.net/p.gif', referrer: 'https://a.com/', responseHeaders: { 'Set-Cookie': ['a=1'], 'content-type': ['image/gif'] } });
+  assert.deepStrictEqual(Object.keys(recv.responseHeaders), ['content-type']);
+
+  // tudo desligado: nenhum ouvinte (custo zero)
+  ads = false;
+  p = { stripParams: false, blockThirdPartyCookies: false, sendDnt: false };
+  hub.refresh();
+  assert.strictEqual(session.handlers.req, null);
+  assert.strictEqual(session.handlers.send, null);
+  assert.strictEqual(session.handlers.recv, null);
+});

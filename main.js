@@ -28,6 +28,9 @@ const { createBookmarks } = require('./src/bookmarks_store');
 const { registerBookmarksIpc } = require('./src/ipc/bookmarks_ipc');
 const { createVault } = require('./src/passwords_vault');
 const { registerPasswordIpc } = require('./src/ipc/password_ipc');
+const { createNetworkHub } = require('./src/network_hub');
+const { privacyOptions } = require('./src/privacy_engine');
+const { registerPrivacyIpc } = require('./src/ipc/privacy_ipc');
 const { createAdblock } = require('./src/adblock_engine');
 const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
 const { TabManager } = require('./src/tabs_manager');
@@ -52,6 +55,7 @@ let history = null; // páginas visitadas (history.json)
 let sessionTimer = null;
 let bookmarks = null; // favoritos (src/bookmarks_store.js)
 let toggleBookmark = () => {}; // Ctrl+D e a estrela
+let privacyApi = null; // opções de privacidade (src/ipc/privacy_ipc.js)
 let vault = null; // cofre de senhas (src/passwords_vault.js)
 let extensions = null; // extensões do Chromium (src/extension_manager.js)
 let lastPreconnect = ''; // último site que já abrimos a conexão
@@ -272,6 +276,7 @@ function createWindow() {
   });
 
   tabs = new TabManager(win, ui, onTabsChanged, onShortcut, history);
+  tabs.setWebrtcPolicy(privacyApi.options().webrtcProtect ? 'default_public_interface_only' : 'default');
   policy = startMemoryPolicy(tabs, (mb) => send('memory', mb));
 
   win.on('resize', () => tabs.layout());
@@ -312,6 +317,7 @@ ipcMain.on('ui:ready', (event) => {
   if (!fromUi(event)) return;
   send('lang', store.get('lang') ?? 'pt');
   send('accent', store.get('accent') ?? null);
+  send('font', { scale: store.get('fontScale') ?? 1, family: store.get('fontFamily') ?? 'system' });
   send('state', tabs.snapshot());
   sampleMemory(true);
 });
@@ -421,6 +427,14 @@ ipcMain.on('theme:set', (event, theme) => {
   store.set('theme', theme);
 });
 // Cor principal do navegador (#rrggbb), ou null para o padrão do tema.
+// Tamanho e fonte do texto da interface do Evl (não muda os sites).
+const FONT_SCALES = new Set([0.9, 1, 1.15, 1.3]);
+const FONT_FAMILIES = new Set(['system', 'arial', 'verdana', 'georgia', 'times', 'mono']);
+ipcMain.on('font:set', (event, scale, family) => {
+  if (!fromUi(event) || !FONT_SCALES.has(scale) || !FONT_FAMILIES.has(family)) return;
+  store.set('fontScale', scale);
+  store.set('fontFamily', family);
+});
 ipcMain.on('accent:set', (event, color) => {
   if (!fromUi(event)) return;
   if (color !== null && !(typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color))) return;
@@ -470,10 +484,30 @@ app.whenReady().then(() => {
     dir: path.join(app.getPath('userData'), 'extensions'),
     store: createStore(path.join(app.getPath('userData'), 'extensions.json'), {}),
   });
-  registerAdblockIpc({ ipcMain, fromUi, adblock: createAdblock(), store, session }).apply();
+  // Rede: bloqueador de anúncios + privacidade, num só lugar (src/network_hub.js).
+  const adblock = createAdblock();
+  const network = createNetworkHub({
+    session,
+    adblock,
+    getAdblockOn: () => store.get('adblock') !== false,
+    getPrivacy: () => privacyOptions(store.get('privacy')),
+  });
+  registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network });
+  privacyApi = registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork: () => network, getTabs: () => tabs });
+  privacyApi.apply();
   extensions.loadAll(); // carrega em segundo plano; a janela não espera
 
   createWindow();
+});
+
+// "Limpar dados ao fechar": apaga cookies e cache antes de sair (uma vez só).
+let clearedOnExit = false;
+app.on('before-quit', (event) => {
+  if (clearedOnExit || !privacyApi?.options().clearOnExit) return;
+  event.preventDefault();
+  clearedOnExit = true;
+  const ses = session.defaultSession;
+  Promise.all([ses.clearCache(), ses.clearStorageData()]).finally(() => app.quit());
 });
 
 app.on('window-all-closed', () => app.quit());
