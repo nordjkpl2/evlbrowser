@@ -17,6 +17,15 @@ contextBridge.exposeInMainWorld('evl', {
   historyList: () => ipcRenderer.invoke('history:list'),
   historyOpen: (url) => ipcRenderer.send('history:open', String(url)),
   historyClear: () => ipcRenderer.send('history:clear'),
+  enginesList: () => ipcRenderer.invoke('engines:list'),
+  enginesSelect: (id) => ipcRenderer.invoke('engines:select', String(id)),
+  enginesRemove: (id) => ipcRenderer.invoke('engines:remove', String(id)),
+  enginesSave: (e) =>
+    ipcRenderer.invoke('engines:save', {
+      id: typeof e?.id === 'string' ? e.id : null,
+      name: String(e?.name ?? ''),
+      url: String(e?.url ?? ''),
+    }),
   cookiesList: () => ipcRenderer.invoke('cookies:list'),
   cookiesRemove: (domain) => ipcRenderer.invoke('cookies:remove', domain === null ? null : String(domain)),
   cookiesImport: (from) => ipcRenderer.invoke('cookies:import', String(from)),

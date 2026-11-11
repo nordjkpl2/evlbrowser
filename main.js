@@ -18,6 +18,8 @@ const cfg = require('./src/config');
 const { UI_HEIGHT } = cfg;
 const { createStore } = require('./src/settings');
 const { createHistory } = require('./src/history');
+const { setSearchUrl } = require('./src/url');
+const { validateEngine, normalizeList, uniqueId } = require('./src/engines');
 const { importCookies, importCookiesFromJson } = require('./src/cookies-import');
 const { TabManager } = require('./src/tabs');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory');
@@ -40,6 +42,8 @@ let sessionStore = null; // abas abertas, para reabrir ao iniciar (session.json)
 let history = null; // páginas visitadas (history.json)
 let sessionTimer = null;
 let importing = false; // importação de cookies em andamento
+let engines = []; // motores de busca [{ id, name, url }]
+let engineId = ''; // o padrão
 let lastSession = '';
 
 // Esquema de cores (prefers-color-scheme) da interface e dos sites,
@@ -262,7 +266,6 @@ function createWindow() {
 function settingsReport() {
   return {
     ...processReport(tabs, ui.webContents),
-    search: { name: cfg.SEARCH_NAME, url: cfg.SEARCH_URL },
     chromium: process.versions.chrome,
     theme: nativeTheme.themeSource,
     accent: store.get('accent') ?? null,
@@ -307,6 +310,55 @@ ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
 ipcMain.handle('history:suggest', (event, q) =>
   fromUi(event) && typeof q === 'string' ? history.suggest(q.slice(0, 200)) : []
 );
+// Motores de busca: lista salva em settings.json; o escolhido vale na hora para a barra de endereço.
+function engineState() {
+  return { engines, selected: engineId };
+}
+
+function saveEngines() {
+  store.set('engines', engines);
+  store.set('engine', engineId);
+  setSearchUrl(engines.find((e) => e.id === engineId)?.url);
+}
+
+function loadEngines() {
+  engines = normalizeList(store.get('engines'));
+  const saved = store.get('engine');
+  engineId = engines.some((e) => e.id === saved) ? saved : engines[0].id;
+  setSearchUrl(engines.find((e) => e.id === engineId).url);
+}
+
+ipcMain.handle('engines:list', (event) => (fromUi(event) ? engineState() : null));
+ipcMain.handle('engines:select', (event, id) => {
+  if (!fromUi(event)) return null;
+  if (engines.some((e) => e.id === id)) {
+    engineId = id;
+    saveEngines();
+  }
+  return engineState();
+});
+ipcMain.handle('engines:save', (event, input) => {
+  if (!fromUi(event)) return null;
+  const v = validateEngine(input);
+  if (!v.ok) return { ok: false, error: v.error, ...engineState() };
+  if (typeof input.id === 'string' && engines.some((e) => e.id === input.id)) {
+    engines = engines.map((e) => (e.id === input.id ? { id: e.id, name: v.name, url: v.url } : e));
+  } else {
+    engines = [...engines, { id: uniqueId(v.name, engines), name: v.name, url: v.url }];
+  }
+  saveEngines();
+  return { ok: true, ...engineState() };
+});
+ipcMain.handle('engines:remove', (event, id) => {
+  if (!fromUi(event)) return null;
+  if (engines.length > 1 && engines.some((e) => e.id === id)) {
+    engines = engines.filter((e) => e.id !== id);
+    if (engineId === id) engineId = engines[0].id;
+    saveEngines();
+  }
+  return engineState();
+});
+
 // Cookies: a lista nunca leva o valor (só domínio e nome); a importação roda aqui no main.
 ipcMain.handle('cookies:list', async (event) => {
   if (!fromUi(event)) return null;
@@ -394,6 +446,7 @@ app.whenReady().then(() => {
   store = createStore(path.join(app.getPath('userData'), 'settings.json'));
   sessionStore = createStore(path.join(app.getPath('userData'), 'session.json'), {});
   history = createHistory(path.join(app.getPath('userData'), 'history.json'));
+  loadEngines();
   const savedTheme = store.get('theme');
   nativeTheme.themeSource = THEMES.has(savedTheme) ? savedTheme : 'dark';
 

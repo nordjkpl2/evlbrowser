@@ -29,8 +29,8 @@ module.exports = {
   BUDGET_CHECK_MS: 30 * 1000,
   MIN_WAIT_MS: 5 * 1000,
 
-  // Buscador usado quando o texto digitado não parece um endereço.
-  // (Aparece em Configurações; para trocar, edite os dois campos.)
+  // Buscador de fábrica (usado até você escolher outro). Daí em diante o motor é
+  // escolhido, adicionado e editado em Configurações > Pesquisa.
   SEARCH_NAME: 'DuckDuckGo',
   SEARCH_URL: 'https://duckduckgo.com/?q=',
 

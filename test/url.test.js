@@ -41,3 +41,15 @@ test('qualquer outro texto vira busca', () => {
     'https://duckduckgo.com/?q=' + encodeURIComponent('meu site.com')
   );
 });
+
+test('setSearchUrl: troca o motor (%s ou formato antigo) e volta ao padrão', () => {
+  const { toUrl, setSearchUrl } = require('../src/url');
+  setSearchUrl('https://www.google.com/search?q=%s');
+  assert.strictEqual(toUrl('gatos fofos'), 'https://www.google.com/search?q=gatos%20fofos');
+  setSearchUrl('https://exemplo.com/%s/buscar?x=%s');
+  assert.strictEqual(toUrl('a b'), 'https://exemplo.com/a%20b/buscar?x=a%20b');
+  setSearchUrl('https://velho.com/?q='); // sem %s: o texto vai no fim
+  assert.strictEqual(toUrl('oi'), 'https://velho.com/?q=oi');
+  setSearchUrl(null);
+  assert.strictEqual(toUrl('oi'), 'https://duckduckgo.com/?q=oi');
+});

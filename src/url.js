@@ -13,8 +13,17 @@ const LOCAL = /^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#]\S*)?$/i;
 // algo.tld (com porta e caminho opcionais), sem espaços.
 const DOMAIN = /^[^\s/:?#]+\.[a-z]{2,}(:\d+)?([/?#]\S*)?$/i;
 
+// Motor de busca em uso. Começa no de fábrica (config.js); main.js troca conforme as Configurações.
+// Aceita %s (onde vai o texto) ou, no formato antigo, um endereço que termina em "q=".
+let searchUrl = SEARCH_URL;
+
+function setSearchUrl(url) {
+  searchUrl = typeof url === 'string' && url ? url : SEARCH_URL;
+}
+
 function search(text) {
-  return SEARCH_URL + encodeURIComponent(text);
+  const query = encodeURIComponent(text);
+  return searchUrl.includes('%s') ? searchUrl.split('%s').join(query) : searchUrl + query;
 }
 
 function toUrl(input) {
@@ -44,4 +53,4 @@ function toUrl(input) {
   return search(text);
 }
 
-module.exports = { toUrl };
+module.exports = { toUrl, setSearchUrl };

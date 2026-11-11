@@ -110,15 +110,26 @@
         <p id="no-results" class="hint" hidden>Nenhuma configuração encontrada.</p>
 
         <section class="card" data-panel="search">
-          <h3>Motor de busca</h3>
-          <p class="hint">Usado quando o que você digita na barra de endereço não parece um endereço.</p>
-          <dl>
-            <dt>Motor de busca</dt>
-            <dd id="s-engine">—</dd>
-            <dt>Endereço de busca</dt>
-            <dd id="s-engine-url" class="mono">—</dd>
-          </dl>
-          <p class="hint">Para trocar, edite SEARCH_NAME e SEARCH_URL em src/config.js.</p>
+          <div class="card-head">
+            <h3>Motores de busca</h3>
+            <button id="e-add" class="text-btn" type="button">Adicionar</button>
+          </div>
+          <p class="hint">Usado quando o que você digita na barra de endereço não parece um endereço. Marque o padrão no círculo.</p>
+          <ul id="e-list" role="radiogroup" aria-label="Motor de busca padrão"></ul>
+          <form id="e-form" hidden>
+            <label>Nome
+              <input id="e-name" type="text" maxlength="40" autocomplete="off">
+            </label>
+            <label>Endereço de busca
+              <input id="e-url" type="text" spellcheck="false" autocomplete="off" placeholder="https://exemplo.com/search?q=%s">
+            </label>
+            <p class="hint">Escreva <code>%s</code> onde vai o texto pesquisado.</p>
+            <p id="e-error" class="hint" role="alert" hidden></p>
+            <div class="form-actions">
+              <button type="submit" class="white-btn">Salvar</button>
+              <button id="e-cancel" type="button" class="text-btn">Cancelar</button>
+            </div>
+          </form>
         </section>
 
         <section class="card" data-panel="search">
