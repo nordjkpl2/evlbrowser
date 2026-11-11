@@ -1,6 +1,6 @@
 // Mensagens da categoria "Privacidade" das Configurações e a aplicação das opções.
 
-const { PRIVACY_DEFAULTS, privacyOptions } = require('../privacy_engine');
+const { PRIVACY_DEFAULTS, privacyOptions } = require('../network/privacy_engine');
 
 const DOH_SERVERS = ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'];
 

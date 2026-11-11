@@ -6,6 +6,11 @@ const { cleanUrl, isThirdParty } = require('./privacy_engine');
 
 const isExtensionRequest = (d) => typeof d.initiator === 'string' && d.initiator.startsWith('chrome-extension://');
 
+// Detalhes do computador que o Chromium só envia quando o site pede (Accept-CH): cortamos.
+const HIGH_ENTROPY_HINTS = ['sec-ch-ua-full-version-list', 'sec-ch-ua-full-version', 'sec-ch-ua-platform-version', 'sec-ch-ua-arch', 'sec-ch-ua-bitness', 'sec-ch-ua-model', 'sec-ch-ua-wow64'];
+// Desliga APIs de anúncio/rastreio do próprio Chromium em todas as páginas e quadros.
+const POLICY = 'browsing-topics=(), interest-cohort=(), join-ad-interest-group=(), run-ad-auction=(), attribution-reporting=()';
+
 const FILTER = { urls: ['http://*/*', 'https://*/*'] };
 
 // Apaga um cabeçalho sem se importar com maiúsculas ("Set-Cookie", "set-cookie").
@@ -38,11 +43,13 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
             const clean = p.stripParams && d.method === 'GET' ? cleanUrl(d.url) : null;
             return callback(clean ? { redirectURL: clean } : {});
           }
+          // relatórios de CSP vão para terceiros e só servem a quem rastreia: cortamos com o bloqueador ligado
+          if (adsOn && d.resourceType === 'cspReport') return callback({ cancel: true });
           callback(adsOn && adblock.check(d.url, d.resourceType, d.referrer) ? { cancel: true } : {});
         });
       } else requests.onBeforeRequest(null);
 
-      if (p.sendDnt || p.blockThirdPartyCookies || p.trimReferrer) {
+      if (p.sendDnt || p.blockThirdPartyCookies || p.trimReferrer || p.limitFingerprint) {
         requests.onBeforeSendHeaders(FILTER, (d, callback) => {
           const headers = d.requestHeaders;
           if (p.sendDnt) {
@@ -52,6 +59,7 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
           if (p.blockThirdPartyCookies && d.resourceType !== 'mainFrame' && isThirdParty(d.url, d.referrer)) {
             dropHeader(headers, 'cookie');
           }
+          if (p.limitFingerprint) for (const h of HIGH_ENTROPY_HINTS) dropHeader(headers, h);
           if (p.trimReferrer && d.referrer && isThirdParty(d.url, d.referrer)) {
             const origin = referrerOrigin(d.referrer);
             if (origin) {
@@ -63,12 +71,21 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
         });
       } else requests.onBeforeSendHeaders(null);
 
-      if (p.blockThirdPartyCookies) {
+      if (p.blockThirdPartyCookies || p.limitFingerprint) {
         requests.onHeadersReceived(FILTER, (d, callback) => {
-          if (d.resourceType === 'mainFrame' || !isThirdParty(d.url, d.referrer)) return callback({});
-          const headers = d.responseHeaders ?? {};
-          dropHeader(headers, 'set-cookie');
-          callback({ responseHeaders: headers });
+          let headers = null;
+          // páginas e quadros: liga a política que desliga as APIs de anúncios do Chromium
+          if (p.limitFingerprint && (d.resourceType === 'mainFrame' || d.resourceType === 'subFrame')) {
+            headers = d.responseHeaders ?? {};
+            const key = Object.keys(headers).find((k) => k.toLowerCase() === 'permissions-policy');
+            if (key) headers[key] = [...[].concat(headers[key]), POLICY];
+            else headers['Permissions-Policy'] = [POLICY];
+          }
+          if (p.blockThirdPartyCookies && d.resourceType !== 'mainFrame' && isThirdParty(d.url, d.referrer)) {
+            headers ??= d.responseHeaders ?? {};
+            dropHeader(headers, 'set-cookie');
+          }
+          callback(headers ? { responseHeaders: headers } : {});
         });
       } else requests.onHeadersReceived(null);
     },

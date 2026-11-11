@@ -1,7 +1,7 @@
 // Mensagens da aba "Extensões" das Configurações.
 
 const fs = require('fs');
-const { parseStoreId } = require('../extension_manager');
+const { parseStoreId } = require('../extensions/extension_manager');
 
 const MAX_CRX = 100 * 1024 * 1024;
 

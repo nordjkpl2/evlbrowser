@@ -10,6 +10,7 @@ const PRIVACY_ROWS = [
   ['webrtcProtect', 'Proteger o IP no WebRTC', 'Impede que sites descubram o IP da sua rede local por chamadas de vídeo.'],
   ['secureDns', 'DNS seguro (HTTPS)', 'Esconde os sites que você visita do provedor de internet. Se falhar, volta ao DNS do sistema.'],
   ['trimReferrer', 'Esconder de onde você veio', 'Sites de fora veem só o domínio da página anterior, nunca o endereço completo (não vazam o que você lia em outra aba).'],
+  ['limitFingerprint', 'Limitar a impressão digital', 'Esconde detalhes do seu computador que os sites pedem (versão exata, modelo) e bloqueia APIs de anúncios do Chromium.'],
   ['blockExtensionNet', 'Extensões não enviam dados para fora', 'Corta a internet das páginas de fundo das extensões, para elas não enviarem o que leem das suas abas. Pode quebrar extensões que precisam de internet.'],
   ['clearOnExit', 'Apagar cookies e cache ao fechar', 'Desliga você dos sites a cada vez que fecha o navegador.'],
 ];

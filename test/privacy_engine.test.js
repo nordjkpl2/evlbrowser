@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { cleanUrl, isThirdParty, siteOf, privacyOptions } = require('../src/privacy_engine');
-const { createNetworkHub } = require('../src/network_hub');
+const { cleanUrl, isThirdParty, siteOf, privacyOptions } = require('../src/network/privacy_engine');
+const { createNetworkHub } = require('../src/network/network_hub');
 
 test('cleanUrl tira rastreadores e deixa o resto; sem mudança devolve null', () => {
   assert.strictEqual(cleanUrl('https://a.com/p?id=1&utm_source=x&fbclid=abc&UTM_medium=y'), 'https://a.com/p?id=1');
@@ -80,4 +80,17 @@ test('hub: corta rede de extensões e reduz o Referer de terceiros', async () =>
   assert.deepStrictEqual(sent.requestHeaders, { Referer: 'https://a.com/' });
   const own = await run(session.handlers.send, { resourceType: 'image', url: 'https://cdn.a.com/p.gif', referrer: 'https://a.com/x?q=1', requestHeaders: { Referer: 'https://a.com/x?q=1' } });
   assert.strictEqual(own.requestHeaders.Referer, 'https://a.com/x?q=1');
+});
+
+test('hub: corta client hints detalhados e liga a política de anúncios do Chromium', async () => {
+  const session = fakeSession();
+  const p = { stripParams: false, blockThirdPartyCookies: false, sendDnt: false, trimReferrer: false, blockExtensionNet: false, limitFingerprint: true };
+  createNetworkHub({ session, adblock: { check: () => false }, getAdblockOn: () => true, getPrivacy: () => p }).refresh();
+  const sent = await run(session.handlers.send, { resourceType: 'mainFrame', url: 'https://a.com/', requestHeaders: { 'Sec-CH-UA-Model': '"x"', 'Sec-CH-UA': '"Chromium"' } });
+  assert.deepStrictEqual(sent.requestHeaders, { 'Sec-CH-UA': '"Chromium"' });
+  const r = await run(session.handlers.recv, { resourceType: 'mainFrame', url: 'https://a.com/', responseHeaders: { 'permissions-policy': ['camera=()'] } });
+  assert.strictEqual(r.responseHeaders['permissions-policy'].length, 2);
+  const img = await run(session.handlers.recv, { resourceType: 'image', url: 'https://a.com/x.png', responseHeaders: {} });
+  assert.deepStrictEqual(img, {});
+  assert.deepStrictEqual(await run(session.handlers.req, { resourceType: 'cspReport', url: 'https://r.net/csp' }), { cancel: true });
 });

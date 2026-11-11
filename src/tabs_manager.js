@@ -17,7 +17,10 @@ const { WebContentsView } = require('electron');
 
 const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
-const { UI_HEIGHT, MENU_HEIGHT, SUGGEST_HEIGHT } = require('./app_config');
+const { MENU_HEIGHT, SUGGEST_HEIGHT } = require('./app_config');
+
+const DEFAULT_TAB_LAYOUT = { mode: 'top', tabH: 32, tabW: 200, sideW: 220 };
+const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Math.round(Number(v)))) : d);
 
 const SETTINGS_URL = 'evl://settings';
 
@@ -41,7 +44,46 @@ class TabManager {
     this.suggestOpen = false; // sugestões do histórico na barra de endereço
     this.history = history;
     this.webrtcPolicy = 'default_public_interface_only'; // o WebRTC não revela o IP da rede local
+    this.tabLayout = { ...DEFAULT_TAB_LAYOUT }; // abas em cima ou na lateral, altura e largura
+    this.popupBlocked = null; // (url) => true corta janelas de anúncio
     this.closed = []; // abas web fechadas (para Ctrl+Shift+T), a mais recente no fim
+  }
+
+  // Abas em cima ("top") ou na lateral esquerda ("side"); tamanhos em px.
+  setTabLayout(l = {}) {
+    const d = DEFAULT_TAB_LAYOUT;
+    this.tabLayout = {
+      mode: l.mode === 'side' ? 'side' : 'top',
+      tabH: clampInt(l.tabH, 24, 48, d.tabH),
+      tabW: clampInt(l.tabW, 100, 300, d.tabW),
+      sideW: clampInt(l.sideW, 180, 320, d.sideW),
+    };
+    this.layout();
+    this._changed();
+    return this.tabLayout;
+  }
+
+  setPopupFilter(fn) {
+    this.popupBlocked = typeof fn === 'function' ? fn : null;
+  }
+
+  // Altura do topo (abas + barra de ferramentas) com as abas em cima.
+  topHeight() {
+    return this.tabLayout.tabH + 6 + 42;
+  }
+
+  // Até onde vai a barra de endereço (para o menu de contexto), em px.
+  toolbarBottom() {
+    return this.tabLayout.mode === 'side' ? 90 : this.topHeight();
+  }
+
+  // Silencia / reativa o som de uma aba.
+  toggleMute(id) {
+    const tab = this.tabs.get(id);
+    if (!tab?.view) return;
+    tab.muted = !tab.muted;
+    tab.view.webContents.setAudioMuted?.(tab.muted);
+    this._changed();
   }
 
   // Política de IP do WebRTC para as páginas abertas e as próximas.
@@ -284,15 +326,19 @@ class TabManager {
     const web = tab?.kind === 'web';
 
     const extra = this.menuOpen ? MENU_HEIGHT : this.suggestOpen ? SUGGEST_HEIGHT : 0;
-    const uiHeight = web ? UI_HEIGHT + extra : height;
-    this.ui.setBounds({ x: 0, y: 0, width, height: Math.min(uiHeight, height) });
+    if (this.tabLayout.mode === 'side') {
+      // painel lateral de abas (barra + abas) à esquerda; a página ocupa o resto.
+      // Com menu/sugestões abertos o painel alarga por cima da página.
+      const side = Math.min(this.tabLayout.sideW, width);
+      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : 0;
+      this.ui.setBounds({ x: 0, y: 0, width: web ? Math.min(Math.max(side, wide), width) : width, height });
+      if (web && tab.view) tab.view.setBounds({ x: side, y: 0, width: Math.max(0, width - side), height });
+      return;
+    }
+    const top = this.topHeight();
+    this.ui.setBounds({ x: 0, y: 0, width, height: Math.min(web ? top + extra : height, height) });
     if (web && tab.view) {
-      tab.view.setBounds({
-        x: 0,
-        y: UI_HEIGHT,
-        width,
-        height: Math.max(0, height - UI_HEIGHT),
-      });
+      tab.view.setBounds({ x: 0, y: top, width, height: Math.max(0, height - top) });
     }
   }
 
@@ -314,6 +360,8 @@ class TabManager {
         url: t.url,
         favicon: t.favicon,
         loading: t.loading,
+        audible: !!t.audible,
+        muted: !!t.muted,
         state:
           t.id === this.activeId
             ? 'active'
@@ -392,12 +440,19 @@ class TabManager {
     tab.lastAudible = 0;
     wc.on('media-started-playing', () => (tab.mediaPlaying = true));
     wc.on('media-paused', () => (tab.mediaPlaying = false));
+    tab.audible = false;
+    tab.muted = false;
     wc.on('audio-state-changed', (e) => {
       if (e.audible) tab.lastAudible = Date.now();
+      if (tab.audible !== e.audible) {
+        tab.audible = e.audible; // o ícone de som na aba acompanha
+        this._changed();
+      }
     });
 
     // target=_blank / window.open -> nova aba (e nunca uma janela solta).
     wc.setWindowOpenHandler(({ url }) => {
+      if (this.popupBlocked?.(url)) return { action: 'deny' }; // janela de anúncio
       this.create(url);
       return { action: 'deny' };
     });

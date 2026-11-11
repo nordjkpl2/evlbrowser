@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { createAdblock } = require('../src/adblock_engine');
+const { createAdblock } = require('../src/network/adblock_engine');
 
 test('bloqueia domínio da lista e subdomínios; deixa o resto passar', () => {
   const ab = createAdblock();

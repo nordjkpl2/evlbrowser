@@ -11,6 +11,7 @@ window.evl.onFocusAddress(() => addressEl.focus());
 window.evl.onAccent(applyAccent);
 window.evl.onLang(setLang);
 window.evl.onFont(applyFont);
+window.evl.onTabLayout(applyTabLayout);
 window.evl.onPanel((name) => ensureSettingsScripts().then(() => showPanel(name))); // Ctrl+H / menu: abre direto no Histórico
 
 window.evl.ready(); // pede o primeiro estado

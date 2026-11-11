@@ -1,7 +1,7 @@
 // Mensagens da categoria Cookies das Configurações.
 
 const fs = require('fs');
-const { importCookies, importCookiesFromJson } = require('../cookies_import');
+const { importCookies, importCookiesFromJson } = require('../data/cookies_import');
 
 // ctx: { ipcMain, fromUi, app, session, dialog, getWindow }
 function registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow }) {

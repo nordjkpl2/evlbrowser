@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { createVault, normalizeSite, parsePasswordCsv } = require('../src/passwords_vault');
+const { createVault, normalizeSite, parsePasswordCsv } = require('../src/data/passwords_vault');
 
 const cipher = {
   available: () => true,

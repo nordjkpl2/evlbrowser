@@ -28,7 +28,7 @@
   </header>
 
   <!-- Submenu do contador de memória. Fica por cima da página (a interface cresce
-       enquanto ele está aberto; ver setMenu em src/tabs_manager.js). -->
+       enquanto ele está aberto; ver setMenu em src/tabs/tabs_manager.js). -->
   <div id="menu" role="menu" aria-label="Menu do Evl" hidden>
     <div class="menu-row">
       <span id="zoom-label" class="menu-label">Zoom</span>
@@ -97,6 +97,13 @@
           <path d="M4 13.5v-2.5M6.7 13.5v-2.5M9.3 13.5v-2.5M12 13.5v-2.5"/>
         </svg>
         <span>Memória</span>
+      </button>
+      <button class="nav-item" type="button" data-panel="speed">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 11a6 6 0 1 1 12 0"/><path d="M8 11l3-4"/>
+        </svg>
+        <span>Velocidade</span>
       </button>
       <button class="nav-item" type="button" data-panel="privacy">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -269,6 +276,28 @@
           </div>
         </section>
 
+        <section class="card" data-panel="appearance">
+          <h3>Abas</h3>
+          <p class="hint">Onde ficam as abas e o tamanho delas.</p>
+          <div class="font-row">
+            <label>Posição das abas
+              <select id="t-mode">
+                <option value="top">Em cima</option>
+                <option value="side">Na lateral esquerda</option>
+              </select>
+            </label>
+            <label>Altura da aba (px)
+              <input id="t-h" type="number" min="24" max="48" step="2" value="32" inputmode="numeric">
+            </label>
+            <label id="t-w-label">Largura máxima da aba (px)
+              <input id="t-w" type="number" min="100" max="300" step="10" value="200" inputmode="numeric">
+            </label>
+            <label id="t-side-label" hidden>Largura do painel lateral (px)
+              <input id="t-side-w" type="number" min="180" max="320" step="10" value="220" inputmode="numeric">
+            </label>
+          </div>
+        </section>
+
         <section class="card color-card" data-panel="appearance">
           <input id="accent" type="color" value="#ffb429"
                  aria-label="Cor principal do navegador. Clique para escolher; botão direito volta ao padrão"
@@ -361,6 +390,16 @@
             <li>Sem telemetria, sincronização de conta nem relatórios de falha do Chromium.</li>
             <li>Sites não recebem o seu histórico, favoritos nem senhas (só a senha do próprio site, ao clicar).</li>
           </ul>
+        </section>
+
+        <section class="card" data-panel="speed">
+          <h3>Velocidade e memória</h3>
+          <p class="hint">Ajustes para o Evl abrir páginas mais rápido e guardar na memória só o que você está usando.</p>
+          <ul id="sp-list"></ul>
+          <div id="sp-restart" class="v-hint" hidden>
+            <span>Reinicie o Evl para aplicar as mudanças marcadas com ↻.</span>
+            <button id="sp-relaunch" class="text-btn" type="button">Reiniciar agora</button>
+          </div>
         </section>
 
         <section class="card" data-panel="adblock">

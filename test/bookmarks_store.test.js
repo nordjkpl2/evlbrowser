@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { createBookmarks } = require('../src/bookmarks_store');
+const { createBookmarks } = require('../src/data/bookmarks_store');
 
 const tmp = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'evl-b-')), 'bookmarks.json');
 

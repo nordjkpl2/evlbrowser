@@ -1,6 +1,6 @@
 // Mensagens da categoria "Anúncios" das Configurações (interruptor, contador, sites permitidos).
 
-const { normalizeSite } = require('../passwords_vault');
+const { normalizeSite } = require('../data/passwords_vault');
 
 const MAX_ALLOW = 200;
 

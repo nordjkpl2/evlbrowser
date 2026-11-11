@@ -41,6 +41,14 @@ coinhive.com coin-hive.com jsecoin.com cryptoloot.pro minero.cc webmine.pro auth
 adnium.com adriver.ru yandexadexchange.net an.yandex.ru mc.yandex.ru adfox.ru marketgid.com
 ads-api.twitter.com static.ads-twitter.com cdn.mxpnl.com api.mixpanel.com sentry-cdn.com
 rubiconproject.net tapad.com nr-data.net imrworldwide.com comscore.com sb.scorecardresearch.com
+addthis.com sharethis.com tynt.com permutive.com permutive.app id5-sync.com cxense.com
+logrocket.com logrocket.io smartlook.com smartlook.cloud clicktale.net contentsquare.net quantummetric.com
+tiqcdn.com tealiumiq.com ensighten.com adobedtm.com 2o7.net hs-analytics.net hsadspixel.net
+marketo.net pardot.com bizible.com 6sc.co media6degrees.com adgear.com 3lift.com liadm.com onaudience.com
+ipredictive.com semasio.net ml314.com m6d.com browser-intake-datadoghq.com sentry.io
+stackadapt.com ttd.com adsrvr.org smartclip.net nrich.ai trackcmp.net sitelabweb.com tracking.klaviyo.com
+conversant.com conversantmedia.com valueclick.com tradedoubler.com awin1.com zanox.com
+impactradius-event.com impact.com partnerize.com cj.com dpbolvw.net anrdoezrs.net jdoqocy.net kqzyfj.com tkqlhce.com
 `
   .split(/\s+/)
   .filter(Boolean);
@@ -72,6 +80,8 @@ const BLOCK_LABELS = new Set([
 const BLOCK_THIRD_PARTY_PATHS = [
   '/pagead/', '/adserver', '/adframe', '/adsbygoogle', 'google_ad', '/doubleclick/', '/prebid', 'ad-banner',
   '/advert/', '/adview', '/ads/js/', '/ads.js', '/show_ads',
+  // medição e etiquetas de rastreio de terceiros
+  '/gtag/js', '/gtm.js', '/analytics.js', '/fbevents.js', '/tr?id=', '/collect?v=', '/pixel.gif', '/track.gif',
 ];
 
 module.exports = { BLOCK_DOMAINS, BLOCK_PATHS, BLOCK_LABELS, BLOCK_THIRD_PARTY_PATHS };

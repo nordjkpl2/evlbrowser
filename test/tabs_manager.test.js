@@ -11,6 +11,7 @@ class FakeWC extends EventEmitter {
   focus() { this.focused = true; } reload() {} openDevTools() {} send() {}
   setWindowOpenHandler(fn) { this.openHandler = fn; }
   isCurrentlyAudible() { return this.audible; }
+  setAudioMuted(m) { this.mutedNow = m; }
   getZoomLevel() { return this.zoom ?? 0; }
   setZoomLevel(l) { this.zoom = l; }
   getOSProcessId() { return this.pid; }
@@ -32,7 +33,7 @@ const attached = new Set();
 const win = { contentView: { addChildView: (v) => attached.add(v), removeChildView: (v) => attached.delete(v) }, getContentBounds: () => ({ width: 1000, height: 700 }) };
 const ui = new FakeView(); ui.webContents.pid = 1;
 let changes = 0;
-const { TabManager } = require(root + '/src/tabs_manager.js');
+const { TabManager } = require(root + '/src/tabs/tabs_manager.js');
 const tabs = new TabManager(win, ui, () => { changes++; }, () => false);
 
 // 1) Aba em branco: sem processo extra, UI em tela cheia
@@ -61,8 +62,8 @@ tabs.navigate('evl://settings'); assert.strictEqual(tabs.tabs.size, 2);
 assert.strictEqual([...attached].filter((v) => v !== ui).length, 0, 'aba web ficou fora da janela');
 
 // 4) política de memória sem timer quando não há candidata
-const { startMemoryPolicy, processReport } = require(root + '/src/memory_policy.js');
-const cfg = require(root + '/src/app_config.js');
+const { startMemoryPolicy, processReport } = require(root + '/src/tabs/memory_policy.js');
+const cfg = require(root + '/src/app/app_config.js');
 let reported = null;
 const policy = startMemoryPolicy(tabs, (mb) => { reported = mb; });
 timers.clear();
@@ -202,3 +203,26 @@ assert.strictEqual(tabs.tabs.size, 1);
 assert.strictEqual(tabs.snapshot().activeKind, 'blank');
 policy.stop();
 console.log('smoke OK');
+
+// ---- som na aba, layout lateral/superior ----
+{
+  const t = tabs.create('musica.com');
+  const wc = tabs.tabs.get(t).view.webContents;
+  assert.strictEqual(tabs.snapshot().tabs.find((x) => x.id === t).audible, false);
+  wc.emit('audio-state-changed', { audible: true });
+  assert.strictEqual(tabs.snapshot().tabs.find((x) => x.id === t).audible, true, 'ícone de som');
+  tabs.toggleMute(t);
+  assert.strictEqual(wc.mutedNow, true);
+  assert.strictEqual(tabs.snapshot().tabs.find((x) => x.id === t).muted, true);
+  tabs.toggleMute(t);
+  assert.strictEqual(wc.mutedNow, false);
+
+  const l = tabs.setTabLayout({ mode: 'side', tabH: 999, tabW: 10, sideW: 250 });
+  assert.deepStrictEqual(l, { mode: 'side', tabH: 48, tabW: 100, sideW: 250 }, 'tamanhos limitados');
+  assert.strictEqual(tabs.toolbarBottom(), 90);
+  assert.strictEqual(tabs.setTabLayout({ mode: 'x' }).mode, 'top', 'modo inválido volta ao padrão');
+  assert.strictEqual(tabs.topHeight(), 80);
+  tabs.setPopupFilter((u) => u.includes('anuncio'));
+  assert.strictEqual(typeof tabs.popupBlocked, 'function');
+}
+console.log('layout/som OK');

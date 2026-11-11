@@ -4,8 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
-const { extractZip } = require('../src/extension_zip_reader');
-const { parseStoreId, createExtensions } = require('../src/extension_manager');
+const { extractZip } = require('../src/extensions/extension_zip_reader');
+const { parseStoreId, createExtensions } = require('../src/extensions/extension_manager');
 
 // Monta um .zip pequeno (deflate) para o teste.
 function makeZip(files) {
@@ -103,7 +103,7 @@ test('readManifest resume o acesso: todos os sites e permissões sensíveis', ()
   const fs = require('node:fs');
   const os = require('node:os');
   const path = require('node:path');
-  const { readManifest } = require('../src/extension_manager');
+  const { readManifest } = require('../src/extensions/extension_manager');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'evlx-'));
   fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ name: 'X', version: '1', permissions: ['cookies', 'storage'], host_permissions: ['<all_urls>'] }));
   assert.deepStrictEqual(readManifest(dir).access, { allSites: true, perms: ['cookies'] });

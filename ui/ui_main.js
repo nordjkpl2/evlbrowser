@@ -28,6 +28,25 @@ let lastKey = ''; // para pular redesenho quando nada mudou
 
 // ---------- barra de abas ----------
 
+// Ícone de alto-falante (ou riscado, se a aba está silenciada).
+function soundIcon(muted) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  for (const [k, v] of Object.entries({ viewBox: '0 0 16 16', width: '14', height: '14', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' })) svg.setAttribute(k, v);
+  const path = (d) => {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d);
+    svg.append(p);
+  };
+  path('M2 6h2.5L8 3v10L4.5 10H2z');
+  if (muted) path('M10.5 6l4 4M14.5 6l-4 4');
+  else {
+    path('M10.5 5.8a3 3 0 0 1 0 4.4');
+    path('M12.2 4a5.5 5.5 0 0 1 0 8');
+  }
+  return svg;
+}
+
 function makeTab(tab) {
   const el = document.createElement('div');
   el.className = `tab ${tab.state}${tab.loading ? ' loading' : ''}`;
@@ -55,6 +74,21 @@ function makeTab(tab) {
   title.className = 'title';
   title.textContent = label;
   el.append(title);
+
+  if (tab.audible || tab.muted) {
+    const snd = document.createElement('button');
+    snd.className = 'sound';
+    snd.type = 'button';
+    const tip = tab.muted ? t('Reativar som da aba') : t('Silenciar aba');
+    snd.title = tip;
+    snd.setAttribute('aria-label', tip);
+    snd.append(soundIcon(tab.muted));
+    snd.addEventListener('click', (event) => {
+      event.stopPropagation();
+      window.evl.muteTab(tab.id);
+    });
+    el.append(snd);
+  }
 
   const close = document.createElement('button');
   close.className = 'close';
@@ -157,13 +191,14 @@ function render(state) {
 // Cada categoria tem o seu arquivo; nada disto é lido enquanto você só navega.
 
 const SETTINGS_SCRIPTS = [
-  'settings_search_engines.js', // primeiro: define textButton, usado pelos outros
-  'settings_cookies.js',
-  'settings_extensions.js',
-  'settings_adblock.js',
-  'settings_passwords.js',
-  'settings_bookmarks.js',
-  'settings_privacy.js',
+  'settings/settings_search_engines.js', // primeiro: define textButton, usado pelos outros
+  'settings/settings_cookies.js',
+  'settings/settings_extensions.js',
+  'settings/settings_adblock.js',
+  'settings/settings_passwords.js',
+  'settings/settings_bookmarks.js',
+  'settings/settings_privacy.js',
+  'settings/settings_speed.js',
 ];
 let settingsScripts = null;
 
@@ -265,6 +300,7 @@ function showPanel(name) {
   if (name === 'passwords') loadPasswords();
   if (name === 'bookmarks') loadBookmarks();
   if (name === 'privacy') loadPrivacy();
+  if (name === 'speed') loadSpeed();
 }
 
 // Ignora maiúsculas e acentos: "memoria" acha "Memória".
@@ -505,6 +541,32 @@ fontFamilyEl.addEventListener('change', () => {
   } else saveFont();
 });
 fontNameEl.addEventListener('change', saveFont);
+
+// ---------- aparência: abas (posição, altura e largura) ----------
+
+const tabModeEl = $('t-mode');
+const tabHEl = $('t-h');
+const tabWEl = $('t-w');
+const sideWEl = $('t-side-w');
+
+function applyTabLayout(l) {
+  const mode = l?.mode === 'side' ? 'side' : 'top';
+  const root = document.documentElement.style;
+  root.setProperty('--tab-h', `${l?.tabH ?? 32}px`);
+  root.setProperty('--tab-w', `${l?.tabW ?? 200}px`);
+  root.setProperty('--side-w', `${l?.sideW ?? 220}px`);
+  document.body.classList.toggle('side-tabs', mode === 'side');
+  tabModeEl.value = mode;
+  tabHEl.value = String(l?.tabH ?? 32);
+  tabWEl.value = String(l?.tabW ?? 200);
+  sideWEl.value = String(l?.sideW ?? 220);
+  $('t-w-label').hidden = mode === 'side';
+  $('t-side-label').hidden = mode !== 'side';
+}
+function saveTabLayout() {
+  window.evl.setTabLayout({ mode: tabModeEl.value, tabH: Number(tabHEl.value), tabW: Number(tabWEl.value), sideW: Number(sideWEl.value) });
+}
+[tabModeEl, tabHEl, tabWEl, sideWEl].forEach((el) => el.addEventListener('change', saveTabLayout));
 
 // ---------- aparência: cor principal ----------
 // Troca só as variáveis --accent e --glow da interface (as páginas dos sites não mudam).

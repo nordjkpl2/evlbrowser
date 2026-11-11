@@ -48,7 +48,7 @@ test('scripts da interface carregam na ordem e só usam window.evl que existe', 
   scripts.forEach(load);
   // as Configurações carregam sob demanda (ui_main.js); aqui carrega todas, na mesma ordem
   const lazy = vm.runInContext('SETTINGS_SCRIPTS', ctx);
-  assert.ok(lazy.length >= 7 && lazy[0] === 'settings_search_engines.js');
+  assert.ok(lazy.length >= 7 && lazy[0] === 'settings/settings_search_engines.js');
   lazy.forEach(load);
   // desenhar abas não pode quebrar (já houve um `t` da aba escondendo o t() de tradução)
   for (const kind of ['web', 'blank', 'settings']) {

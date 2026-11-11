@@ -1,6 +1,6 @@
 // Roda dentro de CADA página web (não confundir com preload.js, que é só da interface do Evl).
 // Faz duas coisas, as duas só no mundo isolado, sem expor nada à página:
-//   1) preenche logins com as senhas do cofre (src/passwords_vault.js), só depois de um clique SEU num campo;
+//   1) preenche logins com as senhas do cofre (src/data/passwords_vault.js), só depois de um clique SEU num campo;
 //   2) reforça o bloqueador de anúncios no YouTube (corta os anúncios da resposta do player,
 //      esconde o que sobra e pula anúncios que mesmo assim começarem).
 // Preloads com sandbox só podem usar 'electron', por isso tudo fica neste arquivo.
@@ -110,7 +110,9 @@ function startYoutubeAdSkipper() {
 const GENERIC_HIDE_CSS = `
 ins.adsbygoogle, amp-ad, amp-embed[type="taboola"], [id^="div-gpt-ad"], [id^="google_ads_iframe"],
 iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"], iframe[src*="adservice.google"],
-.OUTBRAIN, [id^="taboola-"], .taboola-widget, [data-ad-slot], [data-google-query-id]:not(body):not(html)
+.OUTBRAIN, [id^="taboola-"], .taboola-widget, [data-ad-slot], [data-google-query-id]:not(body):not(html),
+iframe[src*="adserver"], iframe[src*="/ads/"], iframe[id^="google_ads"], .advertisement:not(body),
+[aria-label="Advertisement"], [aria-label="Publicidade"], [data-ad-placeholder], .ad-banner, .adsbox, #ad-banner
 { display: none !important; }
 `;
 

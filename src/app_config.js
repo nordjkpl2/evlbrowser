@@ -50,6 +50,7 @@ module.exports = {
   // Flags de velocidade/RAM. process-per-site: abas do mesmo site dividem um processo
   // (menos RAM e abre mais rápido). Se algum site ficar instável, apague esta linha.
   CHROMIUM_FAST_SWITCHES: ['process-per-site', 'enable-gpu-rasterization'],
+  CHROMIUM_ON_FEATURES: ['HttpsUpgrades'], // abre http:// em https:// quando o site oferece
   CHROMIUM_OFF_FEATURES: [
     'MediaRouter', // descoberta de Chromecast na rede
     'OptimizationHints', // serviço de dicas de otimização

@@ -10,6 +10,7 @@ const PRIVACY_DEFAULTS = {
   secureDns: true, // DNS por HTTPS (volta ao DNS do sistema se falhar)
   clearOnExit: false, // apagar cookies e cache ao fechar
   trimReferrer: true, // sites de fora só veem o domínio de onde você veio, nunca o endereço completo
+  limitFingerprint: true, // esconde detalhes do computador (client hints) e desliga APIs de anúncios do Chromium
   blockExtensionNet: true, // páginas de fundo das extensões não enviam dados para a internet
 };
 

@@ -15,32 +15,38 @@ const {
   net,
 } = require('electron');
 const path = require('path');
-const cfg = require('./src/app_config');
-const { UI_HEIGHT } = cfg;
-const { createStore } = require('./src/settings_store');
-const { createHistory } = require('./src/history_store');
-const { setSearchUrl } = require('./src/url_address_parser');
-const { validateEngine, normalizeList, uniqueId } = require('./src/search_engines');
+const cfg = require('./src/app/app_config');
+const { createStore } = require('./src/app/settings_store');
+const { createHistory } = require('./src/data/history_store');
+const { setSearchUrl } = require('./src/tabs/url_address_parser');
+const { validateEngine, normalizeList, uniqueId } = require('./src/data/search_engines');
 const { registerCookiesIpc } = require('./src/ipc/cookies_ipc');
 const { registerExtensionsIpc } = require('./src/ipc/extension_ipc');
-const { createExtensions } = require('./src/extension_manager');
-const { createBookmarks } = require('./src/bookmarks_store');
+const { createExtensions } = require('./src/extensions/extension_manager');
+const { createBookmarks } = require('./src/data/bookmarks_store');
 const { registerBookmarksIpc } = require('./src/ipc/bookmarks_ipc');
-const { createVault } = require('./src/passwords_vault');
+const { createVault } = require('./src/data/passwords_vault');
 const { registerPasswordIpc } = require('./src/ipc/password_ipc');
-const { createNetworkHub } = require('./src/network_hub');
-const { privacyOptions } = require('./src/privacy_engine');
+const { createNetworkHub } = require('./src/network/network_hub');
+const { privacyOptions } = require('./src/network/privacy_engine');
 const { registerPrivacyIpc } = require('./src/ipc/privacy_ipc');
-const { createAdblock } = require('./src/adblock_engine');
+const { createAdblock } = require('./src/network/adblock_engine');
 const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
-const { TabManager } = require('./src/tabs_manager');
-const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory_policy');
+const { readStartupSpeed, speedOptions } = require('./src/app/speed_options');
+const { registerSpeedIpc } = require('./src/ipc/speed_ipc');
+const { TabManager } = require('./src/tabs/tabs_manager');
+const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/tabs/memory_policy');
 
-// Chromium só com o que o navegador precisa (listas em src/app_config.js).
+// Chromium só com o que o navegador precisa (listas em src/app/app_config.js).
 // Precisa vir ANTES do app ficar pronto.
 for (const name of [...cfg.CHROMIUM_OFF_SWITCHES, ...cfg.CHROMIUM_FAST_SWITCHES]) app.commandLine.appendSwitch(name);
 // Para medir a GPU: `set EVL_NO_GPU=1 && npm start` roda sem aceleração de hardware.
-if (process.env.EVL_NO_GPU) app.disableHardwareAcceleration();
+// Opções de Configurações > Velocidade que viram flags do Chromium (valem depois de reiniciar).
+const startupSpeed = readStartupSpeed(app.getPath('userData'));
+if (process.env.EVL_NO_GPU || !startupSpeed.hardwareAccel) app.disableHardwareAcceleration();
+if (startupSpeed.blockAutoplay) app.commandLine.appendSwitch('autoplay-policy', 'document-user-activation-required');
+if (startupSpeed.lowMemory) app.commandLine.appendSwitch('enable-low-end-device-mode');
+if (cfg.CHROMIUM_ON_FEATURES.length > 0) app.commandLine.appendSwitch('enable-features', cfg.CHROMIUM_ON_FEATURES.join(','));
 if (cfg.CHROMIUM_OFF_FEATURES.length > 0) {
   app.commandLine.appendSwitch('disable-features', cfg.CHROMIUM_OFF_FEATURES.join(','));
 }
@@ -53,11 +59,13 @@ let store = null; // preferências salvas (tema...)
 let sessionStore = null; // abas abertas, para reabrir ao iniciar (session.json)
 let history = null; // páginas visitadas (history.json)
 let sessionTimer = null;
-let bookmarks = null; // favoritos (src/bookmarks_store.js)
+let bookmarks = null; // favoritos (src/data/bookmarks_store.js)
 let toggleBookmark = () => {}; // Ctrl+D e a estrela
+let adblockApi = null; // motor do bloqueador (para cortar janelas de anúncio)
+let speedApi = null; // opções de velocidade (src/ipc/speed_ipc.js)
 let privacyApi = null; // opções de privacidade (src/ipc/privacy_ipc.js)
-let vault = null; // cofre de senhas (src/passwords_vault.js)
-let extensions = null; // extensões do Chromium (src/extension_manager.js)
+let vault = null; // cofre de senhas (src/data/passwords_vault.js)
+let extensions = null; // extensões do Chromium (src/extensions/extension_manager.js)
 let lastPreconnect = ''; // último site que já abrimos a conexão
 let engines = []; // motores de busca [{ id, name, url }]
 let engineId = ''; // o padrão
@@ -254,8 +262,8 @@ function createWindow() {
       { role: 'copy', label: tr('Copiar'), enabled: f.canCopy },
       { role: 'paste', label: tr('Colar'), enabled: f.canPaste },
     ];
-    if (params.y < UI_HEIGHT) {
-      // só na barra de endereço (a barra do topo tem UI_HEIGHT px)
+    if (params.y < tabs.toolbarBottom()) {
+      // só na barra de endereço (a barra do topo)
       items.push({
         label: tr('Colar e abrir'),
         enabled: f.canPaste,
@@ -277,7 +285,12 @@ function createWindow() {
 
   tabs = new TabManager(win, ui, onTabsChanged, onShortcut, history);
   tabs.setWebrtcPolicy(privacyApi.options().webrtcProtect ? 'default_public_interface_only' : 'default');
-  policy = startMemoryPolicy(tabs, (mb) => send('memory', mb));
+  tabs.setPopupFilter((url) => store.get('adblock') !== false && !!adblockApi?.shouldBlock(url, 'script', ''));
+  tabs.setTabLayout(store.get('tabLayout') ?? {});
+  policy = startMemoryPolicy(tabs, (mb) => send('memory', mb), () => {
+    const o = speedApi.options();
+    return { discardMs: cfg.DISCARD_AFTER_MS_OVERRIDE ?? o.discardMinutes * 60 * 1000, budgetMB: o.memoryBudgetMB };
+  });
 
   win.on('resize', () => tabs.layout());
   win.on('focus', () => sampleMemory(false));
@@ -318,6 +331,7 @@ ipcMain.on('ui:ready', (event) => {
   send('lang', store.get('lang') ?? 'pt');
   send('accent', store.get('accent') ?? null);
   send('font', { scale: store.get('fontScale') ?? 1, family: store.get('fontFamily') ?? 'system' });
+  send('tabLayout', tabs.tabLayout);
   send('state', tabs.snapshot());
   sampleMemory(true);
 });
@@ -328,6 +342,15 @@ ipcMain.on('tab:new', (event) => {
 });
 ipcMain.on('tab:close', (event, id) => {
   if (fromUi(event) && isId(id)) tabs.close(id);
+});
+ipcMain.on('tab:mute', (event, id) => {
+  if (fromUi(event) && isId(id)) tabs.toggleMute(id);
+});
+ipcMain.on('tabs:layout', (event, layout) => {
+  if (!fromUi(event) || !layout || typeof layout !== 'object') return;
+  const saved = tabs.setTabLayout(layout);
+  store.set('tabLayout', saved);
+  send('tabLayout', saved);
 });
 ipcMain.on('tab:activate', (event, id) => {
   if (fromUi(event) && isId(id)) tabs.activate(id);
@@ -357,7 +380,7 @@ ipcMain.handle('history:suggest', (event, q) => {
   const list = [...stars, ...history.suggest(q.slice(0, 200)).filter((h) => !stars.some((s) => s.url === h.url))].slice(0, 6);
   // Navegar mais rápido: enquanto você digita, já abre a conexão com o 1º site sugerido.
   const top = list[0]?.url;
-  if (top && top !== lastPreconnect && top.startsWith('https://')) {
+  if (top && speedApi.options().preconnect && top !== lastPreconnect && top.startsWith('https://')) {
     lastPreconnect = top;
     session.defaultSession.preconnect({ url: top, numSockets: 1 });
   }
@@ -484,8 +507,9 @@ app.whenReady().then(() => {
     dir: path.join(app.getPath('userData'), 'extensions'),
     store: createStore(path.join(app.getPath('userData'), 'extensions.json'), {}),
   });
-  // Rede: bloqueador de anúncios + privacidade, num só lugar (src/network_hub.js).
+  // Rede: bloqueador de anúncios + privacidade, num só lugar (src/network/network_hub.js).
   const adblock = createAdblock();
+  adblockApi = adblock;
   const network = createNetworkHub({
     session,
     adblock,
@@ -495,6 +519,7 @@ app.whenReady().then(() => {
   registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network });
   privacyApi = registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork: () => network, getTabs: () => tabs });
   privacyApi.apply();
+  speedApi = registerSpeedIpc({ ipcMain, fromUi, store, app, startup: startupSpeed });
   extensions.loadAll(); // carrega em segundo plano; a janela não espera
 
   createWindow();
