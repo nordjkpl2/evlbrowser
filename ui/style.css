@@ -1,6 +1,7 @@
-/* Visual Evl: fundo escuro, destaque âmbar, números em fonte mono.
-   Para mudar o tema, troque só as variáveis abaixo. */
+/* Visual Evl: destaque âmbar, números em fonte mono. Escuro por padrão.
+   Para mudar as cores, troque só as variáveis (o bloco claro fica logo abaixo). */
 :root {
+  color-scheme: light dark; /* barras de rolagem e controles seguem o tema */
   --bg: #0b0b0d;
   --surface: #141417;
   --surface-active: #1d1d22;
@@ -8,11 +9,27 @@
   --text: #ece9e2;
   --muted: #8a8780;
   --accent: #ffb429;
+  --glow: rgba(255, 180, 41, 0.35);
 
   --font-ui: "Segoe UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", Consolas, monospace;
 
   --fast: 120ms;
+}
+
+/* Tema claro. O main.js define nativeTheme.themeSource (Configurações > Aparência)
+   e o Chromium aplica o mesmo esquema a esta interface e aos sites. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f9f9fb;
+    --surface: #ffffff;
+    --surface-active: #ececf1;
+    --border: #d7d7e0;
+    --text: #15141a;
+    --muted: #5b5b66;
+    --accent: #b45309;
+    --glow: rgba(180, 83, 9, 0.2);
+  }
 }
 
 * { box-sizing: border-box; }
@@ -189,7 +206,7 @@ button, input { font: inherit; color: inherit; }
   font-size: 56px;
   letter-spacing: 0.04em;
   color: var(--accent);
-  text-shadow: 0 0 28px rgba(255, 180, 41, 0.35);
+  text-shadow: 0 0 28px var(--glow);
 }
 
 kbd {
@@ -223,7 +240,9 @@ kbd {
 
 .nav-item {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   margin-bottom: 2px;
   padding: 10px 12px;
@@ -234,6 +253,8 @@ kbd {
   cursor: pointer;
   transition: background var(--fast) ease;
 }
+.nav-item svg { flex: none; color: var(--muted); }
+.nav-item[aria-current="true"] svg { color: var(--accent); }
 .nav-item:hover { background: var(--surface); }
 .nav-item[aria-current="true"] { background: var(--surface-active); }
 .nav-item[aria-current="true"]::before {
@@ -285,6 +306,43 @@ dl {
 }
 dt { color: var(--muted); }
 dd { margin: 0; overflow-wrap: anywhere; }
+
+/* escolha Claro / Escuro (como no Firefox) */
+.theme-options { display: flex; gap: 12px; margin: 12px 0; }
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 180px;
+  padding: 14px 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color var(--fast) ease, background var(--fast) ease;
+}
+.theme-option:hover { background: var(--surface-active); }
+.theme-option[aria-checked="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100px;
+  height: 58px;
+  padding: 7px;
+  border-radius: 4px;
+}
+.preview i { display: block; height: 4px; border-radius: 2px; }
+.preview .bar { height: 6px; }
+.preview .line { width: 75%; }
+.preview .short { width: 45%; }
+.pv-dark { background: #2b2a33; }
+.pv-dark i { background: #4a4955; }
+.pv-light { background: #f0f0f4; }
+.pv-light i { background: #c5c5cf; }
 
 .total { font-size: 14px; }
 .total .mono { font-size: 28px; color: var(--accent); }

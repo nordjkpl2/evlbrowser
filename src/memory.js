@@ -15,11 +15,10 @@ const cfg = require('./config');
 // Memória de um processo em KB (no Windows, a memória privada dele).
 const processKB = (p) => p.memory.privateBytes ?? p.memory.workingSetSize ?? 0;
 
-// Soma de todos os processos do app (interface + abas + GPU...), em MB. Estimativa.
-function totalMemoryMB() {
-  const kb = app.getAppMetrics().reduce((sum, p) => sum + processKB(p), 0);
-  return Math.round(kb / 1024);
-}
+// Soma dos processos (interface + abas + GPU...), em MB. Estimativa.
+const sumMB = (metrics) => Math.round(metrics.reduce((sum, p) => sum + processKB(p), 0) / 1024);
+
+const totalMemoryMB = () => sumMB(app.getAppMetrics());
 
 const TYPE_LABEL = {
   Browser: 'Processo principal',
@@ -46,8 +45,7 @@ function processReport(tabs, uiContents) {
     }))
     .sort((a, b) => b.mb - a.mb);
 
-  const totalMB = Math.round(metrics.reduce((sum, p) => sum + processKB(p), 0) / 1024);
-  return { totalMB, processes };
+  return { totalMB: sumMB(metrics), processes };
 }
 
 // Devolve { refresh, stop }. Chame refresh() sempre que o estado das abas mudar.

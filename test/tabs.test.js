@@ -90,7 +90,6 @@ const wcA = tabs.tabs.get(a).view.webContents;
 tabs.discard(a);
 assert.ok(wcA.closed); assert.strictEqual(tabs.snapshot().tabs.find((x) => x.id === a).state, 'discarded');
 tabs.discard(b); assert.ok(tabs.tabs.get(b).view, 'ativa nunca é descartada');
-assert.deepStrictEqual(tabs.stats(), { total: 3, live: 1, sleeping: 0, discarded: 1 });
 
 // 6) reativar recria a página
 tabs.activate(a);

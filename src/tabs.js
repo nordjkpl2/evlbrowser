@@ -207,20 +207,6 @@ class TabManager {
     };
   }
 
-  // Contagens para a tela de Configurações.
-  stats() {
-    let live = 0;
-    let sleeping = 0;
-    let discarded = 0;
-    for (const t of this.tabs.values()) {
-      if (t.kind !== 'web') continue;
-      if (t.id === this.activeId) live++;
-      else if (t.view) sleeping++;
-      else discarded++;
-    }
-    return { total: this.tabs.size, live, sleeping, discarded };
-  }
-
   destroyAll() {
     for (const tab of this.tabs.values()) this._destroyView(tab);
     this.tabs.clear();
@@ -312,4 +298,4 @@ class TabManager {
   }
 }
 
-module.exports = { TabManager, SETTINGS_URL };
+module.exports = { TabManager };

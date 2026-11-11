@@ -1,9 +1,18 @@
 // Ponto de entrada do Evl Browser (o "main()" do programa).
 // Roda em Node, dentro do processo principal do Electron.
 
-const { app, BaseWindow, WebContentsView, Menu, ipcMain, session } = require('electron');
+const {
+  app,
+  BaseWindow,
+  WebContentsView,
+  Menu,
+  ipcMain,
+  session,
+  nativeTheme,
+} = require('electron');
 const path = require('path');
 const cfg = require('./src/config');
+const { createStore } = require('./src/settings');
 const { TabManager } = require('./src/tabs');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory');
 
@@ -18,6 +27,12 @@ let win = null;
 let ui = null; // a interface (abas, barra de endereço, Nova aba e Configurações)
 let tabs = null;
 let policy = null;
+let store = null; // preferências salvas (tema...)
+
+// Esquema de cores (prefers-color-scheme) da interface e dos sites,
+// e a cor de fundo da janela para cada um (evita um clarão ao abrir/redimensionar).
+const THEMES = new Set(['light', 'dark']);
+const WINDOW_BG = { dark: '#0b0b0d', light: '#f9f9fb' };
 
 // Permissões que um site pode usar por enquanto. Todo o resto é negado até
 // termos uma tela de pedido de permissão (como o Firefox).
@@ -107,7 +122,7 @@ function createWindow() {
     height: 800,
     minWidth: 480,
     minHeight: 320,
-    backgroundColor: '#0b0b0d',
+    backgroundColor: WINDOW_BG[nativeTheme.themeSource] ?? WINDOW_BG.dark,
     title: 'Evl Browser',
   });
 
@@ -147,12 +162,10 @@ function createWindow() {
 
 // Tudo que a tela de Configurações mostra.
 function settingsReport() {
-  const minutes = Math.round((cfg.DISCARD_AFTER_MS / 60000) * 10) / 10;
   return {
     ...processReport(tabs, ui.webContents),
-    tabs: tabs.stats(),
-    policy: { discardMinutes: minutes, budgetMB: cfg.MEMORY_BUDGET_MB },
     search: { name: cfg.SEARCH_NAME, url: cfg.SEARCH_URL },
+    theme: nativeTheme.themeSource,
   };
 }
 
@@ -185,12 +198,22 @@ ipcMain.on('nav:back', (event) => fromUi(event) && tabs.back());
 ipcMain.on('nav:forward', (event) => fromUi(event) && tabs.forward());
 ipcMain.on('nav:reload', (event) => fromUi(event) && tabs.reload());
 ipcMain.on('settings:open', (event) => fromUi(event) && tabs.openSettings());
+ipcMain.on('theme:set', (event, theme) => {
+  if (!fromUi(event) || !THEMES.has(theme)) return;
+  nativeTheme.themeSource = theme; // a interface e os sites passam a ver este esquema
+  win?.setBackgroundColor(WINDOW_BG[theme]);
+  store.set('theme', theme);
+});
 ipcMain.handle('settings:report', (event) => (fromUi(event) ? settingsReport() : null));
 
 // ---------- ciclo de vida do app ----------
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null); // sem menu padrão (nossos atalhos ficam no código)
+
+  store = createStore(path.join(app.getPath('userData'), 'settings.json'));
+  const savedTheme = store.get('theme');
+  nativeTheme.themeSource = THEMES.has(savedTheme) ? savedTheme : 'dark';
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(ALLOWED_PERMISSIONS.has(permission));

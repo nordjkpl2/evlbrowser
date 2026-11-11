@@ -30,6 +30,8 @@ function makeTab(t) {
   if (t.favicon) {
     const img = document.createElement('img');
     img.className = 'favicon';
+    img.referrerPolicy = 'no-referrer'; // não conta ao site de onde o ícone foi pedido
+    img.decoding = 'async';
     img.src = t.favicon;
     img.alt = '';
     el.append(img);
@@ -140,11 +142,7 @@ async function refreshSettings() {
   });
   $('s-procs').replaceChildren(...rows);
 
-  $('s-live').textContent = String(report.tabs.live);
-  $('s-sleeping').textContent = String(report.tabs.sleeping);
-  $('s-discarded').textContent = String(report.tabs.discarded);
-  $('s-discard').textContent = `${report.policy.discardMinutes} min`;
-  $('s-budget').textContent = `${report.policy.budgetMB} MB`;
+  showTheme(report.theme);
 }
 
 // ---------- menu lateral e busca das Configurações ----------
@@ -164,7 +162,7 @@ function showPanel(name) {
     const on = item.dataset.panel === name;
     if (on) {
       item.setAttribute('aria-current', 'true');
-      panelTitle.textContent = item.textContent;
+      panelTitle.textContent = item.querySelector('span').textContent;
     } else {
       item.removeAttribute('aria-current');
     }
@@ -196,6 +194,24 @@ searchEl.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') showPanel(panel);
 });
 showPanel('search');
+
+// ---------- aparência: Claro / Escuro ----------
+// Define o esquema de cores que os SITES enxergam. A interface do Evl não muda.
+
+const themeOptions = [...document.querySelectorAll('.theme-option')];
+
+function showTheme(theme) {
+  for (const opt of themeOptions) {
+    opt.setAttribute('aria-checked', String(opt.dataset.theme === theme));
+  }
+}
+
+themeOptions.forEach((opt) =>
+  opt.addEventListener('click', () => {
+    showTheme(opt.dataset.theme);
+    window.evl.setTheme(opt.dataset.theme);
+  })
+);
 
 // ---------- ações ----------
 

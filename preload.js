@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('evl', {
   forward: () => ipcRenderer.send('nav:forward'),
   reload: () => ipcRenderer.send('nav:reload'),
   openSettings: () => ipcRenderer.send('settings:open'),
+  setTheme: (theme) => ipcRenderer.send('theme:set', String(theme)),
 
   // Pergunta ao main.js o relatório da tela de Configurações (devolve uma Promise).
   settingsReport: () => ipcRenderer.invoke('settings:report'),

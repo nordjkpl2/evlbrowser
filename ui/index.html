@@ -35,9 +35,30 @@
   <main id="page-settings" class="screen" hidden aria-labelledby="settings-title">
     <nav class="side" aria-label="Categorias de configurações">
       <h1 id="settings-title">Configurações</h1>
-      <button class="nav-item" type="button" data-panel="search">Pesquisa</button>
-      <button class="nav-item" type="button" data-panel="memory">Memória</button>
-      <button class="nav-item" type="button" data-panel="tabs">Abas e economia</button>
+      <button class="nav-item" type="button" data-panel="search">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/>
+        </svg>
+        <span>Pesquisa</span>
+      </button>
+      <button class="nav-item" type="button" data-panel="memory">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="1.5" y="3" width="13" height="8" rx="1.2"/>
+          <rect x="3.5" y="5.2" width="3" height="3.6" rx="0.4"/>
+          <rect x="9.5" y="5.2" width="3" height="3.6" rx="0.4"/>
+          <path d="M4 13.5v-2.5M6.7 13.5v-2.5M9.3 13.5v-2.5M12 13.5v-2.5"/>
+        </svg>
+        <span>Memória</span>
+      </button>
+      <button class="nav-item" type="button" data-panel="appearance">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             aria-hidden="true">
+          <circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/>
+        </svg>
+        <span>Aparência</span>
+      </button>
     </nav>
 
     <div class="content">
@@ -74,22 +95,20 @@
           </table>
         </section>
 
-        <section class="card" data-panel="tabs"
-                 data-keywords="abas descarte dormindo descartadas orçamento economia ram política">
-          <h3>Economia de RAM</h3>
-          <p class="hint">Abas de fundo ficam dormindo e, depois de um tempo parado, são descartadas.</p>
-          <dl>
-            <dt>Ativa</dt>
-            <dd id="s-live" class="mono">—</dd>
-            <dt>Dormindo (na memória)</dt>
-            <dd id="s-sleeping" class="mono">—</dd>
-            <dt>Descartadas (sem RAM)</dt>
-            <dd id="s-discarded" class="mono">—</dd>
-            <dt>Descarta aba de fundo após</dt>
-            <dd id="s-discard" class="mono">—</dd>
-            <dt>Orçamento de memória</dt>
-            <dd id="s-budget" class="mono">—</dd>
-          </dl>
+        <section class="card" data-panel="appearance"
+                 data-keywords="aparência tema claro escuro cores sites modo noturno">
+          <h3>Tema</h3>
+          <p class="hint">Escolha o esquema de cores do Evl. Os sites que respeitam a preferência de tema seguem a mesma escolha.</p>
+          <div class="theme-options" role="radiogroup" aria-label="Tema">
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-theme="light">
+              <span class="preview pv-light" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Claro</span>
+            </button>
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-theme="dark">
+              <span class="preview pv-dark" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Escuro</span>
+            </button>
+          </div>
         </section>
       </div>
     </div>
