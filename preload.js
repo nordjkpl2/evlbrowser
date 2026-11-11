@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('evl', {
   historyOpen: (url) => ipcRenderer.send('history:open', String(url)),
   historyClear: () => ipcRenderer.send('history:clear'),
   cookiesList: () => ipcRenderer.invoke('cookies:list'),
+  cookiesRemove: (domain) => ipcRenderer.invoke('cookies:remove', domain === null ? null : String(domain)),
   cookiesImport: (from) => ipcRenderer.invoke('cookies:import', String(from)),
   suggest: (text) => ipcRenderer.invoke('history:suggest', String(text)),
   setSuggest: (open) => ipcRenderer.send('suggest:set', open === true),

@@ -80,3 +80,52 @@ test('Chromium: sem navegador instalado dá erro claro; falhas do setCookie cont
   const r = await importCookies('firefox', { appData }, async (c) => { if (c.name === 'b') throw new Error('recusado'); }, NOW);
   assert.deepStrictEqual(r, { imported: 1, skipped: 1, encrypted: 0 });
 });
+
+// ---------- arquivo .json (formato do Cookie-Editor) ----------
+const { importCookiesFromJson, parseCookieJson } = require('../src/cookies-import');
+
+const jsonCookie = (extra) => ({
+  name: 'n', value: 'v', domain: 'github.com', hostOnly: true, path: '/', secure: true, httpOnly: true,
+  sameSite: 'lax', session: false, firstPartyDomain: '', partitionKey: null, expirationDate: nowSec + 1000, storeId: null, ...extra,
+});
+
+test('JSON: domínio x só do host, sessão, sameSite e validade', () => {
+  const text = JSON.stringify([
+    jsonCookie({ name: 'dom', domain: '.github.com', hostOnly: false, sameSite: 'no_restriction' }),
+    jsonCookie({ name: 'host', domain: 'github.com', hostOnly: true }),
+    jsonCookie({ name: 'sess', session: true, expirationDate: undefined, sameSite: 'unspecified' }),
+    jsonCookie({ name: 'semponto', domain: 'x.com', hostOnly: false, sameSite: 'None' }),
+  ]);
+  const { cookies, skipped } = parseCookieJson(text, NOW);
+  assert.strictEqual(skipped, 0);
+  const by = Object.fromEntries(cookies.map((c) => [c.name, c]));
+  assert.strictEqual(by.dom.domain, '.github.com');
+  assert.strictEqual(by.dom.sameSite, 'no_restriction');
+  assert.strictEqual(by.host.domain, undefined, 'só do host não leva domain');
+  assert.strictEqual(by.host.url, 'https://github.com/');
+  assert.strictEqual(by.host.expirationDate, nowSec + 1000);
+  assert.strictEqual(by.sess.expirationDate, undefined);
+  assert.strictEqual(by.sess.sameSite, 'unspecified');
+  assert.strictEqual(by.semponto.domain, '.x.com', 'hostOnly:false ganha o ponto');
+  assert.strictEqual(by.semponto.sameSite, 'no_restriction');
+});
+
+test('JSON: ignora vencidos, particionados e incompletos; aceita { cookies: [...] }', async () => {
+  const text = JSON.stringify({ cookies: [
+    jsonCookie({ name: 'ok' }),
+    jsonCookie({ name: 'velho', expirationDate: nowSec - 1 }),
+    jsonCookie({ name: 'part', partitionKey: { topLevelSite: 'https://a.com' } }),
+    { name: 'semdominio', value: 'x' },
+    'lixo',
+    jsonCookie({ name: 'recusado' }),
+  ] });
+  const got = [];
+  const r = await importCookiesFromJson(text, async (c) => { if (c.name === 'recusado') throw new Error('x'); got.push(c.name); }, NOW);
+  assert.deepStrictEqual(got, ['ok']);
+  assert.deepStrictEqual(r, { imported: 1, skipped: 5, encrypted: 0 });
+});
+
+test('JSON: arquivo inválido dá erro claro', () => {
+  assert.throws(() => parseCookieJson('{ não é json'), /JSON válido/);
+  assert.throws(() => parseCookieJson('{"a":1}'), /lista de cookies/);
+});

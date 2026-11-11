@@ -336,7 +336,17 @@ async function loadCookies() {
     const count = document.createElement('span');
     count.className = 'hint';
     count.textContent = String(d.count);
-    summary.append(domain, count);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'text-btn c-del';
+    del.textContent = 'Apagar';
+    del.title = `Apagar os cookies de ${d.domain}`;
+    del.addEventListener('click', async (event) => {
+      event.preventDefault(); // não abre nem fecha a linha
+      event.stopPropagation();
+      reportRemoved(await window.evl.cookiesRemove(d.domain), d.domain);
+    });
+    summary.append(domain, count, del);
     const names = document.createElement('div');
     names.className = 'c-names mono hint';
     // os nomes só são escritos quando você abre o site
@@ -363,12 +373,16 @@ document.addEventListener('mousedown', (event) => {
 cMenu.querySelectorAll('button').forEach((btn) =>
   btn.addEventListener('click', async () => {
     setImportMenu(false);
-    const label = btn.dataset.from === 'firefox' ? 'Firefox' : 'Chromium';
+    const label = { firefox: 'Firefox', chromium: 'Chromium', json: 'Arquivo' }[btn.dataset.from];
     cStatus.hidden = false;
-    cStatus.textContent = `Importando do ${label}…`;
+    cStatus.textContent = 'Importando…';
     cImport.disabled = true;
     const r = await window.evl.cookiesImport(btn.dataset.from);
     cImport.disabled = false;
+    if (r?.canceled) {
+      cStatus.hidden = true; // fechou a janela de escolher arquivo
+      return;
+    }
     if (!r) cStatus.textContent = 'Não foi possível importar agora.';
     else if (!r.ok) cStatus.textContent = r.message;
     else {
@@ -380,6 +394,35 @@ cMenu.querySelectorAll('button').forEach((btn) =>
     loadCookies();
   })
 );
+
+// Apagar: um site (botão "Apagar" da linha) ou todos (pede um segundo clique para confirmar).
+const cClear = $('c-clear');
+let armedTimer = null;
+
+async function reportRemoved(result, domain) {
+  cStatus.hidden = false;
+  cStatus.textContent = result
+    ? `${result.removed} cookies apagados${domain ? ` de ${domain}` : ''}.`
+    : 'Não foi possível apagar agora.';
+  await loadCookies();
+}
+
+function disarmClear() {
+  clearTimeout(armedTimer);
+  delete cClear.dataset.armed;
+  cClear.textContent = 'Apagar todos';
+}
+
+cClear.addEventListener('click', async () => {
+  if (!cClear.dataset.armed) {
+    cClear.dataset.armed = '1';
+    cClear.textContent = 'Confirmar: apagar todos';
+    armedTimer = setTimeout(disarmClear, 4000); // desiste sozinho
+    return;
+  }
+  disarmClear();
+  reportRemoved(await window.evl.cookiesRemove(null), '');
+});
 
 // ---------- aparência: Claro / Escuro ----------
 // Define o esquema de cores que os SITES enxergam. A interface do Evl não muda.

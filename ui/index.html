@@ -178,11 +178,15 @@
         <section class="card" data-panel="cookies">
           <div class="card-head">
             <h3>Cookies <span id="c-total" class="hint"></span></h3>
-            <div class="import">
-              <button id="c-import" class="white-btn" type="button" aria-haspopup="menu" aria-expanded="false">Importar &#9662;</button>
-              <div id="c-menu" class="pop" role="menu" hidden>
-                <button type="button" role="menuitem" data-from="firefox">Importar do Firefox</button>
-                <button type="button" role="menuitem" data-from="chromium">Importar do Chromium</button>
+            <div class="head-actions">
+              <button id="c-clear" class="text-btn" type="button">Apagar todos</button>
+              <div class="import">
+                <button id="c-import" class="white-btn" type="button" aria-haspopup="menu" aria-expanded="false">Importar &#9662;</button>
+                <div id="c-menu" class="pop" role="menu" hidden>
+                  <button type="button" role="menuitem" data-from="firefox">Importar do Firefox</button>
+                  <button type="button" role="menuitem" data-from="chromium">Importar do Chromium</button>
+                  <button type="button" role="menuitem" data-from="json">Importar de arquivo .json</button>
+                </div>
               </div>
             </div>
           </div>

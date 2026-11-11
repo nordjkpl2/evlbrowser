@@ -10,13 +10,15 @@ const {
   session,
   nativeTheme,
   clipboard,
+  dialog,
 } = require('electron');
+const fs = require('fs');
 const path = require('path');
 const cfg = require('./src/config');
 const { UI_HEIGHT } = cfg;
 const { createStore } = require('./src/settings');
 const { createHistory } = require('./src/history');
-const { importCookies } = require('./src/cookies-import');
+const { importCookies, importCookiesFromJson } = require('./src/cookies-import');
 const { TabManager } = require('./src/tabs');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory');
 
@@ -323,17 +325,44 @@ ipcMain.handle('cookies:list', async (event) => {
   return { total: all.length, domains };
 });
 ipcMain.handle('cookies:import', async (event, from) => {
-  if (!fromUi(event) || importing || (from !== 'firefox' && from !== 'chromium')) return null;
+  if (!fromUi(event) || importing || !['firefox', 'chromium', 'json'].includes(from)) return null;
   importing = true;
   try {
+    const setCookie = (c) => session.defaultSession.cookies.set(c);
+    if (from === 'json') {
+      // quem escolhe o arquivo é uma janela do sistema aberta aqui (a interface não passa caminhos)
+      const pick = await dialog.showOpenDialog(win, {
+        title: 'Importar cookies (.json)',
+        properties: ['openFile'],
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      });
+      const file = pick.filePaths[0];
+      if (pick.canceled || !file) return { ok: true, canceled: true };
+      if (fs.statSync(file).size > 20 * 1024 * 1024) throw new Error('O arquivo é grande demais (máximo 20 MB).');
+      return { ok: true, ...(await importCookiesFromJson(fs.readFileSync(file, 'utf8'), setCookie)) };
+    }
     const env = { appData: app.getPath('appData'), localAppData: process.env.LOCALAPPDATA ?? '' };
-    const result = await importCookies(from, env, (c) => session.defaultSession.cookies.set(c));
-    return { ok: true, ...result };
+    return { ok: true, ...(await importCookies(from, env, setCookie)) };
   } catch (error) {
     return { ok: false, message: String(error?.message ?? error) };
   } finally {
     importing = false;
   }
+});
+// Apagar cookies: de um site (exatamente o domínio da lista) ou todos (domain = null).
+ipcMain.handle('cookies:remove', async (event, domain) => {
+  if (!fromUi(event) || (domain !== null && (typeof domain !== 'string' || domain.length > 253))) return null;
+  const ses = session.defaultSession;
+  if (domain === null) {
+    const removed = (await ses.cookies.get({})).length;
+    await ses.clearStorageData({ storages: ['cookies'] });
+    return { removed };
+  }
+  const mine = (await ses.cookies.get({})).filter((c) => c.domain.replace(/^\./, '') === domain);
+  await Promise.all(
+    mine.map((c) => ses.cookies.remove(`${c.secure ? 'https' : 'http'}://${domain}${c.path}`, c.name))
+  );
+  return { removed: mine.length };
 });
 ipcMain.on('suggest:set', (event, open) => fromUi(event) && tabs.setSuggest(open === true));
 ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));

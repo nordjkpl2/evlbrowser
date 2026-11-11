@@ -172,10 +172,57 @@ function readChromium(localAppData, now) {
   return { cookies: out, skipped, encrypted };
 }
 
-// kind: 'firefox' | 'chromium'. env: { appData, localAppData }.
-// Devolve { imported, skipped, encrypted } ou lança Error com mensagem para a pessoa.
-async function importCookies(kind, env, setCookie, now = Date.now()) {
-  const read = kind === 'firefox' ? readFirefox(env.appData, now) : readChromium(env.localAppData, now);
+// ---------- arquivo .json (formato do Cookie-Editor / EditThisCookie) ----------
+// Lista de objetos { name, value, domain, hostOnly, path, secure, httpOnly, sameSite,
+// session, expirationDate, partitionKey... }. Também aceita { "cookies": [ ... ] }.
+
+const SAME_JSON = { strict: 'strict', lax: 'lax', no_restriction: 'no_restriction', none: 'no_restriction' };
+
+function parseCookieJson(text, now = Date.now()) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('O arquivo não é um JSON válido.');
+  }
+  const list = Array.isArray(data) ? data : data?.cookies;
+  if (!Array.isArray(list)) throw new Error('Formato não reconhecido: esperava uma lista de cookies.');
+
+  const cookies = [];
+  let skipped = 0;
+  for (const c of list) {
+    const valid = c && typeof c.name === 'string' && c.name && typeof c.domain === 'string' && c.domain && typeof c.value === 'string';
+    if (!valid || c.partitionKey) {
+      skipped++; // incompleto, ou cookie particionado (CHIPS), que o Electron não recebe
+      continue;
+    }
+    const expires = c.session ? 0 : Number(c.expirationDate) || 0;
+    if (expires > 0 && expires < now / 1000) {
+      skipped++; // já venceu
+      continue;
+    }
+    const domainCookie = c.hostOnly === false || (c.hostOnly === undefined && c.domain.startsWith('.'));
+    const host = domainCookie ? (c.domain.startsWith('.') ? c.domain : '.' + c.domain) : c.domain.replace(/^\./, '');
+    cookies.push(
+      details({
+        host,
+        name: c.name,
+        value: c.value,
+        path: typeof c.path === 'string' && c.path ? c.path : '/',
+        expires,
+        secure: c.secure,
+        httpOnly: c.httpOnly,
+        sameSite: SAME_JSON[String(c.sameSite ?? '').toLowerCase()] ?? 'unspecified',
+      })
+    );
+  }
+  return { cookies, skipped, encrypted: 0 };
+}
+
+// ---------- aplicar ----------
+
+// Grava os cookies lidos (em blocos de 50). O que o navegador recusar conta como ignorado.
+async function applyAll(read, setCookie) {
   let { cookies, skipped } = read;
   if (cookies.length > MAX_COOKIES) {
     skipped += cookies.length - MAX_COOKIES;
@@ -189,4 +236,15 @@ async function importCookies(kind, env, setCookie, now = Date.now()) {
   return { imported, skipped, encrypted: read.encrypted };
 }
 
-module.exports = { importCookies, firefoxProfileDir };
+// kind: 'firefox' | 'chromium'. env: { appData, localAppData }.
+// Devolve { imported, skipped, encrypted } ou lança Error com mensagem para a pessoa.
+async function importCookies(kind, env, setCookie, now = Date.now()) {
+  const read = kind === 'firefox' ? readFirefox(env.appData, now) : readChromium(env.localAppData, now);
+  return applyAll(read, setCookie);
+}
+
+async function importCookiesFromJson(text, setCookie, now = Date.now()) {
+  return applyAll(parseCookieJson(text, now), setCookie);
+}
+
+module.exports = { importCookies, importCookiesFromJson, parseCookieJson, firefoxProfileDir };

@@ -486,17 +486,22 @@ dd { margin: 0; overflow-wrap: anywhere; }
   cursor: pointer;
 }
 .pop button:hover { background: var(--surface-active); }
+.head-actions { display: flex; align-items: center; gap: 8px; }
+#c-clear[data-armed] { color: #ff5c5c; }
+.c-del { margin-left: 4px; padding: 0 8px; font-size: 12px; opacity: 0; }
+#c-list summary:hover .c-del, .c-del:focus-visible { opacity: 1; }
 #c-status { margin: 8px 0 0; }
 #c-list { margin: 8px 0 0; padding: 0; list-style: none; }
 #c-list summary {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: 16px;
   padding: 8px;
   border-radius: 6px;
   cursor: pointer;
 }
 #c-list summary:hover { background: var(--surface-active); }
+#c-list summary > :nth-child(2) { margin-left: auto; }
 .c-names { padding: 0 8px 8px; font-size: 12px; overflow-wrap: anywhere; }
 
 /* histórico */
