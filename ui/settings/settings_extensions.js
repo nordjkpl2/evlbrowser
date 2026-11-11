@@ -51,7 +51,21 @@ function xRow(x) {
     open.addEventListener('click', () => window.evl.extensionsOpen(x.id, kind));
     li.append(open);
   }
+  if (x.cross || x.full) {
+    // extensões que não funcionam isoladas: você devolve as permissões entre sites e a internet só para esta
+    const full = textButton(x.full ? t('Voltar a isolar') : t('Acesso completo'), async () => {
+      await window.evl.extensionsFull(x.id, !x.full);
+      loadExtensions();
+    });
+    li.append(full);
+  }
   li.append(toggle, del);
+  if (x.full) {
+    const open = document.createElement('span');
+    open.className = 'x-warn hint';
+    open.textContent = t('Acesso completo: esta extensão vê abas, histórico, cookies e usa a internet.');
+    li.append(open);
+  }
   if (x.removed?.length) {
     const cut = document.createElement('span');
     cut.className = 'x-warn hint';

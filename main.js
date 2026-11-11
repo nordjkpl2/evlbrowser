@@ -14,6 +14,7 @@ const {
   dialog,
   net,
   nativeImage,
+  shell,
 } = require('electron');
 const path = require('path');
 const cfg = require('./src/app/app_config');
@@ -29,7 +30,7 @@ const { registerBookmarksIpc } = require('./src/ipc/bookmarks_ipc');
 const { createVault } = require('./src/data/passwords_vault');
 const { registerPasswordIpc } = require('./src/ipc/password_ipc');
 const { createNetworkHub } = require('./src/network/network_hub');
-const { privacyOptions, webrtcPolicy } = require('./src/network/privacy_engine');
+const { privacyOptions } = require('./src/network/privacy_engine');
 const { registerPrivacyIpc } = require('./src/ipc/privacy_ipc');
 const { createAdblock } = require('./src/network/adblock_engine');
 const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
@@ -37,6 +38,7 @@ const { readStartupSpeed, speedSwitches, speedFeatures } = require('./src/app/sp
 const { registerSpeedIpc } = require('./src/ipc/speed_ipc');
 const { registerPermissionIpc } = require('./src/ipc/permission_ipc');
 const { registerSettingsIpc } = require('./src/ipc/settings_ipc');
+const { registerDownloadsIpc } = require('./src/ipc/downloads_ipc');
 const { TabManager } = require('./src/tabs/tabs_manager');
 const { createFaviconColor } = require('./src/tabs/favicon_color');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/tabs/memory_policy');
@@ -80,6 +82,8 @@ let extensions = null; // extensões do Chromium (src/extensions/extension_manag
 let engines = []; // motores de busca [{ id, name, url }]
 let engineId = ''; // o padrão
 let lastSession = '';
+let downloadsStore = null; // lista de downloads (downloads.json)
+let downloadsApi = null;
 
 // Esquema de cores (prefers-color-scheme) da interface e dos sites,
 // e a cor de fundo da janela para cada um (evita um clarão ao abrir/redimensionar).
@@ -121,7 +125,9 @@ function activePage() {
 function flushState() {
   statePending = false;
   if (!tabs) return;
-  send('state', { ...tabs.snapshot(), bookmarked: !!activePage() && bookmarks.has(activePage().url) });
+  const page = activePage();
+  // perms: permissões do site da aba ativa, para o painel ao lado da estrela
+  send('state', { ...tabs.snapshot(), bookmarked: !!page && bookmarks.has(page.url), perms: page ? permissions.siteState(page.url) : null });
   sampleMemory(false);
   policy?.refresh();
   scheduleSession();
@@ -144,10 +150,11 @@ function scheduleSession() {
   if (!sessionTimer) sessionTimer = setTimeout(saveSession, 2000);
 }
 
-// Abre as Configurações; com 'history', já na categoria Histórico.
+// Abre as Configurações; com 'history', 'appearance' ou 'downloads', já nessa categoria.
+const OPEN_PANELS = new Set(['history', 'appearance', 'downloads']);
 function openSettings(panel) {
   tabs.openSettings();
-  if (panel === 'history' || panel === 'appearance') send('panel', panel);
+  if (OPEN_PANELS.has(panel)) send('panel', panel);
 }
 
 // O número de MB no canto NÃO tem timer: é atualizado quando algo acontece
@@ -189,8 +196,8 @@ function onShortcut(input) {
     toggleBookmark();
     return true;
   }
-  if (key === 'h') {
-    openSettings('history');
+  if (key === 'h' || key === 'j') {
+    openSettings(key === 'h' ? 'history' : 'downloads');
     return true;
   }
   switch (key) {
@@ -292,7 +299,8 @@ function createWindow() {
   });
 
   tabs = new TabManager(win, ui, onTabsChanged, onShortcut, history);
-  tabs.setWebrtcPolicy(webrtcPolicy(privacyApi.options()));
+  tabs.eagerJs = () => speedApi.options().eagerJsCache;
+  tabs.setWebrtcPolicy(privacyApi.webrtc());
   // janela de anúncio: cortada se o bloqueador OU "fechar popups" estiver ligado
   tabs.setPopupFilter((url) => (store.get('adblock') !== false || store.get('adblockPopups') !== false) && !!adblockApi?.shouldBlock(url, 'script', ''));
   tabs.setFaviconColor(createFaviconColor({ net, nativeImage }));
@@ -314,6 +322,7 @@ function createWindow() {
     saveSession(); // antes de as abas serem destruídas
     sessionStore.flush();
     history.flush();
+    downloadsStore.flush();
   });
   win.on('closed', () => {
     policy?.stop();
@@ -345,7 +354,7 @@ ipcMain.on('ui:ready', (event) => {
   send('font', { scale: store.get('fontScale') ?? 1, family: store.get('fontFamily') ?? 'system' });
   send('tabLayout', tabs.tabLayout);
   if (permissions.pending()) send('perm:ask', permissions.pending());
-  send('state', tabs.snapshot());
+  flushState();
   sampleMemory(true);
 });
 ipcMain.on('tab:new', (event) => {
@@ -514,7 +523,7 @@ toggleBookmark = registerBookmarksIpc({
 registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: () => vault, getWindow: () => win });
 registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
 registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win, getTabs: () => tabs });
-const permissions = registerPermissionIpc({ ipcMain, fromUi, session, getStore: () => store, getTabs: () => tabs, send });
+const permissions = registerPermissionIpc({ ipcMain, fromUi, session, getStore: () => store, getTabs: () => tabs, send, getActiveUrl: () => activePage()?.url ?? '', refresh: onTabsChanged });
 const settingsApi = registerSettingsIpc({
   ipcMain,
   fromUi,
@@ -527,6 +536,7 @@ const settingsApi = registerSettingsIpc({
     saveSession(); // app.exit não passa pelo evento "close"
     sessionStore.flush();
     history.flush();
+    downloadsStore.flush();
   },
 });
 
@@ -544,6 +554,9 @@ app.whenReady().then(() => {
   nativeTheme.themeSource = THEMES.has(savedTheme) ? savedTheme : 'dark';
 
   permissions.install();
+  downloadsStore = createStore(path.join(app.getPath('userData'), 'downloads.json'), {});
+  downloadsApi = registerDownloadsIpc({ ipcMain, fromUi, session, app, shell, dialog, store, listStore: downloadsStore, getWindow: () => win, notify: (name) => send('download', name) });
+  downloadsApi.install();
   settingsApi.applyUserAgent();
 
   // Senhas: cifradas com a proteção do sistema (safeStorage); sem ela, o cofre fica desativado.
@@ -567,8 +580,9 @@ app.whenReady().then(() => {
     adblock,
     getAdblockOn: () => store.get('adblock') !== false,
     getPrivacy: () => privacyOptions(store.get('privacy')),
+    isFullExtension: (initiator) => extensions.isFull(initiator),
   });
-  registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network, getMask: () => privacyOptions(store.get('privacy')).maskHardware, getCanvas: () => privacyOptions(store.get('privacy')).canvasNoise });
+  registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network, getMask: () => privacyOptions(store.get('privacy')).maskHardware, getCanvas: () => privacyOptions(store.get('privacy')).canvasNoise, getPage: () => ({ lazy: speedApi.options().lazyImages, lang: privacyOptions(store.get('privacy')).englishOnly }) });
   privacyApi = registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork: () => network, getTabs: () => tabs });
   privacyApi.apply();
   speedApi = registerSpeedIpc({ ipcMain, fromUi, store, app, startup: startupSpeed });

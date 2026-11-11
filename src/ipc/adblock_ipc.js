@@ -4,8 +4,8 @@ const { normalizeSite } = require('../data/passwords_vault');
 
 const MAX_ALLOW = 200;
 
-// ctx: { ipcMain, fromUi, adblock, store, getNetwork }
-function registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork, getMask = () => false, getCanvas = () => false }) {
+// ctx: { ipcMain, fromUi, adblock, store, getNetwork, getMask, getCanvas, getPage(): { lazy, lang } }
+function registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork, getMask = () => false, getCanvas = () => false, getPage = () => ({}) }) {
   const enabled = () => store.get('adblock') !== false; // ligado por padrão
   const allowList = () => (Array.isArray(store.get('adblockAllow')) ? store.get('adblockAllow') : []);
   const popupsOn = () => store.get('adblockPopups') !== false; // fechar popups/anúncios inesperados: ligado por padrão
@@ -21,7 +21,7 @@ function registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork, getMa
     } catch {}
     const free = fromUi(event) || adblock.allowedHost(host);
     // uma única consulta por página: anúncios, popups e "esconder hardware" (privacidade)
-    event.returnValue = { ads: !free && enabled(), popups: !free && popupsOn(), mask: !fromUi(event) && getMask(), canvas: !fromUi(event) && getCanvas() };
+    event.returnValue = { ads: !free && enabled(), popups: !free && popupsOn(), mask: !fromUi(event) && getMask(), canvas: !fromUi(event) && getCanvas(), ...(fromUi(event) ? {} : getPage()) };
   });
   ipcMain.handle('adblock:get', (event) => (fromUi(event) ? state() : null));
   ipcMain.handle('adblock:set', (event, on) => {

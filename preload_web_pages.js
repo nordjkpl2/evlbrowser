@@ -159,6 +159,31 @@ function maskHardware() {
   def('deviceMemory', 8);
 }
 
+// Mundo da página: idioma sempre en-US (o mais comum), junto com o cabeçalho Accept-Language (network_hub.js).
+function maskLanguage() {
+  try {
+    Object.defineProperty(Navigator.prototype, 'language', { get: () => 'en-US', configurable: true });
+    Object.defineProperty(Navigator.prototype, 'languages', { get: () => Object.freeze(['en-US', 'en']), configurable: true });
+  } catch {}
+}
+
+// Imagens fora da tela: sem `loading`, o Chromium baixa todas na hora. Marcadas como "lazy" elas esperam
+// você rolar até perto (o que o leitor antecipado do Chromium já pediu não é cancelado). Só o mundo isolado.
+function lazyImages() {
+  const mark = (img) => {
+    if (!img.hasAttribute('loading') && !img.complete) img.loading = 'lazy';
+  };
+  new MutationObserver((list) => {
+    for (const m of list) {
+      for (const n of m.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.tagName === 'IMG') mark(n);
+        else if (n.firstElementChild) for (const img of n.getElementsByTagName('img')) mark(img);
+      }
+    }
+  }).observe(document, { childList: true, subtree: true });
+}
+
 // Mundo da página: ruído invisível (1 bit em pontos espalhados) no que o site LÊ do canvas.
 // A "assinatura" do desenho muda a cada página, então não serve para reconhecer você.
 function canvasNoise() {
@@ -196,6 +221,8 @@ if (/^https?:$/.test(location.protocol)) {
   let popups = false;
   let mask = false;
   let canvas = false;
+  let lang = false;
+  let lazy = false;
   try {
     // { ads, popups }: ligados nas Configurações e o site não está na lista de permitidos
     const r = ipcRenderer.sendSync('adblock:enabled');
@@ -203,13 +230,16 @@ if (/^https?:$/.test(location.protocol)) {
     popups = r?.popups === true;
     mask = r?.mask === true;
     canvas = r?.canvas === true;
+    lang = r?.lang === true;
+    lazy = r?.lazy === true;
   } catch {}
-  for (const [on, func] of [[mask, maskHardware], [canvas, canvasNoise]]) {
+  for (const [on, func] of [[mask, maskHardware], [canvas, canvasNoise], [lang, maskLanguage]]) {
     if (!on) continue;
     try {
       contextBridge.executeInMainWorld({ func });
     } catch {}
   }
+  if (lazy && window === window.top) lazyImages();
   if (popups) {
     webFrame.insertCSS(POPUP_HIDE_CSS);
     try {

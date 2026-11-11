@@ -110,28 +110,114 @@ function permName(kind) {
   if (kind === 'midi') return t('dispositivos MIDI');
   return t('área de transferência');
 }
+const permBtn = $('perm-btn');
+const permList = $('perm-list');
+let permOpen = false; // aberto pelo botão ao lado da estrela
+let permAsk = null; // pedido do site esperando resposta
+let sitePerms = null; // { host, perms } do site da aba ativa (vem no estado)
+let permKey = '';
+
+function setPermOpen(open) {
+  permOpen = open;
+  window.evl.permPanel(open); // a interface cresce por cima da página para o painel caber
+  drawPerms();
+}
+
+// Cada clique anda um passo: Perguntar -> Permitido -> Bloqueado -> Perguntar.
+const PERM_NEXT = new Map([[null, true], [true, false], [false, null]]);
+function drawPerms() {
+  const show = (permOpen && !!sitePerms) || !!permAsk;
+  permEl.hidden = !show;
+  permBtn.setAttribute('aria-expanded', String(permOpen));
+  $('perm-ask').hidden = !permAsk;
+  if (!show) return;
+  $('perm-host').textContent = permAsk?.host ?? sitePerms.host;
+  const key = JSON.stringify(sitePerms) + lang;
+  $('perm-note').hidden = permList.hidden = !sitePerms;
+  if (key === permKey || !sitePerms) return;
+  permKey = key;
+  permList.replaceChildren(
+    ...Object.entries(sitePerms.perms).map(([kind, value]) => {
+      const li = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = permName(kind);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = value === true ? 'allow' : value === false ? 'block' : '';
+      btn.textContent = value === true ? t('Permitido') : value === false ? t('Bloqueado') : t('Perguntar');
+      btn.setAttribute('aria-label', `${permName(kind)}: ${btn.textContent}`);
+      btn.addEventListener('click', () => window.evl.permSet(kind, PERM_NEXT.get(value)));
+      li.append(name, btn);
+      return li;
+    })
+  );
+}
+
+// Chamado a cada estado novo (ui_main.js): o botão fica sempre na barra; colorido se o site tem algo permitido.
+function applyPerms(perms) {
+  sitePerms = perms ?? null;
+  permBtn.disabled = !sitePerms;
+  permBtn.classList.toggle('on', !!sitePerms && Object.values(sitePerms.perms).includes(true));
+  if (!sitePerms && permOpen) return setPermOpen(false);
+  drawPerms();
+}
+
 function answerPerm(allow) {
-  permEl.hidden = true;
-  window.evl.permAnswer(permId, allow, $('perm-remember').checked);
+  window.evl.permAnswer(permAsk?.id, allow, $('perm-remember').checked);
+  permAsk = null;
+  drawPerms();
 }
 window.evl.onPermAsk((ask) => {
-  permId = ask.id;
-  $('perm-text').textContent = `${ask.host} ${t('quer usar:')} ${ask.kinds.map(permName).join(', ')}`;
+  permAsk = ask;
+  $('perm-text').textContent = `${t('quer usar:')} ${ask.kinds.map(permName).join(', ')}`;
   $('perm-remember').checked = false;
-  permEl.hidden = false;
+  drawPerms();
 });
 window.evl.onPermClose(() => {
-  permEl.hidden = true;
+  permAsk = null;
+  drawPerms();
 });
+permBtn.addEventListener('click', () => setPermOpen(!permOpen));
 $('perm-allow').addEventListener('click', () => answerPerm(true));
 $('perm-block').addEventListener('click', () => answerPerm(false));
 permEl.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') answerPerm(false);
+  if (event.key !== 'Escape') return;
+  if (permAsk) answerPerm(false);
+  else setPermOpen(false);
+});
+document.addEventListener('mousedown', (event) => {
+  if (permOpen && !permEl.contains(event.target) && !permBtn.contains(event.target)) setPermOpen(false);
 });
 
+// Cartão em Configurações > Privacidade: sites com resposta lembrada.
+let permSitesKey = '';
 async function loadPerms() {
-  const n = await window.evl.permCount();
-  $('perm-count').textContent = `${n} ${t('sites com permissão salva')}`;
+  const list = await window.evl.permList();
+  const key = JSON.stringify(list) + lang;
+  if (key === permSitesKey) return; // roda a cada 2 s: só redesenha se mudou
+  permSitesKey = key;
+  $('perm-count').textContent = `${list.length} ${t('sites com permissão salva')}`;
+  $('perm-sites').replaceChildren(
+    ...list.map((s) => {
+      const li = document.createElement('li');
+      const name = document.createElement('span');
+      name.className = 'x-name';
+      name.textContent = s.origin.replace(/^https:\/\//, '');
+      const what = document.createElement('span');
+      what.className = 'hint';
+      what.textContent = [s.allowed.length && `${t('Permitido')}: ${s.allowed.map(permName).join(', ')}`, s.blocked.length && `${t('Bloqueado')}: ${s.blocked.map(permName).join(', ')}`].filter(Boolean).join(' · ');
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'text-btn';
+      del.textContent = t('Esquecer');
+      del.addEventListener('click', async () => {
+        await window.evl.permForget(s.origin);
+        loadPerms();
+      });
+      li.append(name, what, del);
+      return li;
+    })
+  );
 }
 $('perm-clear').addEventListener('click', async () => {
   await window.evl.permClear();

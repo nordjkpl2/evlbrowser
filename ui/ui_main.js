@@ -121,6 +121,31 @@ function makeTab(tab) {
   return el;
 }
 
+// Só a aba que mudou é refeita; as outras continuam com o mesmo elemento (ícone não pisca nem recarrega).
+const tabEls = new Map(); // id -> { key, el }
+function syncTabs(list) {
+  const keep = new Set();
+  let index = 0;
+  for (const tab of list) {
+    const key = JSON.stringify(tab) + lang;
+    let hit = tabEls.get(tab.id);
+    if (hit?.key !== key) {
+      const el = makeTab(tab);
+      hit?.el.remove();
+      hit = { key, el };
+      tabEls.set(tab.id, hit);
+    }
+    keep.add(tab.id);
+    if (tabsEl.children[index] !== hit.el) tabsEl.insertBefore(hit.el, tabsEl.children[index] ?? newTabBtn);
+    index++;
+  }
+  for (const [id, hit] of tabEls) {
+    if (keep.has(id)) continue;
+    hit.el.remove();
+    tabEls.delete(id);
+  }
+}
+
 function showAddress() {
   const active = current?.tabs.find((t) => t.id === current.activeId);
   // Aba em branco mostra a barra vazia; as outras mostram o endereço.
@@ -174,8 +199,8 @@ function render(state) {
     // linha de carregamento sob a barra, só enquanto a aba ativa carrega
     chromeEl.classList.toggle('loading', !!state.tabs.find((t) => t.id === state.activeId)?.loading);
 
-    tabsEl.querySelectorAll('.tab').forEach((n) => n.remove());
-    for (const t of state.tabs) tabsEl.insertBefore(makeTab(t), newTabBtn);
+    syncTabs(state.tabs);
+    applyPerms(state.perms);
 
     const web = state.activeKind === 'web';
     showStar(web, state.bookmarked === true);
@@ -206,6 +231,7 @@ const SETTINGS_SCRIPTS = [
   'settings/settings_bookmarks.js',
   'settings/settings_privacy.js',
   'settings/settings_speed.js',
+  'settings/settings_downloads.js',
 ];
 let settingsScripts = null;
 
@@ -272,6 +298,7 @@ async function refreshSettings() {
 
   if (panel === 'adblock') loadAdblock(); // o contador sobe enquanto você navega
   if (panel === 'privacy') loadPerms();
+  if (panel === 'downloads') loadDownloads(); // progresso dos downloads em andamento
   showTheme(report.theme);
   if (!accent) applyAccent(null); // sem escolha: o quadrado acompanha o tema claro/escuro
 }
@@ -394,6 +421,7 @@ function showPanel(name) {
   if (name === 'passwords') loadPasswords();
   if (name === 'bookmarks') loadBookmarks();
   if (name === 'privacy') loadPrivacy();
+  if (name === 'downloads') loadDownloads();
   if (name === 'render') loadSpeed();
 }
 
@@ -641,6 +669,7 @@ zoomInBtn.addEventListener('click', () => window.evl.zoom('in'));
 zoomValBtn.addEventListener('click', () => window.evl.zoom('reset'));
 menuSettingsBtn.addEventListener('click', () => window.evl.openSettings()); // abrir fecha o menu
 menuHistoryBtn.addEventListener('click', () => window.evl.openSettings('history'));
+$('menu-downloads').addEventListener('click', () => window.evl.openSettings('downloads'));
 
 // Clicar fora do menu (inclusive na área transparente sobre a página) ou Esc fecha.
 document.addEventListener('mousedown', (event) => {

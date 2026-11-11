@@ -19,6 +19,8 @@ const PRIVACY_DEFAULTS = {
   httpsOnly: false, // só abre https:// (sem voltar para http:// quando o site não oferece)
   webrtcOff: false, // WebRTC sem conexão direta (o IP real nunca aparece; chamadas de vídeo podem falhar)
   canvasNoise: false, // ruído invisível no canvas (a "assinatura" do desenho muda a cada página)
+  strictDns: false, // DNS seguro sem plano B: nunca pergunta ao DNS do provedor (se o DNS seguro cair, os sites não abrem)
+  englishOnly: false, // sites veem o idioma en-US (o mais comum), como no LibreWolf
 };
 
 function privacyOptions(raw) {
@@ -125,8 +127,19 @@ function httpsUrl(url) {
   return host && !LOCAL_HOST.test(host) ? `https://${url.slice(7)}` : null;
 }
 
-// Política do WebRTC conforme as opções (a mais forte vence).
-const webrtcPolicy = (o) => (o.webrtcOff ? 'disable_non_proxied_udp' : o.webrtcProtect ? 'default_public_interface_only' : 'default');
+// Política do WebRTC conforme as opções (a mais forte vence). Com proxy, nada sai por fora dele.
+const webrtcPolicy = (o, proxy) => (o.webrtcOff || proxy ? 'disable_non_proxied_udp' : o.webrtcProtect ? 'default_public_interface_only' : 'default');
+
+// Modo do DNS por HTTPS: desligado, com plano B (DNS do sistema) ou estrito.
+const dnsMode = (o) => (!o.secureDns ? 'off' : o.strictDns ? 'secure' : 'automatic');
+
+// Proxy aceito: socks5://host:porta (Tor = socks5://127.0.0.1:9050), socks4, http ou https. '' = sem proxy; null = inválido.
+function validProxy(text) {
+  const s = String(text ?? '').trim().toLowerCase();
+  if (!s) return '';
+  const m = /^(socks5|socks4|http|https):\/\/([a-z0-9.-]{1,253}|\[[0-9a-f:]+\]):(\d{1,5})$/.exec(s);
+  return m && Number(m[3]) > 0 && Number(m[3]) < 65536 ? s : null;
+}
 
 const hostOf = (url) => splitUrl(url)?.host ?? '';
 
@@ -138,4 +151,4 @@ function isThirdParty(requestUrl, pageUrl) {
   return !!req && siteOf(req) !== siteOf(page);
 }
 
-module.exports = { httpsUrl, webrtcPolicy, PRIVACY_DEFAULTS, privacyOptions, cleanUrl, isTrackingParam, siteOf, isThirdParty, hostOf, splitUrl };
+module.exports = { dnsMode, validProxy, httpsUrl, webrtcPolicy, PRIVACY_DEFAULTS, privacyOptions, cleanUrl, isTrackingParam, siteOf, isThirdParty, hostOf, splitUrl };

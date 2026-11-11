@@ -4,8 +4,15 @@
 // ---------- eventos do main.js ----------
 
 window.evl.onState(render);
+let lastMb = '-- MB';
 window.evl.onMemory((mb) => {
-  memEl.textContent = `${mb} MB`;
+  lastMb = `${mb} MB`;
+  memEl.textContent = lastMb;
+});
+// Download começou: o nome aparece por 3 s no lugar do contador (a lista fica em Configurações > Downloads, Ctrl+J).
+window.evl.onDownload((name) => {
+  memEl.textContent = `↓ ${String(name).slice(0, 16)}`;
+  setTimeout(() => (memEl.textContent = lastMb), 3000);
 });
 window.evl.onFocusAddress(() => addressEl.focus());
 window.evl.onAccent(applyAccent);

@@ -116,3 +116,18 @@ test('novas opções: só HTTPS, beacons, WebRTC e filtro com WebSocket', async 
   assert.deepStrictEqual(await ask({ resourceType: 'webSocket', url: 'wss://coleta.net/', initiator: 'chrome-extension://abc' }), { cancel: true });
   assert.deepStrictEqual(await ask({ resourceType: 'image', url: 'https://a.com/i.png' }), {});
 });
+
+test('DNS estrito, proxy e WebRTC com proxy', () => {
+  const { dnsMode, validProxy, webrtcPolicy, privacyOptions } = require('../src/network/privacy_engine');
+  const o = privacyOptions(null);
+  assert.strictEqual(dnsMode(o), 'automatic');
+  assert.strictEqual(dnsMode({ ...o, strictDns: true }), 'secure');
+  assert.strictEqual(dnsMode({ ...o, secureDns: false, strictDns: true }), 'off');
+  assert.strictEqual(validProxy(' SOCKS5://127.0.0.1:9050 '), 'socks5://127.0.0.1:9050');
+  assert.strictEqual(validProxy(''), '');
+  assert.strictEqual(validProxy('socks5://x:99999'), null);
+  assert.strictEqual(validProxy('ftp://x:21'), null);
+  assert.strictEqual(validProxy('http://a.b:8080/x'), null);
+  assert.strictEqual(webrtcPolicy(o, 'socks5://127.0.0.1:9050'), 'disable_non_proxied_udp');
+  assert.strictEqual(webrtcPolicy(o, ''), 'default_public_interface_only');
+});

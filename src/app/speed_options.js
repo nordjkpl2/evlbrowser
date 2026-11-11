@@ -20,8 +20,13 @@ const SPEED_DEFAULTS = {
   zeroCopy: false, // a placa de vídeo recebe as imagens sem cópia (rolagem mais fluida; pode falhar em drivers antigos)
   noSmoothScroll: false, // rolagem sem animação (resposta imediata, menos CPU)
   rasterThreads: 0, // threads que desenham a página (0 = automático)
+  eagerJsCache: false, // guarda o JavaScript já compilado desde a 1ª visita (abas abertas depois)
+  lazyImages: false, // imagens fora da tela só baixam quando você rola até elas (páginas abertas depois)
+  ignoreGpuBlocklist: false, // usa a placa de vídeo mesmo se o Chromium a considera antiga
+  forceSrgb: false, // cores iguais em qualquer monitor (perfil sRGB)
+  skiaGraphite: false, // novo motor de desenho do Chromium (experimental)
 };
-const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB', 'parallelDownloads', 'zeroCopy', 'noSmoothScroll', 'rasterThreads'];
+const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB', 'parallelDownloads', 'zeroCopy', 'noSmoothScroll', 'rasterThreads', 'ignoreGpuBlocklist', 'forceSrgb', 'skiaGraphite'];
 const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096], rasterThreads: [0, 4] };
 
 function speedOptions(raw) {
@@ -62,10 +67,12 @@ function speedSwitches(o) {
   if (o.zeroCopy) out.push(['enable-zero-copy']);
   if (o.noSmoothScroll) out.push(['disable-smooth-scrolling']);
   if (o.rasterThreads > 0) out.push(['num-raster-threads', String(o.rasterThreads)]);
+  if (o.ignoreGpuBlocklist) out.push(['ignore-gpu-blocklist']);
+  if (o.forceSrgb) out.push(['force-color-profile', 'srgb']);
   return out;
 }
 
 // Recursos (enable-features) ligados pelas opções.
-const speedFeatures = (o) => (o.parallelDownloads ? ['ParallelDownloading'] : []);
+const speedFeatures = (o) => [o.parallelDownloads && 'ParallelDownloading', o.skiaGraphite && 'SkiaGraphite'].filter(Boolean);
 
 module.exports = { speedFeatures, speedSwitches, SPEED_DEFAULTS, RESTART, speedOptions, checkSpeedValue, readStartupSpeed, needsRestart };

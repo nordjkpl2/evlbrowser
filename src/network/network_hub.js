@@ -28,8 +28,8 @@ function referrerOrigin(ref) {
   }
 }
 
-// ctx: { session, adblock, getAdblockOn(): boolean, getPrivacy(): opções }
-function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
+// ctx: { session, adblock, getAdblockOn(): boolean, getPrivacy(): opções, isFullExtension(initiator): extensão com "acesso completo" }
+function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy, isFullExtension = () => false }) {
   return {
     refresh() {
       const requests = session.defaultSession.webRequest;
@@ -39,7 +39,7 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
       if (adsOn || p.stripParams || p.blockExtensionNet || p.blockBeacons || p.httpsOnly) {
         requests.onBeforeRequest(FILTER, (d, callback) => {
           // extensão (página de fundo / service worker) tentando falar com a internet
-          if (p.blockExtensionNet && isExtensionRequest(d)) return callback({ cancel: true });
+          if (p.blockExtensionNet && isExtensionRequest(d) && !isFullExtension(d.initiator)) return callback({ cancel: true });
           const secure = p.httpsOnly ? httpsUrl(d.url) : null;
           if (secure) return callback({ redirectURL: secure });
           if (d.resourceType === 'mainFrame') {
@@ -53,7 +53,7 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
         });
       } else requests.onBeforeRequest(null);
 
-      if (p.sendDnt || p.blockThirdPartyCookies || p.trimReferrer || p.limitFingerprint) {
+      if (p.sendDnt || p.blockThirdPartyCookies || p.trimReferrer || p.limitFingerprint || p.englishOnly) {
         requests.onBeforeSendHeaders(FILTER, (d, callback) => {
           const headers = d.requestHeaders;
           if (p.sendDnt) {
@@ -64,6 +64,10 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
             dropHeader(headers, 'cookie');
           }
           if (p.limitFingerprint) for (const h of HIGH_ENTROPY_HINTS) dropHeader(headers, h);
+          if (p.englishOnly) {
+            dropHeader(headers, 'accept-language');
+            headers['Accept-Language'] = 'en-US,en;q=0.9';
+          }
           if (p.trimReferrer && d.referrer && isThirdParty(d.url, d.referrer)) {
             const origin = referrerOrigin(d.referrer);
             if (origin) {

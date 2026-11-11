@@ -11,10 +11,10 @@ module.exports = {
 
   // Espaço extra (px) que a interface ocupa por cima da página enquanto o
   // submenu do contador de memória está aberto.
-  MENU_HEIGHT: 150,
+  MENU_HEIGHT: 186,
 
-  // Painel de pedido de permissão (microfone, câmera...) abaixo da barra de endereço.
-  PROMPT_HEIGHT: 110,
+  // Painel de permissões do site (lista + pedido), pequeno, abaixo do botão ao lado da estrela.
+  PROMPT_HEIGHT: 350,
 
   // Idem para a lista de sugestões do histórico (até 6 linhas) da barra de endereço.
   SUGGEST_HEIGHT: 240,

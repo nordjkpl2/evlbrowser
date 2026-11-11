@@ -9,6 +9,7 @@ const PRIVACY_ROWS = [
   ['sendDnt', 'Pedir para não ser rastreado', 'Envia os avisos Do Not Track e Global Privacy Control.'],
   ['webrtcProtect', 'Proteger o IP no WebRTC', 'Impede que sites descubram o IP da sua rede local por chamadas de vídeo.'],
   ['secureDns', 'DNS seguro (HTTPS)', 'Esconde os sites que você visita do provedor de internet. Se falhar, volta ao DNS do sistema.'],
+  ['strictDns', 'DNS seguro estrito', 'Nunca volta ao DNS do provedor: ele não vê nenhum nome de site. Precisa do DNS seguro ligado; se ele cair, os sites não abrem até voltar.'],
   ['trimReferrer', 'Esconder de onde você veio', 'Sites de fora veem só o domínio da página anterior, nunca o endereço completo (não vazam o que você lia em outra aba).'],
   ['limitFingerprint', 'Limitar a impressão digital', 'Esconde detalhes do seu computador que os sites pedem (versão exata, modelo) e bloqueia APIs de anúncios do Chromium.'],
   ['blockExtensionNet', 'Extensões não enviam dados para fora', 'Corta a internet das páginas de fundo das extensões, para elas não enviarem o que leem das suas abas. Pode quebrar extensões que precisam de internet.'],
@@ -17,6 +18,7 @@ const PRIVACY_ROWS = [
   ['letterbox', 'Arredondar o tamanho da janela', 'A página usa sempre múltiplos de 200×100 px, para o tamanho exato da janela não identificar você. Sobram faixas vazias nas bordas.'],
   ['blockBeacons', 'Bloquear beacons e relatórios', 'Corta os avisos que as páginas mandam em segundo plano para medir cliques e tempo de leitura. Nenhum site depende deles.'],
   ['canvasNoise', 'Ruído no canvas', 'Muda de forma invisível o que os sites leem dos desenhos da página, para a assinatura do seu computador não se repetir. Vale para páginas abertas depois.'],
+  ['englishOnly', 'Idioma genérico para os sites', 'Os sites veem o idioma en-US, o mais comum (como no LibreWolf). Páginas podem abrir em inglês.'],
   ['httpsOnly', 'Só HTTPS', 'Endereços http:// viram https://, sem voltar atrás. Sites que só existem em http:// deixam de abrir (a rede local continua funcionando).'],
   ['webrtcOff', 'WebRTC sem conexão direta', 'O seu IP real nunca aparece em chamadas, nem usando VPN. Chamadas de vídeo podem falhar.'],
   ['clearOnExit', 'Apagar cookies e cache ao fechar', 'Desliga você dos sites a cada vez que fecha o navegador.'],
@@ -60,7 +62,16 @@ function renderPrivacy() {
 async function loadPrivacy() {
   vOptions = await window.evl.privacyGet();
   renderPrivacy();
+  $('v-proxy').value = (await window.evl.privacyProxy())?.proxy ?? '';
 }
+
+$('v-proxy-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const r = await window.evl.privacyProxy($('v-proxy').value);
+  const st = $('v-proxy-status');
+  st.hidden = false;
+  st.textContent = !r?.ok ? t('Endereço inválido. Use socks5://endereço:porta (ou socks4, http, https).') : r.proxy ? t('Proxy ligado.') : t('Proxy desligado.');
+});
 
 let vArmed = null;
 $('v-clear').addEventListener('click', async (event) => {

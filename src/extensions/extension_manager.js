@@ -88,6 +88,8 @@ if (typeof globalThis.browser === 'undefined' && typeof chrome !== 'undefined') 
     };
     return v && typeof v === 'object' ? wrap(v) : v;
   } });
+  // browser.menus (Firefox) é o chrome.contextMenus do Chromium
+  try { if (!chrome.menus && chrome.contextMenus) chrome.menus = chrome.contextMenus; } catch {}
   globalThis.browser = chrome.runtime.getManifest().manifest_version >= 3 ? chrome : wrap(chrome);
 }
 `;
@@ -96,7 +98,12 @@ function adaptFirefox(root, m) {
   if (!m.browser_specific_settings && !m.applications) return;
   delete m.browser_specific_settings;
   delete m.applications;
-  fs.writeFileSync(path.join(root, SHIM), SHIM_CODE);
+  // "menus" do Firefox = "contextMenus" do Chromium
+  for (const key of ['permissions', 'optional_permissions']) {
+    if (Array.isArray(m[key])) m[key] = [...new Set(m[key].map((x) => (x === 'menus' ? 'contextMenus' : x)))];
+  }
+  const shim = path.join(root, SHIM);
+  if (!fs.existsSync(shim) || fs.readFileSync(shim, 'utf8') !== SHIM_CODE) fs.writeFileSync(shim, SHIM_CODE);
   const first = (list) => [SHIM, ...list.filter((x) => x !== SHIM)];
   for (const c of Array.isArray(m.content_scripts) ? m.content_scripts : []) if (Array.isArray(c?.js)) c.js = first(c.js);
   const bg = m.background;
@@ -105,7 +112,9 @@ function adaptFirefox(root, m) {
       // o Firefox aceita background.scripts no manifest v3; o Chromium exige um service worker
       const mod = bg.type === 'module';
       const lines = first(bg.scripts).map((s) => (mod ? `import ${JSON.stringify(`./${s.replace(/^\/+/, '')}`)};` : `importScripts(${JSON.stringify(s)});`));
-      fs.writeFileSync(path.join(root, 'evl_sw.js'), `${lines.join('\n')}\n`);
+      const sw = `${lines.join('\n')}\n`;
+      const swFile = path.join(root, 'evl_sw.js');
+      if (!fs.existsSync(swFile) || fs.readFileSync(swFile, 'utf8') !== sw) fs.writeFileSync(swFile, sw);
       m.background = { service_worker: 'evl_sw.js', ...(mod ? { type: 'module' } : {}) };
     } else bg.scripts = first(bg.scripts);
   }
@@ -130,15 +139,30 @@ function pagesOf(m) {
 }
 
 // Aplica o isolamento e a adaptação na cópia instalada. Devolve as permissões tiradas. Pode rodar de novo sem efeito.
-function secure(root) {
+// O manifest original fica guardado ao lado (ORIGINAL): com `full` ("acesso completo", escolhido por você) as
+// permissões entre sites voltam, para extensões que não funcionam sem elas.
+const ORIGINAL = 'manifest.evl-original.json';
+function secure(root, { full = false } = {}) {
   const file = path.join(root, 'manifest.json');
-  const before = stripBom(fs.readFileSync(file, 'utf8'));
-  const m = JSON.parse(before);
+  const backup = path.join(root, ORIGINAL);
+  const current = stripBom(fs.readFileSync(file, 'utf8'));
+  if (!fs.existsSync(backup)) fs.writeFileSync(backup, current);
+  const m = JSON.parse(stripBom(fs.readFileSync(backup, 'utf8')));
   const removed = isolate(m);
+  if (full) Object.assign(m, pick(JSON.parse(stripBom(fs.readFileSync(backup, 'utf8'))), ['permissions', 'optional_permissions']));
+  delete m.minimum_chrome_version; // extensão pede um Chrome mais novo que o nosso: tenta carregar assim mesmo
   adaptFirefox(root, m);
-  const after = JSON.stringify(m, null, 2);
-  if (JSON.stringify(JSON.parse(before)) !== JSON.stringify(m)) fs.writeFileSync(file, after);
-  return removed;
+  if (JSON.stringify(JSON.parse(current)) !== JSON.stringify(m)) fs.writeFileSync(file, JSON.stringify(m, null, 2));
+  return full ? [] : removed;
+}
+const pick = (o, keys) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
+// O original pedia permissões entre sites? (para mostrar o botão "Acesso completo")
+function wantsCrossSite(root) {
+  try {
+    return isolate(JSON.parse(stripBom(fs.readFileSync(path.join(root, ORIGINAL), 'utf8')))).length > 0;
+  } catch {
+    return false;
+  }
 }
 
 // Resumo do que a extensão pode acessar (para avisar a pessoa): todos os sites e permissões sensíveis.
@@ -168,6 +192,7 @@ function readManifest(root) {
 // `ext` é session.extensions (ou o próprio session nas versões antigas); `store` tem get/set.
 function createExtensions({ ext, dir, store }) {
   const loaded = new Map(); // id nosso -> objeto Extension do Electron
+  const fullIds = new Set(); // ids do Chromium das extensões com "acesso completo" (podem usar a internet)
   const errors = new Map();
   const items = () => store.get('list') ?? [];
   const save = (list) => store.set('list', list);
@@ -176,6 +201,7 @@ function createExtensions({ ext, dir, store }) {
     try {
       const e = await ext.loadExtension(path.join(dir, item.id), { allowFileAccess: false });
       loaded.set(item.id, e);
+      if (item.full) fullIds.add(e.id);
       errors.delete(item.id);
     } catch (err) {
       errors.set(item.id, String(err.message ?? err).slice(0, 160));
@@ -185,6 +211,7 @@ function createExtensions({ ext, dir, store }) {
     const e = loaded.get(id);
     loaded.delete(id);
     if (!e) return;
+    fullIds.delete(e.id);
     try {
       (ext.removeExtension ?? (() => {}))(e.id);
     } catch {}
@@ -209,8 +236,10 @@ function createExtensions({ ext, dir, store }) {
       for (const item of list) {
         try {
           // extensões instaladas antes do isolamento passam por ele aqui (nada de permissão antiga sobrando)
-          const removed = [...new Set([...(item.removed ?? []), ...secure(path.join(dir, item.id))])];
-          const next = { ...item, ...readManifest(path.join(dir, item.id)), removed };
+          const root = path.join(dir, item.id);
+          const cut = secure(root, { full: item.full === true });
+          const removed = item.full ? [] : [...new Set([...(item.removed ?? []), ...cut])];
+          const next = { ...item, ...readManifest(root), removed, cross: wantsCrossSite(root) };
           if (JSON.stringify(next) !== JSON.stringify(item)) {
             Object.assign(item, next);
             changed = true;
@@ -225,6 +254,8 @@ function createExtensions({ ext, dir, store }) {
         popup: pageUrl(i, 'popup'),
         options: pageUrl(i, 'options'),
         removed: i.removed ?? [],
+        full: i.full === true,
+        cross: i.cross === true, // pede permissões entre sites: dá para ligar "Acesso completo"
         id: i.id,
         name: i.name,
         version: i.version,
@@ -250,7 +281,7 @@ function createExtensions({ ext, dir, store }) {
           fs.renameSync(tmp, dest);
         }
         const removed = secure(dest);
-        const item = { id, ...readManifest(dest), removed, enabled: true };
+        const item = { id, ...readManifest(dest), removed, cross: removed.length > 0, enabled: true };
         save([...items(), item]);
         await load(item);
         return this.list().find((x) => x.id === id);
@@ -269,6 +300,22 @@ function createExtensions({ ext, dir, store }) {
       else await unload(id);
       return true;
     },
+    // "Acesso completo": devolve (ou tira de novo) as permissões entre sites e a internet da extensão.
+    async setFull(id, full) {
+      const list = items();
+      const item = list.find((i) => i.id === id);
+      if (!item) return false;
+      item.full = full === true;
+      item.removed = secure(path.join(dir, id), { full: item.full });
+      save(list);
+      if (item.enabled) {
+        await unload(id);
+        await load(item);
+      }
+      return true;
+    },
+    // Pedido de rede vindo de uma extensão com acesso completo? (initiator = "chrome-extension://<id>")
+    isFull: (initiator) => fullIds.size > 0 && fullIds.has(String(initiator).slice(19, 51)),
     async remove(id) {
       if (!items().some((i) => i.id === id)) return false;
       await unload(id);

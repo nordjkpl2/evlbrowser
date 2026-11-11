@@ -116,7 +116,7 @@ ul > .v-row:first-child, p + .v-row:first-child { border-top: 0; }
 .v-hint { font-size: calc(12px * var(--ui-scale, 1)); }
 .v-always { margin: 0; padding-left: 18px; }
 .v-always li { padding: 3px 0; }
-#sp-list, #rd-list, #v-list, #ab-allow, #x-list, #c-list, #b-list, #p-list, #e-list, #h-list { margin: 8px 0 0; padding: 0; list-style: none; }
+#sp-list, #rd-list, #v-list, #ab-allow, #x-list, #c-list, #b-list, #p-list, #e-list, #h-list, #d-list, #perm-sites { margin: 8px 0 0; padding: 0; list-style: none; }
 
 /* interruptor */
 .switch { position: relative; flex: none; width: 44px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-active); cursor: pointer; }
@@ -214,9 +214,9 @@ tbody tr:last-child td { border-bottom: 0; }
 .h-title, .h-url { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .h-url { grid-column: 1; font-size: calc(12px * var(--ui-scale, 1)); }
 .h-time { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: calc(12px * var(--ui-scale, 1)); white-space: nowrap; }
-#x-list li, .ab-row { display: flex; align-items: center; gap: 12px; padding: 6px 4px; border-radius: var(--r); }
-#x-list li:hover { background: var(--surface-active); }
-#x-list .x-name, .ab-row .ab-site { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#x-list li, #d-list li, #perm-sites li, .ab-row { display: flex; align-items: center; gap: 12px; padding: 6px 4px; border-radius: var(--r); }
+#x-list li:hover, #d-list li:hover, #perm-sites li:hover { background: var(--surface-active); }
+#x-list .x-name, #d-list .x-name, #perm-sites .x-name, .ab-row .ab-site { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- escolha de tema e de estilo visual ---------- */
 .theme-options { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
@@ -330,3 +330,7 @@ html.look-1900 .theme-option[aria-checked="true"] { box-shadow: 3px 3px 0 var(--
 .font-row label.grow { flex: 1 1 100%; }
 #home-links-in { width: 100%; min-height: 84px; padding: 8px; border: 1px solid var(--border); border-radius: calc(var(--r) * 0.6); background: var(--surface); color: var(--text); font: inherit; resize: vertical; }
 #home-links-in:focus { border-color: var(--accent); outline: none; }
+
+/* linhas longas (histórico, favoritos, cookies, senhas, downloads): o que está fora da tela não é desenhado */
+#h-list > li, #b-list > li, #c-list > li, #p-list > li, #d-list > li { content-visibility: auto; contain-intrinsic-size: auto 36px; }
+#d-list progress { width: 90px; height: 6px; }

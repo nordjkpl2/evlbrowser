@@ -63,3 +63,11 @@ test('novas opções de velocidade: desligadas por padrão e viram flags', () =>
   assert.deepStrictEqual(speedFeatures(on), ['ParallelDownloading']);
   assert.deepStrictEqual(speedSwitches(on), [['enable-zero-copy'], ['disable-smooth-scrolling'], ['num-raster-threads', '4']]);
 });
+
+test('renderização: novas flags', () => {
+  const { speedOptions: so, speedSwitches: sw, speedFeatures: sf } = require('../src/app/speed_options');
+  const o = so({ ignoreGpuBlocklist: true, forceSrgb: true, skiaGraphite: true, parallelDownloads: true });
+  assert.deepStrictEqual(sw(o), [['ignore-gpu-blocklist'], ['force-color-profile', 'srgb']]);
+  assert.deepStrictEqual(sf(o), ['ParallelDownloading', 'SkiaGraphite']);
+  assert.deepStrictEqual(sf(so(null)), []);
+});

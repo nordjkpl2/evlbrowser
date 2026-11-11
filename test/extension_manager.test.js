@@ -124,7 +124,14 @@ test('isolamento: permissões que olham entre sites saem do manifest (e não vol
   assert.deepStrictEqual(m.optional_permissions, []);
   assert.ok(!('externally_connectable' in m) && !('update_url' in m));
   assert.deepStrictEqual(m.host_permissions, ['<all_urls>']); // scripts de página continuam
-  assert.deepStrictEqual(secure(dir), []); // rodar de novo não muda nada
+  assert.deepStrictEqual(secure(dir), ['tabs', 'cookies', 'webRequest', 'history']); // rodar de novo dá o mesmo resultado
+  assert.deepStrictEqual(read().permissions, ['storage']);
+  // "Acesso completo": as permissões voltam do manifest original guardado; update_url continua fora
+  assert.deepStrictEqual(secure(dir, { full: true }), []);
+  assert.deepStrictEqual(read().permissions, ['storage', 'tabs', 'cookies', 'webRequest']);
+  assert.ok(!('update_url' in read()));
+  assert.deepStrictEqual(secure(dir), ['tabs', 'cookies', 'webRequest', 'history']);
+  assert.deepStrictEqual(read().permissions, ['storage']);
   assert.strictEqual(parseAmoSlug('https://addons.mozilla.org/pt-BR/firefox/addon/dark-reader/?x=1'), 'dark-reader');
   assert.strictEqual(parseAmoSlug('https://chromewebstore.google.com/detail/x/abcdefghijklmnopabcdefghijklmnop'), null);
 });

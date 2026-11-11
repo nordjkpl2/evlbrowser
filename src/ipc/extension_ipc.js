@@ -53,6 +53,9 @@ function registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions, ge
   ipcMain.handle('extensions:enable', (event, id, enabled) =>
     fromUi(event) && typeof id === 'string' ? getExtensions().setEnabled(id, enabled === true) : false
   );
+  ipcMain.handle('extensions:full', (event, id, full) =>
+    fromUi(event) && typeof id === 'string' ? getExtensions().setFull(id, full === true) : false
+  );
   // Popup ou opções da extensão numa aba (o Electron não tem o botão da extensão na barra).
   ipcMain.handle('extensions:open', (event, id, kind) => {
     if (!fromUi(event) || typeof id !== 'string') return false;

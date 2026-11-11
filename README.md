@@ -29,6 +29,7 @@ npm test
 | Ctrl+0 | Zoom em 100% |
 | Ctrl+, | Configurações |
 | Ctrl+H | Histórico |
+| Ctrl+J | Downloads |
 | Ctrl+Shift+T | Reabrir a última aba fechada |
 | Ctrl+Shift+I | DevTools da aba ativa |
 | F12 | DevTools da interface do navegador 

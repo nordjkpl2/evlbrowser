@@ -21,6 +21,11 @@ const SPEED_ROWS = [
   ['zeroCopy', 'bool', 'Imagens direto na placa de vídeo', 'Rolagem e vídeo mais fluidos (zero-copy). Desligue se aparecerem falhas na imagem.', '', true, 'o', 0],
   ['noSmoothScroll', 'bool', 'Rolagem sem animação', 'A página responde na hora à roda do mouse e gasta menos CPU.', '', true, 'o', 0],
   ['rasterThreads', 'num', 'Threads de desenho', 'Quantas threads desenham a página. Mais threads aceleram páginas pesadas em processadores com vários núcleos. 0 = automático.', '', true, 'o', 0],
+  ['eagerJsCache', 'bool', 'Guardar o JavaScript já compilado', 'O código dos sites fica pronto no cache desde a primeira visita: a segunda abre mais rápido. Usa um pouco mais de disco. Vale para abas abertas depois.', '', false, 's', 0],
+  ['lazyImages', 'bool', 'Imagens só quando aparecem', 'Imagens fora da tela esperam você rolar até perto delas: menos internet e memória em páginas longas. Vale para páginas abertas depois.', '', false, 'o', 0],
+  ['ignoreGpuBlocklist', 'bool', 'Forçar a placa de vídeo', 'Usa a aceleração mesmo em placas que o Chromium considera antigas. Desligue se a imagem falhar.', '', true, 'o', 0],
+  ['forceSrgb', 'bool', 'Cores padrão (sRGB)', 'As páginas usam sempre o perfil sRGB: cores iguais em qualquer monitor.', '', true, 'o', 0],
+  ['skiaGraphite', 'bool', 'Novo motor de desenho (experimental)', 'Liga o Skia Graphite do Chromium, que desenha as páginas com menos trabalho da placa de vídeo. Desligue se algo aparecer errado.', '', true, 'o', 0],
 ];
 
 // Pontos que a opção rende com o valor atual (0 até o valor total). Números: quanto menor o teto, mais ponto.

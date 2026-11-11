@@ -65,3 +65,26 @@ test('aba de fundo é negada sem perguntar', () => {
   assert.deepStrictEqual(got, [false]);
   assert.strictEqual(sent.length, 0);
 });
+
+test('painel: permissões do site da aba, mudar e esquecer', () => {
+  const { createPermissions: make } = require('../src/ipc/permission_ipc');
+  const data = {};
+  const store = { get: (k) => data[k], set: (k, v) => (data[k] = v) };
+  const tabs = { prompt: false, setPrompt(v) { this.prompt = v; } };
+  const p = make({ getStore: () => store, getTabs: () => tabs, send() {} });
+  assert.strictEqual(p.siteState('evl://settings'), null);
+  assert.strictEqual(p.siteState('https://a.com/x').perms.microphone, null);
+  assert.ok(p.setSite('https://a.com/x', 'microphone', true));
+  assert.ok(p.setSite('https://a.com/y', 'camera', false));
+  assert.ok(!p.setSite('https://a.com/', 'usb', true));
+  assert.deepStrictEqual(p.list(), [{ origin: 'https://a.com', allowed: ['microphone'], blocked: ['camera'] }]);
+  assert.strictEqual(p.check('media', 'https://a.com', { mediaType: 'audio' }), true);
+  assert.strictEqual(p.check('media', 'https://a.com', { mediaType: 'video' }), false);
+  p.setSite('https://a.com/', 'microphone', null);
+  p.setSite('https://a.com/', 'camera', null);
+  assert.deepStrictEqual(data.sitePerms, {});
+  p.setPanel(true);
+  assert.strictEqual(tabs.prompt, true);
+  p.setPanel(false);
+  assert.strictEqual(tabs.prompt, false);
+});

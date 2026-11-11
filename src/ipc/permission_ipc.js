@@ -6,6 +6,8 @@
 // Permissões que perguntamos; as demais continuam negadas (exceto as de ALLOWED).
 const PROMPTABLE = new Set(['media', 'geolocation', 'notifications', 'midi', 'clipboard-read']);
 const ALLOWED = new Set(['fullscreen', 'clipboard-sanitized-write']);
+// O que aparece no painel ao lado da estrela, nesta ordem.
+const KINDS = ['microphone', 'camera', 'geolocation', 'notifications', 'midi', 'clipboard-read'];
 
 // 'media' vira câmera e/ou microfone; as outras usam o próprio nome.
 function permKinds(permission, details) {
@@ -31,11 +33,58 @@ function createPermissions({ getStore, getTabs, send }) {
 
   const view = (entry) => ({ id: entry.id, host: entry.host, kinds: entry.kinds });
 
+  let panel = false; // painel aberto pela pessoa (botão ao lado da estrela)
+  const sync = () => getTabs()?.setPrompt(panel || !!current);
+
   function showNext() {
     if (current || queue.length === 0) return;
     current = queue.shift();
     send('perm:ask', view(current));
-    getTabs()?.setPrompt(true);
+    sync();
+  }
+
+  const originOf = (url) => {
+    try {
+      const u = new URL(url);
+      return u.protocol === 'https:' || u.protocol === 'http:' ? u : null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Permissões do site de uma página: { host, perms: { microphone: true | false | null, ... } }, ou null.
+  function siteState(url) {
+    const u = originOf(url);
+    if (!u) return null;
+    const saved = getStore().get('sitePerms')?.[u.origin] ?? {};
+    return { host: u.host, perms: Object.fromEntries(KINDS.map((k) => [k, typeof saved[k] === 'boolean' ? saved[k] : null])) };
+  }
+
+  // value: true = permitir, false = bloquear, null = perguntar de novo.
+  function setSite(url, kind, value) {
+    const u = originOf(url);
+    if (!u || !KINDS.includes(kind) || !(value === null || typeof value === 'boolean')) return false;
+    const all = { ...(getStore().get('sitePerms') ?? {}) };
+    const site = { ...all[u.origin] };
+    if (value === null) delete site[kind];
+    else site[kind] = value;
+    if (Object.keys(site).length) all[u.origin] = site;
+    else delete all[u.origin];
+    getStore().set('sitePerms', all);
+    return true;
+  }
+
+  // Sites com resposta lembrada (cartão em Configurações > Privacidade).
+  const list = () =>
+    Object.entries(getStore().get('sitePerms') ?? {}).map(([origin, p]) => ({
+      origin,
+      allowed: KINDS.filter((k) => p[k] === true),
+      blocked: KINDS.filter((k) => p[k] === false),
+    }));
+  function forget(origin) {
+    const all = { ...(getStore().get('sitePerms') ?? {}) };
+    delete all[origin];
+    getStore().set('sitePerms', all);
   }
 
   function finish(entry, allow, remember) {
@@ -52,7 +101,7 @@ function createPermissions({ getStore, getTabs, send }) {
     if (current === entry) {
       current = null;
       send('perm:close');
-      getTabs()?.setPrompt(false);
+      sync();
       showNext();
     }
   }
@@ -93,23 +142,42 @@ function createPermissions({ getStore, getTabs, send }) {
     ask,
     check,
     sitePerm,
+    siteState,
+    setSite,
+    list,
+    forget,
+    setPanel(open) {
+      panel = open === true;
+      sync();
+    },
     answer: (id, allow, remember) => current?.id === id && finish(current, allow === true, remember === true),
     pending: () => (current ? view(current) : null),
   };
 }
 
-// ctx: { ipcMain, fromUi, session, getStore, getTabs, send }
-function registerPermissionIpc({ ipcMain, fromUi, session, getStore, getTabs, send }) {
+// ctx: { ipcMain, fromUi, session, getStore, getTabs, send, getActiveUrl(): endereço da aba ativa, refresh(): redesenha a interface }
+function registerPermissionIpc({ ipcMain, fromUi, session, getStore, getTabs, send, getActiveUrl = () => '', refresh = () => {} }) {
   const perms = createPermissions({ getStore, getTabs, send });
   ipcMain.on('perm:answer', (event, id, allow, remember) => {
     if (fromUi(event)) perms.answer(id, allow, remember);
   });
-  ipcMain.handle('perm:count', (event) => (fromUi(event) ? Object.keys(getStore().get('sitePerms') ?? {}).length : 0));
+  ipcMain.on('perm:panel', (event, open) => fromUi(event) && perms.setPanel(open === true));
+  // Muda uma permissão do site da aba ativa (painel ao lado da estrela).
+  ipcMain.on('perm:set', (event, kind, value) => {
+    if (fromUi(event) && perms.setSite(getActiveUrl(), kind, value)) refresh();
+  });
+  ipcMain.handle('perm:list', (event) => (fromUi(event) ? perms.list() : []));
+  ipcMain.handle('perm:forget', (event, origin) => {
+    if (fromUi(event) && typeof origin === 'string') perms.forget(origin);
+    refresh();
+  });
   ipcMain.handle('perm:clear', (event) => {
     if (fromUi(event)) getStore().set('sitePerms', {});
+    refresh();
   });
   return {
     pending: perms.pending,
+    siteState: perms.siteState,
     // chamar quando o app estiver pronto (a sessão só existe depois)
     install() {
       session.defaultSession.setPermissionRequestHandler(perms.ask);
@@ -118,4 +186,4 @@ function registerPermissionIpc({ ipcMain, fromUi, session, getStore, getTabs, se
   };
 }
 
-module.exports = { PROMPTABLE, permKinds, createPermissions, registerPermissionIpc };
+module.exports = { KINDS, PROMPTABLE, permKinds, createPermissions, registerPermissionIpc };

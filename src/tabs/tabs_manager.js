@@ -52,6 +52,7 @@ class TabManager {
     this.letterbox = false;
     this.popupBlocked = null; // (url) => true corta janelas de anúncio
     this.closed = []; // abas web fechadas (para Ctrl+Shift+T), a mais recente no fim
+    this.eagerJs = () => false; // Velocidade > "Guardar o JavaScript já compilado" (vem do main.js)
   }
 
   // Abas em cima ("top") ou na lateral esquerda ("side"); tamanhos em px.
@@ -408,7 +409,7 @@ class TabManager {
       // painel lateral de abas (barra + abas) à esquerda; a página ocupa o resto.
       // Com menu/sugestões abertos o painel alarga por cima da página.
       const side = Math.min(this.tabLayout.sideW, width);
-      const wide = this.menuOpen ? 300 : this.suggestOpen || this.promptOpen ? 400 : 0;
+      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : this.promptOpen ? 300 : 0;
       this.ui.setBounds({ x: 0, y: 0, width: web ? Math.min(Math.max(side, wide), width) : width, height });
       if (web && tab.view) tab.view.setBounds(this._fit({ x: side, y: 0, width: Math.max(0, width - side), height }));
       return;
@@ -483,6 +484,7 @@ class TabManager {
   }
 
   // Próximo passo da lista ZOOM_FACTORS a partir de um fator (1 = 100%).
+  // Se o zoom atual não é um dos passos, o primeiro passo só "encaixa" na lista.
   _nextZoom(current, direction) {
     let index = ZOOM_FACTORS.findIndex((f) => f >= current - 0.001);
     if (index === -1) index = ZOOM_FACTORS.length - 1;
@@ -500,14 +502,7 @@ class TabManager {
     }
     const wc = tab?.view?.webContents;
     if (!wc) return;
-    const current = Math.pow(1.2, wc.getZoomLevel()); // nível do Chromium -> fator (1 = 100%)
-    let index = ZOOM_FACTORS.findIndex((f) => f >= current - 0.001);
-    if (index === -1) index = ZOOM_FACTORS.length - 1;
-    const exact = Math.abs(ZOOM_FACTORS[index] - current) < 0.01;
-    // se o zoom atual não é um dos passos, o primeiro passo só "encaixa" na lista
-    const next =
-      direction > 0 ? (exact ? index + 1 : index) : index - 1;
-    const factor = ZOOM_FACTORS[Math.min(ZOOM_FACTORS.length - 1, Math.max(0, next))];
+    const factor = this._nextZoom(Math.pow(1.2, wc.getZoomLevel()), direction); // nível do Chromium -> fator (1 = 100%)
     wc.setZoomLevel(Math.log(factor) / Math.log(1.2));
     this._changed();
   }
@@ -522,6 +517,8 @@ class TabManager {
         contextIsolation: true,
         nodeIntegration: false,
         webgl: !this.webglOff,
+        // código já compilado guardado no cache desde a 1ª visita (padrão do Chromium: só depois de "esquentar")
+        v8CacheOptions: this.eagerJs() ? 'bypassHeatCheck' : 'code',
         preload: path.join(__dirname, '..', '..', 'preload_web_pages.js'), // senhas e YouTube (só mundo isolado)
       },
     });
