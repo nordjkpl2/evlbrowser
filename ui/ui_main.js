@@ -169,6 +169,8 @@ function render(state) {
     lastKey = key;
 
     showMenu(state);
+    // zoom da aba Configurações: a própria página da interface é ampliada (as páginas web usam o zoom do Chromium)
+    pageSettings.style.zoom = state.activeKind === 'settings' && typeof state.zoom === 'number' ? String(state.zoom / 100) : '';
     // linha de carregamento sob a barra, só enquanto a aba ativa carrega
     chromeEl.classList.toggle('loading', !!state.tabs.find((t) => t.id === state.activeId)?.loading);
 
@@ -269,6 +271,7 @@ async function refreshSettings() {
   $('s-procs').replaceChildren(...rows);
 
   if (panel === 'adblock') loadAdblock(); // o contador sobe enquanto você navega
+  if (panel === 'privacy') loadPerms();
   showTheme(report.theme);
   if (!accent) applyAccent(null); // sem escolha: o quadrado acompanha o tema claro/escuro
 }
@@ -347,6 +350,20 @@ function paintCards() {
   for (const card of cards) card.classList.toggle('alt', !card.hidden && n++ % 2 === 1);
 }
 
+// Mesmo ícone do menu lateral, pequeno, ao lado dos títulos (página e cartões)
+function navIcon(item) {
+  const ico = item.querySelector('svg').cloneNode(true);
+  ico.classList.add('title-ico');
+  ico.setAttribute('aria-hidden', 'true');
+  return ico;
+}
+const navByPanel = new Map(navItems.map((item) => [item.dataset.panel, item]));
+for (const card of cards) {
+  const title = card.querySelector('h3');
+  const item = navByPanel.get(card.dataset.panel);
+  if (title && item && !card.classList.contains('color-card')) title.prepend(navIcon(item));
+}
+
 function showPanel(name) {
   panel = name;
   document.body.classList.remove('searching');
@@ -359,6 +376,7 @@ function showPanel(name) {
       const grp = item.closest('.nav-group');
       if (grp && grp.querySelector('.nav-group-body').hidden) setGroup(grp, true);
       panelTitle.textContent = item.querySelector('span').textContent;
+      panelTitle.prepend(navIcon(item));
     } else {
       item.removeAttribute('aria-current');
     }
@@ -366,7 +384,10 @@ function showPanel(name) {
   for (const card of cards) card.hidden = card.dataset.panel !== name;
   paintCards();
   if (name === 'history') loadHistory();
-  if (name === 'cookies') loadCookies();
+  if (name === 'cookies') {
+    loadCookies();
+    loadUa();
+  }
   if (name === 'extensions') loadExtensions();
   if (name === 'adblock') loadAdblock();
   if (name === 'passwords') loadPasswords();
@@ -538,195 +559,6 @@ document.addEventListener('keydown', (event) => {
 $('h-clear').addEventListener('click', async () => {
   window.evl.historyClear();
   await loadHistory();
-});
-
-// ---------- aparência: Claro / Escuro ----------
-// Define o esquema de cores que os SITES enxergam. A interface do Evl não muda.
-
-const themeOptions = [...document.querySelectorAll('.theme-option')];
-
-function showTheme(theme) {
-  for (const opt of themeOptions) {
-    opt.setAttribute('aria-checked', String(opt.dataset.theme === theme));
-  }
-}
-
-themeOptions.forEach((opt) =>
-  opt.addEventListener('click', () => {
-    showTheme(opt.dataset.theme);
-    window.evl.setTheme(opt.dataset.theme);
-  })
-);
-
-// ---------- aparência: tamanho e fonte do texto da interface ----------
-// --ui-scale multiplica os tamanhos do style.css; --font-ui troca a fonte. Os sites não mudam.
-
-const FONTS = {
-  system: '"Segoe UI", system-ui, sans-serif',
-  arial: 'Arial, Helvetica, sans-serif',
-  verdana: 'Verdana, Geneva, sans-serif',
-  georgia: 'Georgia, "Times New Roman", serif',
-  times: '"Times New Roman", Times, serif',
-  mono: '"Cascadia Mono", Consolas, monospace',
-};
-const fontSizeEl = $('f-size');
-const fontFamilyEl = $('f-family');
-const fontNumEl = $('f-size-num');
-const fontNameEl = $('f-family-name');
-const PRESET_SCALES = ['0.9', '1', '1.15', '1.3'];
-const cleanFontName = (s) => String(s ?? '').replace(/[^\p{L}\p{N} .\-]/gu, '').trim().slice(0, 60);
-
-function applyFont(f) {
-  const scale = Math.min(2, Math.max(0.7, Number(f?.scale) || 1));
-  const raw = String(f?.family ?? 'system');
-  const name = raw.startsWith('custom:') ? cleanFontName(raw.slice(7)) : '';
-  const family = FONTS[raw] ? raw : name ? 'custom' : 'system';
-  document.documentElement.style.setProperty('--ui-scale', String(scale));
-  document.documentElement.style.setProperty('--font-ui', name ? `"${name}", ${FONTS.system}` : FONTS[family] ?? FONTS.system);
-  const preset = PRESET_SCALES.includes(String(scale));
-  fontSizeEl.value = preset ? String(scale) : 'custom';
-  fontNumEl.value = String(Math.round(scale * 100));
-  $('f-size-custom').hidden = preset;
-  fontFamilyEl.value = family;
-  fontNameEl.value = name;
-  $('f-family-custom').hidden = family !== 'custom';
-}
-function saveFont() {
-  const scale = fontSizeEl.value === 'custom' ? Math.min(200, Math.max(70, Number(fontNumEl.value) || 100)) / 100 : Number(fontSizeEl.value);
-  let family = fontFamilyEl.value;
-  if (family === 'custom') {
-    const name = cleanFontName(fontNameEl.value);
-    family = name ? `custom:${name}` : 'system';
-  }
-  applyFont({ scale, family });
-  window.evl.setFont(scale, family);
-}
-fontSizeEl.addEventListener('change', () => {
-  if (fontSizeEl.value === 'custom') {
-    $('f-size-custom').hidden = false;
-    fontNumEl.focus();
-  } else saveFont();
-});
-fontNumEl.addEventListener('change', saveFont);
-fontFamilyEl.addEventListener('change', () => {
-  if (fontFamilyEl.value === 'custom') {
-    $('f-family-custom').hidden = false;
-    fontNameEl.focus();
-  } else saveFont();
-});
-fontNameEl.addEventListener('change', saveFont);
-
-// ---------- aparência: abas (posição, altura e largura) ----------
-
-const tabModeEl = $('t-mode');
-const tabHEl = $('t-h');
-const tabWEl = $('t-w');
-const sideWEl = $('t-side-w');
-
-function applyTabLayout(l) {
-  const mode = l?.mode === 'side' ? 'side' : 'top';
-  const root = document.documentElement.style;
-  root.setProperty('--tab-h', `${l?.tabH ?? 32}px`);
-  root.setProperty('--tab-w', `${l?.tabW ?? 200}px`);
-  root.setProperty('--side-w', `${l?.sideW ?? 220}px`);
-  document.body.classList.toggle('side-tabs', mode === 'side');
-  tabModeEl.value = mode;
-  tabHEl.value = String(l?.tabH ?? 32);
-  tabWEl.value = String(l?.tabW ?? 200);
-  sideWEl.value = String(l?.sideW ?? 220);
-  $('t-line').setAttribute('aria-checked', String(l?.line === true));
-  const custom = /^#[0-9a-f]{6}$/i.test(l?.lineColor || '');
-  lineColorValue = custom ? l.lineColor : '';
-  if (custom && l.line === true) root.setProperty('--ring', l.lineColor);
-  else root.removeProperty('--ring');
-  if (custom) $('t-line-color').value = l.lineColor;
-  $('t-line-auto').disabled = !custom; // já está em automático
-  $('t-line-color-row').hidden = l?.line !== true;
-  $('t-w-label').hidden = mode === 'side';
-  $('t-side-label').hidden = mode !== 'side';
-}
-let lineColorValue = ''; // '' = automática (cor do ícone/site)
-function saveTabLayout() {
-  window.evl.setTabLayout({ mode: tabModeEl.value, tabH: Number(tabHEl.value), tabW: Number(tabWEl.value), sideW: Number(sideWEl.value), line: $('t-line').getAttribute('aria-checked') === 'true', lineColor: lineColorValue });
-}
-[tabModeEl, tabHEl, tabWEl, sideWEl].forEach((el) => el.addEventListener('change', saveTabLayout));
-$('t-line-color').addEventListener('change', (event) => {
-  lineColorValue = event.currentTarget.value;
-  saveTabLayout();
-});
-$('t-line-auto').addEventListener('click', () => {
-  lineColorValue = '';
-  saveTabLayout();
-});
-$('t-line').addEventListener('click', (event) => {
-  const on = event.currentTarget.getAttribute('aria-checked') !== 'true';
-  event.currentTarget.setAttribute('aria-checked', String(on));
-  saveTabLayout();
-});
-
-// Menos cor: tira brilhos, linhas e setas coloridas das Configurações
-const lessColor = $('less-color');
-function setLessColor(on) {
-  document.body.classList.toggle('less-color', on);
-  lessColor.setAttribute('aria-checked', String(on));
-}
-try {
-  setLessColor(localStorage.getItem('evl.lessColor') === '1');
-} catch {}
-lessColor.addEventListener('click', () => {
-  const on = lessColor.getAttribute('aria-checked') !== 'true';
-  setLessColor(on);
-  try {
-    localStorage.setItem('evl.lessColor', on ? '1' : '0');
-  } catch {}
-});
-
-// Usar só 1 cor: a 2ª variação (--accent2) passa a ser igual à principal
-const oneColor = $('one-color');
-function setOneColor(on) {
-  document.body.classList.toggle('one-color', on);
-  oneColor.setAttribute('aria-checked', String(on));
-}
-try {
-  setOneColor(localStorage.getItem('evl.oneColor') === '1');
-} catch {}
-oneColor.addEventListener('click', () => {
-  const on = oneColor.getAttribute('aria-checked') !== 'true';
-  setOneColor(on);
-  try {
-    localStorage.setItem('evl.oneColor', on ? '1' : '0');
-  } catch {}
-});
-
-// ---------- aparência: cor principal ----------
-// Troca só as variáveis --accent e --glow da interface (as páginas dos sites não mudam).
-
-const accentEl = $('accent');
-let accent = null; // #rrggbb escolhido, ou null = padrão do tema
-
-function applyAccent(color) {
-  accent = color;
-  const root = document.documentElement.style;
-  if (color) {
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
-    root.setProperty('--accent', color);
-    root.setProperty('--glow', `rgba(${r}, ${g}, ${b}, 0.35)`);
-  } else {
-    root.removeProperty('--accent');
-    root.removeProperty('--glow');
-  }
-  // o quadrado mostra a cor em uso (a do tema, quando não há escolha)
-  const shown = color ?? getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-  if (/^#[0-9a-f]{6}$/i.test(shown)) accentEl.value = shown.toLowerCase();
-}
-
-accentEl.addEventListener('input', () => applyAccent(accentEl.value)); // ao vivo
-accentEl.addEventListener('change', () => window.evl.setAccent(accentEl.value)); // salva ao confirmar
-// botão direito no bloco de cor volta ao padrão do tema
-accentEl.addEventListener('contextmenu', (event) => {
-  event.preventDefault();
-  applyAccent(null);
-  window.evl.setAccent(null);
 });
 
 // ---------- sugestões do histórico na barra de endereço ----------

@@ -22,7 +22,7 @@ function fake() {
 }
 
 test('scripts da interface carregam na ordem e só usam window.evl que existe', () => {
-  assert.deepStrictEqual(scripts, ['ui_i18n_asian.js', 'ui_i18n_languages.js', 'ui_main.js', 'ui_boot.js']);
+  assert.deepStrictEqual(scripts, ['ui_i18n_asian.js', 'ui_i18n_languages.js', 'ui_main.js', 'ui_appearance.js', 'ui_boot.js']);
   const preload = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
   const api = new Set([...preload.matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]));
   const used = new Set();

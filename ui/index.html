@@ -31,7 +31,7 @@
        enquanto ele está aberto; ver setMenu em src/tabs/tabs_manager.js). -->
   <div id="menu" role="menu" aria-label="Menu do Evl" hidden>
     <div class="menu-row">
-      <span id="zoom-label" class="menu-label">Zoom</span>
+      <span class="menu-label"><span id="zoom-label">Zoom</span> <kbd class="zoom-kbd">Ctrl &minus;</kbd></span>
       <div class="zoom-ctrl" role="group" aria-labelledby="zoom-label">
         <button id="zoom-out" class="icon-btn" type="button" title="Diminuir zoom (Ctrl+-)" aria-label="Diminuir zoom">&minus;</button>
         <button id="zoom-val" type="button" title="Voltar para 100% (Ctrl+0)" aria-label="Zoom atual. Clique para voltar a 100%">100%</button>
@@ -51,6 +51,16 @@
 
   <!-- Sugestões do histórico para o que está sendo digitado na barra de endereço. -->
   <div id="suggest" role="listbox" aria-label="Sugestões do histórico" hidden></div>
+
+  <!-- Pedido de permissão de um site (microfone, câmera...). O main.js cuida da fila e da resposta. -->
+  <div id="perm" role="alertdialog" aria-labelledby="perm-text" hidden>
+    <div id="perm-text"></div>
+    <label class="perm-remember"><input id="perm-remember" type="checkbox"> Lembrar esta decisão</label>
+    <div class="perm-actions">
+      <button id="perm-block" type="button">Bloquear</button>
+      <button id="perm-allow" type="button" class="perm-primary">Permitir</button>
+    </div>
+  </div>
 
   <!-- Telas internas: só aparecem quando a aba ativa é "em branco" ou "configurações".
        Em aba web a interface tem só 80 px de altura e elas ficam fora da tela. -->
@@ -253,6 +263,17 @@
               <span class="preview pv-dark" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
               <span class="label">Escuro</span>
             </button>
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-theme="amoled">
+              <span class="preview pv-amoled" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">AMOLED</span>
+            </button>
+          </div>
+          <div class="v-row">
+            <span class="v-text">
+              <span>Cor no tema</span>
+              <span class="v-hint hint">Pinta o fundo do Evl com a cor principal, em vez de branco ou preto. Funciona com Claro, Escuro e AMOLED.</span>
+            </span>
+            <button id="tint-switch" class="switch" type="button" role="switch" aria-checked="false" aria-label="Cor no tema"></button>
           </div>
         </section>
 
@@ -324,6 +345,13 @@
             <input id="t-line-color" type="color" value="#ffb429" aria-label="Cor da linha sobre o ícone das abas">
             <button id="t-line-auto" class="text-btn" type="button">Automática</button>
           </div>
+          <div class="v-row">
+            <span class="v-text">
+              <span>Luz na aba ativa</span>
+              <span class="v-hint hint">Só a aba que você está vendo ganha brilho e destaque; as outras ficam simples.</span>
+            </span>
+            <button id="tab-glow" class="switch" type="button" role="switch" aria-checked="false" aria-label="Luz na aba ativa"></button>
+          </div>
         </section>
 
         <section class="card" data-panel="appearance">
@@ -334,6 +362,38 @@
               <span class="v-hint hint">Deixa as Configurações mais apertadas: menos espaço entre cartões, linhas e itens do menu.</span>
             </span>
             <button id="compact-switch" class="switch" type="button" role="switch" aria-checked="false" aria-label="Itens compactos"></button>
+          </div>
+        </section>
+
+        <section class="card" data-panel="appearance">
+          <h3>Imagem de fundo</h3>
+          <p class="hint">Coloca uma imagem no fundo de toda a aba Configurações. Ela é reduzida e guardada só neste computador.</p>
+          <div class="form-actions">
+            <button id="bg-pick" class="white-btn" type="button">Escolher imagem</button>
+            <button id="bg-clear" class="text-btn" type="button" disabled>Remover imagem</button>
+            <input id="bg-file" type="file" accept="image/*" hidden>
+          </div>
+          <div class="font-row">
+            <label>Escurecer a imagem (%)
+              <input id="bg-dim" type="range" min="0" max="85" step="5" value="35">
+            </label>
+          </div>
+          <p id="bg-status" class="hint" role="status" hidden></p>
+        </section>
+
+        <section class="card" data-panel="appearance">
+          <h3>Cantos</h3>
+          <p class="hint">Quanto os cantos de botões, cartões e abas são arredondados.</p>
+          <div class="font-row">
+            <label>Arredondamento
+              <select id="radius">
+                <option value="0">Retos</option>
+                <option value="4">Pequenos</option>
+                <option value="8">Normais (padrão)</option>
+                <option value="14">Grandes</option>
+                <option value="22">Máximos</option>
+              </select>
+            </label>
           </div>
         </section>
 
@@ -361,6 +421,16 @@
                  title="Clique para trocar a cor · botão direito volta ao padrão">
         </section>
 
+        <section class="card" data-panel="appearance">
+          <h3>Restaurar padrões</h3>
+          <p class="hint">Volta tema, cor, texto, abas, velocidade, privacidade, bloqueador, user agent e as opções desta tela ao padrão. Não apaga histórico, favoritos, senhas, cookies, extensões, motores de busca nem permissões. O Evl reinicia.</p>
+          <div class="form-actions">
+            <button id="reset-ask" class="white-btn" type="button">Restaurar configurações padrão</button>
+            <button id="reset-yes" class="white-btn" type="button" hidden>Sim, restaurar e reiniciar</button>
+            <button id="reset-no" class="text-btn" type="button" hidden>Cancelar</button>
+          </div>
+        </section>
+
         <section class="card" data-panel="history">
           <div class="card-head">
             <h3>Páginas visitadas</h3>
@@ -368,6 +438,21 @@
           </div>
           <p id="h-empty" class="hint" hidden>Nenhuma página visitada ainda.</p>
           <ul id="h-list"></ul>
+        </section>
+
+        <section class="card" data-panel="cookies">
+          <h3>User agent</h3>
+          <p class="hint">Texto com que o Evl se apresenta aos sites. Vazio usa o padrão (Chrome, sem a palavra Electron). Vale ao abrir ou recarregar páginas. Trocar pode quebrar alguns sites.</p>
+          <div class="font-row">
+            <label>User agent
+              <input id="ua-input" type="text" maxlength="400" spellcheck="false" autocomplete="off">
+            </label>
+          </div>
+          <div class="form-actions">
+            <button id="ua-save" class="white-btn" type="button">Salvar</button>
+            <button id="ua-reset" class="text-btn" type="button">Usar o padrão</button>
+          </div>
+          <p id="ua-status" class="hint" role="status" hidden></p>
         </section>
 
         <section class="card" data-panel="cookies">
@@ -457,9 +542,18 @@
         </section>
 
         <section class="card" data-panel="privacy">
+          <h3>Permissões dos sites</h3>
+          <p class="hint">Câmera, microfone, localização e notificações: o Evl pergunta quando um site pede. Aqui você apaga as respostas lembradas.</p>
+          <p id="perm-count" class="hint" role="status"></p>
+          <div class="form-actions">
+            <button id="perm-clear" class="white-btn" type="button">Esquecer permissões salvas</button>
+          </div>
+        </section>
+
+        <section class="card" data-panel="privacy">
           <h3>Sempre ativo</h3>
           <ul class="v-always hint">
-            <li>Câmera, microfone, localização e notificações são negados por padrão.</li>
+            <li>Câmera, microfone, localização e notificações são negados até você permitir, quando o site pedir.</li>
             <li>Sem telemetria, sincronização de conta nem relatórios de falha do Chromium.</li>
             <li>Sites não recebem o seu histórico, favoritos nem senhas (só a senha do próprio site, ao clicar).</li>
           </ul>
@@ -532,6 +626,7 @@
   <script src="ui_i18n_asian.js"></script>
   <script src="ui_i18n_languages.js"></script>
   <script src="ui_main.js"></script>
+  <script src="ui_appearance.js"></script>
   <script src="ui_boot.js"></script>
 </body>
 </html>

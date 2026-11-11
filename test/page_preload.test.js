@@ -125,6 +125,18 @@ test('popups: com "fechar popups" ligado esconde avisos e só deixa abrir janela
   assert.strictEqual(clicked, 2);
 });
 
+test('esconder hardware: núcleos e memória sempre iguais, só com a opção ligada', () => {
+  const off = loadPreload('exemplo.com', { ads: false, popups: false });
+  assert.strictEqual(off.calls.world, null);
+  const on = loadPreload('exemplo.com', { ads: false, popups: false, mask: true });
+  const page = { Navigator: function () {} };
+  vm.createContext(page);
+  vm.runInContext(`(${on.calls.world.func.toString()})()`, page);
+  const nav = Object.create(page.Navigator.prototype);
+  assert.strictEqual(nav.hardwareConcurrency, 4);
+  assert.strictEqual(nav.deviceMemory, 8);
+});
+
 test('popups desligado (só anúncios ligados): nada de popup é instalado', () => {
   const r = loadPreload('exemplo.com', { ads: true, popups: false });
   assert.strictEqual(r.calls.world, null);

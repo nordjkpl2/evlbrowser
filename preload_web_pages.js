@@ -148,16 +148,34 @@ function popupGuard() {
   };
 }
 
+// Mundo da página: núcleos e memória sempre iguais (4 e 8 GB), como muitos computadores.
+function maskHardware() {
+  const def = (name, value) => {
+    try {
+      Object.defineProperty(Navigator.prototype, name, { get: () => value, configurable: true });
+    } catch {}
+  };
+  def('hardwareConcurrency', 4);
+  def('deviceMemory', 8);
+}
+
 // uma única consulta por página (só em http/https); YouTube ganha as regras extras
 if (/^https?:$/.test(location.protocol)) {
   let ads = false;
   let popups = false;
+  let mask = false;
   try {
     // { ads, popups }: ligados nas Configurações e o site não está na lista de permitidos
     const r = ipcRenderer.sendSync('adblock:enabled');
     ads = r === true || r?.ads === true;
     popups = r?.popups === true;
+    mask = r?.mask === true;
   } catch {}
+  if (mask) {
+    try {
+      contextBridge.executeInMainWorld({ func: maskHardware });
+    } catch {}
+  }
   if (popups) {
     webFrame.insertCSS(POPUP_HIDE_CSS);
     try {
@@ -276,14 +294,12 @@ document.addEventListener('keydown', (event) => event.key === 'Escape' && closeP
 
 // Navegar mais rápido: mouse sobre um link para outro site -> o main já abre a conexão (1x por site e página).
 const hovered = new Set();
-document.addEventListener(
-  'pointerover',
-  (event) => {
-    if (!event.isTrusted || hovered.size >= 20) return;
-    const link = event.target?.closest?.('a[href]');
-    if (!link || link.protocol !== 'https:' || link.origin === location.origin || hovered.has(link.origin)) return;
-    hovered.add(link.origin);
-    ipcRenderer.send('link:hover', link.origin);
-  },
-  { capture: true, passive: true }
-);
+const warmLink = (event) => {
+  if (!event.isTrusted || hovered.size >= 20) return;
+  const link = event.target?.closest?.('a[href]');
+  if (!link || link.protocol !== 'https:' || link.origin === location.origin || hovered.has(link.origin)) return;
+  hovered.add(link.origin);
+  ipcRenderer.send('link:hover', link.origin);
+};
+// no mouse por cima (adianta a conexão) e no botão pressionado (para quem clica sem parar o mouse)
+for (const type of ['pointerover', 'pointerdown']) document.addEventListener(type, warmLink, { capture: true, passive: true });

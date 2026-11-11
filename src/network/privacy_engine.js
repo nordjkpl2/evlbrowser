@@ -12,6 +12,9 @@ const PRIVACY_DEFAULTS = {
   trimReferrer: true, // sites de fora só veem o domínio de onde você veio, nunca o endereço completo
   limitFingerprint: true, // esconde detalhes do computador (client hints) e desliga APIs de anúncios do Chromium
   blockExtensionNet: true, // páginas de fundo das extensões não enviam dados para a internet
+  noWebgl: false, // desliga o WebGL nas abas novas (mapas e jogos 3D deixam de funcionar)
+  maskHardware: false, // sites veem sempre 4 núcleos e 8 GB de memória
+  letterbox: false, // página com tamanho em múltiplos de 200x100 px (a janela exata não identifica você)
 };
 
 function privacyOptions(raw) {

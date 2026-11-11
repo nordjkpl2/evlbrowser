@@ -33,8 +33,10 @@ const { privacyOptions } = require('./src/network/privacy_engine');
 const { registerPrivacyIpc } = require('./src/ipc/privacy_ipc');
 const { createAdblock } = require('./src/network/adblock_engine');
 const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
-const { readStartupSpeed, speedOptions } = require('./src/app/speed_options');
+const { readStartupSpeed } = require('./src/app/speed_options');
 const { registerSpeedIpc } = require('./src/ipc/speed_ipc');
+const { registerPermissionIpc } = require('./src/ipc/permission_ipc');
+const { registerSettingsIpc } = require('./src/ipc/settings_ipc');
 const { TabManager } = require('./src/tabs/tabs_manager');
 const { createFaviconColor } = require('./src/tabs/favicon_color');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/tabs/memory_policy');
@@ -48,6 +50,11 @@ const startupSpeed = readStartupSpeed(app.getPath('userData'));
 if (process.env.EVL_NO_GPU || !startupSpeed.hardwareAccel) app.disableHardwareAcceleration();
 if (startupSpeed.blockAutoplay) app.commandLine.appendSwitch('autoplay-policy', 'document-user-activation-required');
 if (startupSpeed.lowMemory) app.commandLine.appendSwitch('enable-low-end-device-mode');
+if (startupSpeed.diskCacheMB > 0) app.commandLine.appendSwitch('disk-cache-size', String(startupSpeed.diskCacheMB * 1024 * 1024)); // cache maior = sites já visitados abrem mais rápido
+// Identidade igual à do Chrome: sem os trechos "Electron/x" e "nome-do-app/x", que fazem sites como o
+// WhatsApp Web dizerem que o navegador não é compatível. A versão do Chrome continua a real.
+app.userAgentFallback = app.userAgentFallback.replace(/\s(Electron|evl[\w.-]*)\/[\d.]+/gi, '');
+const DEFAULT_UA = app.userAgentFallback;
 if (cfg.CHROMIUM_ON_FEATURES.length > 0) app.commandLine.appendSwitch('enable-features', cfg.CHROMIUM_ON_FEATURES.join(','));
 if (cfg.CHROMIUM_OFF_FEATURES.length > 0) {
   app.commandLine.appendSwitch('disable-features', cfg.CHROMIUM_OFF_FEATURES.join(','));
@@ -76,10 +83,6 @@ let lastSession = '';
 // e a cor de fundo da janela para cada um (evita um clarão ao abrir/redimensionar).
 const THEMES = new Set(['light', 'dark']);
 const WINDOW_BG = { dark: '#0b0b0d', light: '#f9f9fb' };
-
-// Permissões que um site pode usar por enquanto. Todo o resto é negado até
-// termos uma tela de pedido de permissão (como o Firefox).
-const ALLOWED_PERMISSIONS = new Set(['fullscreen', 'clipboard-sanitized-write']);
 
 // Textos do menu nativo (botão direito em campos de texto) no idioma escolhido.
 const NATIVE = {
@@ -339,6 +342,7 @@ ipcMain.on('ui:ready', (event) => {
   send('accent', store.get('accent') ?? null);
   send('font', { scale: store.get('fontScale') ?? 1, family: store.get('fontFamily') ?? 'system' });
   send('tabLayout', tabs.tabLayout);
+  if (permissions.pending()) send('perm:ask', permissions.pending());
   send('state', tabs.snapshot());
   sampleMemory(true);
 });
@@ -383,19 +387,26 @@ ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
 // Abre a conexão (DNS + TLS) com um site antes de você precisar dele. Só https, uma vez por site,
 // nada de domínio de anúncio, e só se "Conectar antes de abrir" estiver ligado em Velocidade.
 const warmed = new Set();
-function warmUp(url) {
-  let origin;
-  try {
-    const u = new URL(url);
-    if (u.protocol !== 'https:') return;
-    origin = u.origin;
-  } catch {
-    return;
-  }
+// Sites que sempre puxam imagens/arquivos de outro endereço: a conexão com ele também já fica pronta.
+const COMPANIONS = { 'youtube.com': ['https://i.ytimg.com'] };
+function connect(origin) {
   if (warmed.has(origin) || !speedApi.options().preconnect || adblockApi?.shouldBlock(`${origin}/`, 'script', '')) return;
   if (warmed.size >= 50) warmed.clear();
   warmed.add(origin);
   session.defaultSession.preconnect({ url: origin, numSockets: 1 });
+}
+function warmUp(url) {
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return;
+  }
+  if (u.protocol !== 'https:') return;
+  connect(u.origin);
+  for (const [site, extra] of Object.entries(COMPANIONS)) {
+    if (u.hostname === site || u.hostname.endsWith(`.${site}`)) extra.forEach(connect);
+  }
 }
 // Vem das páginas quando o mouse passa por cima de um link para outro site.
 ipcMain.on('link:hover', (event, origin) => {
@@ -501,6 +512,21 @@ toggleBookmark = registerBookmarksIpc({
 registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: () => vault, getWindow: () => win });
 registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
 registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win });
+const permissions = registerPermissionIpc({ ipcMain, fromUi, session, getStore: () => store, getTabs: () => tabs, send });
+const settingsApi = registerSettingsIpc({
+  ipcMain,
+  fromUi,
+  app,
+  session,
+  getStore: () => store,
+  getTabs: () => tabs,
+  defaultUA: DEFAULT_UA,
+  beforeRestart: () => {
+    saveSession(); // app.exit não passa pelo evento "close"
+    sessionStore.flush();
+    history.flush();
+  },
+});
 
 // ---------- ciclo de vida do app ----------
 
@@ -515,9 +541,8 @@ app.whenReady().then(() => {
   const savedTheme = store.get('theme');
   nativeTheme.themeSource = THEMES.has(savedTheme) ? savedTheme : 'dark';
 
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(ALLOWED_PERMISSIONS.has(permission));
-  });
+  permissions.install();
+  settingsApi.applyUserAgent();
 
   // Senhas: cifradas com a proteção do sistema (safeStorage); sem ela, o cofre fica desativado.
   vault = createVault(path.join(app.getPath('userData'), 'passwords.json'), {
@@ -541,7 +566,7 @@ app.whenReady().then(() => {
     getAdblockOn: () => store.get('adblock') !== false,
     getPrivacy: () => privacyOptions(store.get('privacy')),
   });
-  registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network });
+  registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network, getMask: () => privacyOptions(store.get('privacy')).maskHardware });
   privacyApi = registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork: () => network, getTabs: () => tabs });
   privacyApi.apply();
   speedApi = registerSpeedIpc({ ipcMain, fromUi, store, app, startup: startupSpeed });

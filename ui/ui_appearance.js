@@ -1,0 +1,398 @@
+'use strict';
+// Aparência e pedidos de permissão: tema (Claro/Escuro/AMOLED), cor no tema, cantos, texto, abas,
+// imagem de fundo, user agent, restaurar padrões, cor principal. Carrega depois do ui_main.js
+// (usa o $ e o t() dele) e antes do ui_boot.js; as funções são chamadas só depois que tudo carregou.
+
+// ---------- aparência: Claro / Escuro ----------
+// Define o esquema de cores que os SITES enxergam. A interface do Evl não muda.
+
+const themeOptions = [...document.querySelectorAll('.theme-option')];
+
+// AMOLED = tema escuro (para os sites) com fundo preto total na interface; fica salvo neste computador.
+const htmlEl = document.documentElement;
+function showTheme(theme) {
+  const shown = theme === 'dark' && htmlEl.classList.contains('amoled') ? 'amoled' : theme;
+  for (const opt of themeOptions) {
+    opt.setAttribute('aria-checked', String(opt.dataset.theme === shown));
+  }
+}
+try {
+  htmlEl.classList.toggle('amoled', localStorage.getItem('evl.amoled') === '1');
+} catch {}
+
+themeOptions.forEach((opt) =>
+  opt.addEventListener('click', () => {
+    const amoled = opt.dataset.theme === 'amoled';
+    const theme = amoled ? 'dark' : opt.dataset.theme;
+    htmlEl.classList.toggle('amoled', amoled);
+    try {
+      localStorage.setItem('evl.amoled', amoled ? '1' : '0');
+    } catch {}
+    showTheme(theme);
+    window.evl.setTheme(theme);
+  })
+);
+
+// Cor no tema: o fundo e os cartões levam um toque da cor principal (vale para Claro, Escuro e AMOLED)
+const tintSwitch = $('tint-switch');
+function setTint(on) {
+  htmlEl.classList.toggle('tint', on);
+  tintSwitch.setAttribute('aria-checked', String(on));
+}
+try {
+  setTint(localStorage.getItem('evl.tint') === '1');
+} catch {}
+tintSwitch.addEventListener('click', () => {
+  const on = tintSwitch.getAttribute('aria-checked') !== 'true';
+  setTint(on);
+  try {
+    localStorage.setItem('evl.tint', on ? '1' : '0');
+  } catch {}
+});
+
+// Cantos: raio base (--r) usado por todo o style.css
+const radiusEl = $('radius');
+function setRadius(v) {
+  const n = ['0', '4', '8', '14', '22'].includes(v) ? v : '8';
+  htmlEl.style.setProperty('--r', `${n}px`);
+  radiusEl.value = n;
+}
+try {
+  setRadius(localStorage.getItem('evl.radius'));
+} catch {}
+radiusEl.addEventListener('change', () => {
+  setRadius(radiusEl.value);
+  try {
+    localStorage.setItem('evl.radius', radiusEl.value);
+  } catch {}
+});
+
+// ---------- pedido de permissão de um site ----------
+const permEl = $('perm');
+let permId = 0;
+function permName(kind) {
+  if (kind === 'microphone') return t('microfone');
+  if (kind === 'camera') return t('câmera');
+  if (kind === 'geolocation') return t('sua localização');
+  if (kind === 'notifications') return t('notificações');
+  if (kind === 'midi') return t('dispositivos MIDI');
+  return t('área de transferência');
+}
+function answerPerm(allow) {
+  permEl.hidden = true;
+  window.evl.permAnswer(permId, allow, $('perm-remember').checked);
+}
+window.evl.onPermAsk((ask) => {
+  permId = ask.id;
+  $('perm-text').textContent = `${ask.host} ${t('quer usar:')} ${ask.kinds.map(permName).join(', ')}`;
+  $('perm-remember').checked = false;
+  permEl.hidden = false;
+});
+window.evl.onPermClose(() => {
+  permEl.hidden = true;
+});
+$('perm-allow').addEventListener('click', () => answerPerm(true));
+$('perm-block').addEventListener('click', () => answerPerm(false));
+permEl.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') answerPerm(false);
+});
+
+async function loadPerms() {
+  const n = await window.evl.permCount();
+  $('perm-count').textContent = `${n} ${t('sites com permissão salva')}`;
+}
+$('perm-clear').addEventListener('click', async () => {
+  await window.evl.permClear();
+  loadPerms();
+});
+
+// ---------- aparência: tamanho e fonte do texto da interface ----------
+// --ui-scale multiplica os tamanhos do style.css; --font-ui troca a fonte. Os sites não mudam.
+
+const FONTS = {
+  system: '"Segoe UI", system-ui, sans-serif',
+  arial: 'Arial, Helvetica, sans-serif',
+  verdana: 'Verdana, Geneva, sans-serif',
+  georgia: 'Georgia, "Times New Roman", serif',
+  times: '"Times New Roman", Times, serif',
+  mono: '"Cascadia Mono", Consolas, monospace',
+};
+const fontSizeEl = $('f-size');
+const fontFamilyEl = $('f-family');
+const fontNumEl = $('f-size-num');
+const fontNameEl = $('f-family-name');
+const PRESET_SCALES = ['0.9', '1', '1.15', '1.3'];
+const cleanFontName = (s) => String(s ?? '').replace(/[^\p{L}\p{N} .\-]/gu, '').trim().slice(0, 60);
+
+function applyFont(f) {
+  const scale = Math.min(2, Math.max(0.7, Number(f?.scale) || 1));
+  const raw = String(f?.family ?? 'system');
+  const name = raw.startsWith('custom:') ? cleanFontName(raw.slice(7)) : '';
+  const family = FONTS[raw] ? raw : name ? 'custom' : 'system';
+  document.documentElement.style.setProperty('--ui-scale', String(scale));
+  document.documentElement.style.setProperty('--font-ui', name ? `"${name}", ${FONTS.system}` : FONTS[family] ?? FONTS.system);
+  const preset = PRESET_SCALES.includes(String(scale));
+  fontSizeEl.value = preset ? String(scale) : 'custom';
+  fontNumEl.value = String(Math.round(scale * 100));
+  $('f-size-custom').hidden = preset;
+  fontFamilyEl.value = family;
+  fontNameEl.value = name;
+  $('f-family-custom').hidden = family !== 'custom';
+}
+function saveFont() {
+  const scale = fontSizeEl.value === 'custom' ? Math.min(200, Math.max(70, Number(fontNumEl.value) || 100)) / 100 : Number(fontSizeEl.value);
+  let family = fontFamilyEl.value;
+  if (family === 'custom') {
+    const name = cleanFontName(fontNameEl.value);
+    family = name ? `custom:${name}` : 'system';
+  }
+  applyFont({ scale, family });
+  window.evl.setFont(scale, family);
+}
+fontSizeEl.addEventListener('change', () => {
+  if (fontSizeEl.value === 'custom') {
+    $('f-size-custom').hidden = false;
+    fontNumEl.focus();
+  } else saveFont();
+});
+fontNumEl.addEventListener('change', saveFont);
+fontFamilyEl.addEventListener('change', () => {
+  if (fontFamilyEl.value === 'custom') {
+    $('f-family-custom').hidden = false;
+    fontNameEl.focus();
+  } else saveFont();
+});
+fontNameEl.addEventListener('change', saveFont);
+
+// ---------- aparência: abas (posição, altura e largura) ----------
+
+const tabModeEl = $('t-mode');
+const tabHEl = $('t-h');
+const tabWEl = $('t-w');
+const sideWEl = $('t-side-w');
+
+function applyTabLayout(l) {
+  const mode = l?.mode === 'side' ? 'side' : 'top';
+  const root = document.documentElement.style;
+  root.setProperty('--tab-h', `${l?.tabH ?? 32}px`);
+  root.setProperty('--tab-w', `${l?.tabW ?? 200}px`);
+  root.setProperty('--side-w', `${l?.sideW ?? 220}px`);
+  document.body.classList.toggle('side-tabs', mode === 'side');
+  tabModeEl.value = mode;
+  tabHEl.value = String(l?.tabH ?? 32);
+  tabWEl.value = String(l?.tabW ?? 200);
+  sideWEl.value = String(l?.sideW ?? 220);
+  $('t-line').setAttribute('aria-checked', String(l?.line === true));
+  const custom = /^#[0-9a-f]{6}$/i.test(l?.lineColor || '');
+  lineColorValue = custom ? l.lineColor : '';
+  if (custom && l.line === true) root.setProperty('--ring', l.lineColor);
+  else root.removeProperty('--ring');
+  if (custom) $('t-line-color').value = l.lineColor;
+  $('t-line-auto').disabled = !custom; // já está em automático
+  $('t-line-color-row').hidden = l?.line !== true;
+  $('t-w-label').hidden = mode === 'side';
+  $('t-side-label').hidden = mode !== 'side';
+}
+let lineColorValue = ''; // '' = automática (cor do ícone/site)
+function saveTabLayout() {
+  window.evl.setTabLayout({ mode: tabModeEl.value, tabH: Number(tabHEl.value), tabW: Number(tabWEl.value), sideW: Number(sideWEl.value), line: $('t-line').getAttribute('aria-checked') === 'true', lineColor: lineColorValue });
+}
+[tabModeEl, tabHEl, tabWEl, sideWEl].forEach((el) => el.addEventListener('change', saveTabLayout));
+$('t-line-color').addEventListener('change', (event) => {
+  lineColorValue = event.currentTarget.value;
+  saveTabLayout();
+});
+$('t-line-auto').addEventListener('click', () => {
+  lineColorValue = '';
+  saveTabLayout();
+});
+$('t-line').addEventListener('click', (event) => {
+  const on = event.currentTarget.getAttribute('aria-checked') !== 'true';
+  event.currentTarget.setAttribute('aria-checked', String(on));
+  saveTabLayout();
+});
+
+// Luz na aba ativa (desligado por padrão; guardado só neste computador)
+const tabGlow = $('tab-glow');
+function setTabGlow(on) {
+  document.body.classList.toggle('tab-glow', on);
+  tabGlow.setAttribute('aria-checked', String(on));
+}
+try {
+  setTabGlow(localStorage.getItem('evl.tabGlow') === '1');
+} catch {}
+tabGlow.addEventListener('click', () => {
+  const on = tabGlow.getAttribute('aria-checked') !== 'true';
+  setTabGlow(on);
+  try {
+    localStorage.setItem('evl.tabGlow', on ? '1' : '0');
+  } catch {}
+});
+
+// Imagem de fundo da aba Configurações: reduzida (máx. 1920 px) e guardada neste computador
+const bgStatus = $('bg-status');
+function applyBg(url, dim) {
+  // a imagem (pode ter centenas de KB) fica só na tela de Configurações, não na página toda
+  const page = $('page-settings').style;
+  if (url) page.setProperty('--settings-bg', `url("${url}")`);
+  else page.removeProperty('--settings-bg');
+  page.setProperty('--bg-dim', String((Number(dim) || 0) / 100));
+  document.body.classList.toggle('has-bg', !!url);
+  $('bg-clear').disabled = !url;
+  $('bg-dim').value = String(Number(dim) || 0);
+}
+try {
+  applyBg(localStorage.getItem('evl.bgImage'), localStorage.getItem('evl.bgDim') ?? 35);
+} catch {}
+$('bg-pick').addEventListener('click', () => $('bg-file').click());
+$('bg-file').addEventListener('change', (event) => {
+  const file = event.currentTarget.files?.[0];
+  event.currentTarget.value = '';
+  if (!file) return;
+  // lê como data: (a política de segurança da interface não aceita blob:)
+  const reader = new FileReader();
+  const img = new Image();
+  reader.onerror = () => img.onerror();
+  reader.onload = () => {
+    img.src = reader.result;
+  };
+  img.onload = () => {
+    const k = Math.min(1, 1920 / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * k);
+    canvas.height = Math.round(img.height * k);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    const url = canvas.toDataURL('image/jpeg', 0.82);
+    try {
+      localStorage.setItem('evl.bgImage', url);
+      bgStatus.hidden = true;
+      applyBg(url, $('bg-dim').value);
+    } catch {
+      bgStatus.textContent = t('Não deu para guardar a imagem (muito grande).');
+      bgStatus.hidden = false;
+    }
+  };
+  img.onerror = () => {
+    bgStatus.textContent = t('Não deu para abrir essa imagem.');
+    bgStatus.hidden = false;
+  };
+  reader.readAsDataURL(file);
+});
+$('bg-clear').addEventListener('click', () => {
+  try {
+    localStorage.removeItem('evl.bgImage');
+  } catch {}
+  applyBg(null, $('bg-dim').value);
+});
+$('bg-dim').addEventListener('input', () => {
+  $('page-settings').style.setProperty('--bg-dim', String(Number($('bg-dim').value) / 100));
+});
+$('bg-dim').addEventListener('change', () => {
+  try {
+    localStorage.setItem('evl.bgDim', $('bg-dim').value);
+  } catch {}
+});
+
+// User agent (aba Cookies)
+const uaInput = $('ua-input');
+const uaStatus = $('ua-status');
+async function loadUa() {
+  const r = await window.evl.uaGet();
+  if (!r) return;
+  uaInput.value = r.value;
+  uaInput.placeholder = r.default;
+}
+async function saveUa(value) {
+  const r = await window.evl.uaSet(value);
+  uaStatus.textContent = r?.ok ? t('Salvo. Vale ao abrir ou recarregar páginas.') : t('User agent inválido (texto simples, de 8 a 400 caracteres).');
+  uaStatus.hidden = false;
+  if (r?.ok) loadUa();
+}
+$('ua-save').addEventListener('click', () => saveUa(uaInput.value));
+$('ua-reset').addEventListener('click', () => saveUa(null));
+
+// Restaurar padrões: confirma em 2 passos; limpa as preferências desta tela e pede ao main.js o resto
+const resetAsk = $('reset-ask');
+const resetYes = $('reset-yes');
+const resetNo = $('reset-no');
+let resetTimer = 0;
+function resetStep(confirming) {
+  resetAsk.hidden = confirming;
+  resetYes.hidden = !confirming;
+  resetNo.hidden = !confirming;
+  clearTimeout(resetTimer);
+  if (confirming) resetTimer = setTimeout(() => resetStep(false), 8000);
+}
+resetAsk.addEventListener('click', () => resetStep(true));
+resetNo.addEventListener('click', () => resetStep(false));
+resetYes.addEventListener('click', () => {
+  try {
+    for (const k of ['compact', 'oneColor', 'lessColor', 'amoled', 'tint', 'radius', 'tabGlow', 'bgImage', 'bgDim']) localStorage.removeItem(`evl.${k}`);
+  } catch {}
+  window.evl.settingsReset();
+});
+
+// Menos cor: tira brilhos, linhas e setas coloridas das Configurações
+const lessColor = $('less-color');
+function setLessColor(on) {
+  document.body.classList.toggle('less-color', on);
+  lessColor.setAttribute('aria-checked', String(on));
+}
+try {
+  setLessColor(localStorage.getItem('evl.lessColor') === '1');
+} catch {}
+lessColor.addEventListener('click', () => {
+  const on = lessColor.getAttribute('aria-checked') !== 'true';
+  setLessColor(on);
+  try {
+    localStorage.setItem('evl.lessColor', on ? '1' : '0');
+  } catch {}
+});
+
+// Usar só 1 cor: a 2ª variação (--accent2) passa a ser igual à principal
+const oneColor = $('one-color');
+function setOneColor(on) {
+  document.body.classList.toggle('one-color', on);
+  oneColor.setAttribute('aria-checked', String(on));
+}
+try {
+  setOneColor(localStorage.getItem('evl.oneColor') === '1');
+} catch {}
+oneColor.addEventListener('click', () => {
+  const on = oneColor.getAttribute('aria-checked') !== 'true';
+  setOneColor(on);
+  try {
+    localStorage.setItem('evl.oneColor', on ? '1' : '0');
+  } catch {}
+});
+
+// ---------- aparência: cor principal ----------
+// Troca só as variáveis --accent e --glow da interface (as páginas dos sites não mudam).
+
+const accentEl = $('accent');
+let accent = null; // #rrggbb escolhido, ou null = padrão do tema
+
+function applyAccent(color) {
+  accent = color;
+  const root = document.documentElement.style;
+  if (color) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
+    root.setProperty('--accent', color);
+    root.setProperty('--glow', `rgba(${r}, ${g}, ${b}, 0.35)`);
+  } else {
+    root.removeProperty('--accent');
+    root.removeProperty('--glow');
+  }
+  // o quadrado mostra a cor em uso (a do tema, quando não há escolha)
+  const shown = color ?? getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  if (/^#[0-9a-f]{6}$/i.test(shown)) accentEl.value = shown.toLowerCase();
+}
+
+accentEl.addEventListener('input', () => applyAccent(accentEl.value)); // ao vivo
+accentEl.addEventListener('change', () => window.evl.setAccent(accentEl.value)); // salva ao confirmar
+// botão direito no bloco de cor volta ao padrão do tema
+accentEl.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+  applyAccent(null);
+  window.evl.setAccent(null);
+});

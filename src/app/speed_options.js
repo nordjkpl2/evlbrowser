@@ -12,9 +12,10 @@ const SPEED_DEFAULTS = {
   blockAutoplay: true, // vídeos só tocam depois de um clique/toque seu (economiza rede e CPU)
   hardwareAccel: true, // usa a placa de vídeo (desligar economiza RAM de vídeo, mas pode deixar lento)
   lowMemory: false, // modo de baixa memória do Chromium (caches menores)
+  diskCacheMB: 0, // tamanho máximo do cache em disco (0 = automático do Chromium)
 };
-const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory'];
-const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000] };
+const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB'];
+const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000] };
 
 function speedOptions(raw) {
   const out = { ...SPEED_DEFAULTS };

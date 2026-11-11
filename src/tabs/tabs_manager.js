@@ -18,7 +18,7 @@ const { WebContentsView } = require('electron');
 const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
 const { hostColor } = require('./favicon_color');
-const { MENU_HEIGHT, SUGGEST_HEIGHT } = require('../app/app_config');
+const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT } = require('../app/app_config');
 
 const DEFAULT_TAB_LAYOUT = { mode: 'top', tabH: 32, tabW: 200, sideW: 220, line: false, lineColor: '' };
 const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Math.round(Number(v)))) : d);
@@ -43,9 +43,13 @@ class TabManager {
     this.nextId = 1;
     this.menuOpen = false; // submenu do contador de memória (zoom + Configurações)
     this.suggestOpen = false; // sugestões do histórico na barra de endereço
+    this.promptOpen = false; // pedido de permissão de um site (microfone, câmera...)
     this.history = history;
     this.webrtcPolicy = 'default_public_interface_only'; // o WebRTC não revela o IP da rede local
     this.tabLayout = { ...DEFAULT_TAB_LAYOUT }; // abas em cima ou na lateral, altura e largura
+    this.webglOff = false;
+    this.settingsZoom = 1; // zoom da aba Configurações (a página é da própria interface; a UI aplica o zoom)
+    this.letterbox = false;
     this.popupBlocked = null; // (url) => true corta janelas de anúncio
     this.closed = []; // abas web fechadas (para Ctrl+Shift+T), a mais recente no fim
   }
@@ -120,6 +124,24 @@ class TabManager {
     tab.muted = !tab.muted;
     tab.view.webContents.setAudioMuted?.(tab.muted);
     this._changed();
+  }
+
+  // Impressão digital: WebGL desligado (vale para abas abertas depois) e página em múltiplos de 200x100 px.
+  setFingerprint({ webglOff = false, letterbox = false } = {}) {
+    this.webglOff = webglOff === true;
+    const snap = letterbox === true;
+    if (snap !== this.letterbox) {
+      this.letterbox = snap;
+      this.layout();
+    }
+  }
+
+  // Com letterbox, o tamanho da página arredonda para baixo (200x100) e fica centrado na horizontal.
+  _fit(b) {
+    if (!this.letterbox) return b;
+    const width = Math.max(200, Math.floor(b.width / 200) * 200);
+    const height = Math.max(100, Math.floor(b.height / 100) * 100);
+    return { x: b.x + Math.max(0, Math.floor((b.width - width) / 2)), y: b.y, width: Math.min(width, b.width), height: Math.min(height, b.height) };
   }
 
   // Política de IP do WebRTC para as páginas abertas e as próximas.
@@ -291,12 +313,18 @@ class TabManager {
     this._zoomStep(-1);
   }
   zoomReset() {
-    this.tabs.get(this.activeId)?.view?.webContents.setZoomLevel(0);
+    if (this._onSettings()) this.settingsZoom = 1;
+    else this.tabs.get(this.activeId)?.view?.webContents.setZoomLevel(0);
     this._changed();
+  }
+
+  _onSettings() {
+    return this.tabs.get(this.activeId)?.kind === 'settings';
   }
 
   // Zoom da aba ativa em % (100 = normal), ou null se a aba não é uma página web viva.
   zoomPercent() {
+    if (this._onSettings()) return Math.round(this.settingsZoom * 100);
     const wc = this.tabs.get(this.activeId)?.view?.webContents;
     return wc ? Math.round(Math.pow(1.2, wc.getZoomLevel()) * 100) : null;
   }
@@ -309,6 +337,13 @@ class TabManager {
     if (open) this.suggestOpen = false;
     this.layout();
     this._changed();
+  }
+
+  // Idem para o painel de pedido de permissão.
+  setPrompt(open) {
+    if (this.promptOpen === open) return;
+    this.promptOpen = open;
+    this.layout();
   }
 
   // Idem para a lista de sugestões. A interface controla; aqui só ajustamos a altura.
@@ -361,20 +396,20 @@ class TabManager {
     const tab = this.tabs.get(this.activeId);
     const web = tab?.kind === 'web';
 
-    const extra = this.menuOpen ? MENU_HEIGHT : this.suggestOpen ? SUGGEST_HEIGHT : 0;
+    const extra = Math.max(this.menuOpen ? MENU_HEIGHT : this.suggestOpen ? SUGGEST_HEIGHT : 0, this.promptOpen ? PROMPT_HEIGHT : 0);
     if (this.tabLayout.mode === 'side') {
       // painel lateral de abas (barra + abas) à esquerda; a página ocupa o resto.
       // Com menu/sugestões abertos o painel alarga por cima da página.
       const side = Math.min(this.tabLayout.sideW, width);
-      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : 0;
+      const wide = this.menuOpen ? 300 : this.suggestOpen || this.promptOpen ? 400 : 0;
       this.ui.setBounds({ x: 0, y: 0, width: web ? Math.min(Math.max(side, wide), width) : width, height });
-      if (web && tab.view) tab.view.setBounds({ x: side, y: 0, width: Math.max(0, width - side), height });
+      if (web && tab.view) tab.view.setBounds(this._fit({ x: side, y: 0, width: Math.max(0, width - side), height }));
       return;
     }
     const top = this.topHeight();
     this.ui.setBounds({ x: 0, y: 0, width, height: Math.min(web ? top + extra : height, height) });
     if (web && tab.view) {
-      tab.view.setBounds({ x: 0, y: top, width, height: Math.max(0, height - top) });
+      tab.view.setBounds(this._fit({ x: 0, y: top, width, height: Math.max(0, height - top) }));
     }
   }
 
@@ -440,8 +475,22 @@ class TabManager {
     this.onChange();
   }
 
+  // Próximo passo da lista ZOOM_FACTORS a partir de um fator (1 = 100%).
+  _nextZoom(current, direction) {
+    let index = ZOOM_FACTORS.findIndex((f) => f >= current - 0.001);
+    if (index === -1) index = ZOOM_FACTORS.length - 1;
+    const exact = Math.abs(ZOOM_FACTORS[index] - current) < 0.01;
+    const next = direction > 0 ? (exact ? index + 1 : index) : index - 1;
+    return ZOOM_FACTORS[Math.min(ZOOM_FACTORS.length - 1, Math.max(0, next))];
+  }
+
   // Anda um passo na lista ZOOM_FACTORS a partir do zoom atual da página.
   _zoomStep(direction, tab = this.tabs.get(this.activeId)) {
+    if (tab?.kind === 'settings') {
+      this.settingsZoom = this._nextZoom(this.settingsZoom, direction);
+      this._changed();
+      return;
+    }
     const wc = tab?.view?.webContents;
     if (!wc) return;
     const current = Math.pow(1.2, wc.getZoomLevel()); // nível do Chromium -> fator (1 = 100%)
@@ -465,6 +514,7 @@ class TabManager {
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
+        webgl: !this.webglOff,
         preload: path.join(__dirname, '..', '..', 'preload_web_pages.js'), // senhas e YouTube (só mundo isolado)
       },
     });

@@ -13,6 +13,9 @@ module.exports = {
   // submenu do contador de memória está aberto.
   MENU_HEIGHT: 150,
 
+  // Painel de pedido de permissão (microfone, câmera...) abaixo da barra de endereço.
+  PROMPT_HEIGHT: 110,
+
   // Idem para a lista de sugestões do histórico (até 6 linhas) da barra de endereço.
   SUGGEST_HEIGHT: 240,
 
@@ -52,7 +55,7 @@ module.exports = {
   // Flags de velocidade/RAM. process-per-site: abas do mesmo site dividem um processo
   // (menos RAM e abre mais rápido). Se algum site ficar instável, apague esta linha.
   CHROMIUM_FAST_SWITCHES: ['process-per-site', 'enable-gpu-rasterization'],
-  CHROMIUM_ON_FEATURES: ['HttpsUpgrades'], // abre http:// em https:// quando o site oferece
+  CHROMIUM_ON_FEATURES: ['HttpsUpgrades', 'BackForwardCache'], // http:// vira https:// quando o site oferece; Voltar/Avançar mostram a página na hora (guardada por pouco tempo na memória)
   CHROMIUM_OFF_FEATURES: [
     'MediaRouter', // descoberta de Chromecast na rede
     'OptimizationHints', // serviço de dicas de otimização

@@ -7,6 +7,7 @@ const SPEED_ROWS = [
   ['preconnect', 'bool', 'Conectar antes de abrir', 'Enquanto você digita, o Evl já abre a conexão com o primeiro site sugerido. A página aparece mais rápido.', '', false],
   ['discardMinutes', 'num', 'Fechar abas paradas após', 'Abas de fundo sem uso (e sem som ou vídeo tocando) são descarregadas e liberam a memória. Clicar nelas volta a carregar.', 'min', false],
   ['memoryBudgetMB', 'num', 'Limite de memória', 'Acima deste valor o Evl descarrega as abas paradas mais antigas antes do tempo.', 'MB', false],
+  ['diskCacheMB', 'num', 'Cache em disco', 'Guarda mais arquivos dos sites no disco: páginas já visitadas abrem mais rápido e gastam menos internet. Não usa memória RAM. 0 = tamanho automático.', 'MB', true],
   ['blockAutoplay', 'bool', 'Não tocar vídeos sozinhos', 'Vídeos só tocam depois de um clique seu: menos rede, menos CPU e menos memória em abas abertas.', '', true],
   ['hardwareAccel', 'bool', 'Usar a placa de vídeo', 'Deixa rolagem e vídeo mais fluidos. Desligue só se notar travamentos ou quiser poupar a memória de vídeo.', '', true],
   ['lowMemory', 'bool', 'Modo de baixa memória', 'Usa menos memória em cada página (caches menores). Pode deixar sites muito pesados um pouco mais lentos.', '', true],

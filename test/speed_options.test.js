@@ -33,3 +33,12 @@ test('readStartupSpeed lê settings.json; needsRestart só para opções de rein
   assert.strictEqual(needsRestart({ ...startup, lowMemory: true }, startup), true);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('cache em disco: 0 = automático, limite máximo e pede reinício', () => {
+  const { speedOptions, needsRestart, checkSpeedValue } = require('../src/app/speed_options');
+  assert.strictEqual(speedOptions(null).diskCacheMB, 0);
+  assert.strictEqual(speedOptions({ diskCacheMB: 99999 }).diskCacheMB, 8000);
+  assert.strictEqual(speedOptions({ diskCacheMB: -5 }).diskCacheMB, 0);
+  assert.strictEqual(checkSpeedValue('diskCacheMB', 512), 512);
+  assert.ok(needsRestart(speedOptions({ diskCacheMB: 512 }), speedOptions(null)));
+});

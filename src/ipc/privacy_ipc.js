@@ -13,6 +13,7 @@ function registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork, 
     const o = options();
     getNetwork().refresh();
     getTabs()?.setWebrtcPolicy(o.webrtcProtect ? 'default_public_interface_only' : 'default');
+    getTabs()?.setFingerprint({ webglOff: o.noWebgl, letterbox: o.letterbox });
     // "automatic": usa DNS por HTTPS e, se falhar, volta para o DNS do sistema (não trava a navegação).
     app.configureHostResolver({ secureDnsMode: o.secureDns ? 'automatic' : 'off', secureDnsServers: DOH_SERVERS });
   }

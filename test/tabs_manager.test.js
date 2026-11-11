@@ -148,7 +148,7 @@ tabs.tabs.get(a).view.webContents.emit('zoom-changed', {}, 'in'); // Ctrl + roda
 assert.strictEqual(tabs.snapshot().zoom, 110);
 tabs.zoomReset();
 tabs.activate(s);
-assert.strictEqual(tabs.snapshot().zoom, null, 'Configurações não tem zoom');
+assert.strictEqual(tabs.snapshot().zoom, 100, 'Configurações tem zoom próprio (começa em 100%)');
 
 // 10) submenu do contador de memória: a interface cresce por cima da página
 const { MENU_HEIGHT, SUGGEST_HEIGHT } = cfg;
@@ -250,3 +250,34 @@ console.log('layout/som OK');
     assert.strictEqual(snap().color, '', 'desligar tira a cor');
   });
 }
+
+// 10) Letterbox: página em múltiplos de 200x100, centrada; WebGL vale para as próximas abas
+{
+  const lb = new TabManager(win, ui, () => {}, () => false);
+  assert.deepStrictEqual(lb._fit({ x: 0, y: 48, width: 1000, height: 652 }), { x: 0, y: 48, width: 1000, height: 652 }, 'desligado não muda');
+  lb.setFingerprint({ webglOff: true, letterbox: true });
+  assert.deepStrictEqual(lb._fit({ x: 0, y: 48, width: 1000, height: 652 }), { x: 0, y: 48, width: 1000, height: 600 });
+  assert.deepStrictEqual(lb._fit({ x: 0, y: 0, width: 1919, height: 950 }), { x: 59, y: 0, width: 1800, height: 900 });
+  assert.deepStrictEqual(lb._fit({ x: 0, y: 0, width: 150, height: 80 }), { x: 0, y: 0, width: 150, height: 80 }, 'janela minúscula não passa do espaço');
+  assert.strictEqual(lb.webglOff, true);
+}
+console.log('letterbox OK');
+
+// 11) Zoom na aba Configurações: passos da lista, % no estado e 100% ao zerar
+{
+  const zt = new TabManager(win, ui, () => {}, () => false);
+  zt.openSettings();
+  assert.strictEqual(zt.snapshot().zoom, 100);
+  zt.zoomIn();
+  assert.strictEqual(zt.snapshot().zoom, 110);
+  zt.zoomIn();
+  zt.zoomIn();
+  assert.strictEqual(zt.snapshot().zoom, 150);
+  zt.zoomOut();
+  assert.strictEqual(zt.snapshot().zoom, 125);
+  zt.zoomReset();
+  assert.strictEqual(zt.snapshot().zoom, 100);
+  for (let i = 0; i < 30; i++) zt.zoomOut();
+  assert.strictEqual(zt.snapshot().zoom, 25, 'mínimo 25%');
+}
+console.log('zoom das configurações OK');

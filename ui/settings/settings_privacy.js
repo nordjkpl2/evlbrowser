@@ -12,6 +12,9 @@ const PRIVACY_ROWS = [
   ['trimReferrer', 'Esconder de onde você veio', 'Sites de fora veem só o domínio da página anterior, nunca o endereço completo (não vazam o que você lia em outra aba).'],
   ['limitFingerprint', 'Limitar a impressão digital', 'Esconde detalhes do seu computador que os sites pedem (versão exata, modelo) e bloqueia APIs de anúncios do Chromium.'],
   ['blockExtensionNet', 'Extensões não enviam dados para fora', 'Corta a internet das páginas de fundo das extensões, para elas não enviarem o que leem das suas abas. Pode quebrar extensões que precisam de internet.'],
+  ['noWebgl', 'Desligar o WebGL', 'Impede que sites usem a placa de vídeo para desenhar e identificar o computador. Pode quebrar mapas e jogos 3D; vale para abas abertas depois.'],
+  ['maskHardware', 'Esconder núcleos e memória', 'Os sites veem sempre 4 núcleos e 8 GB de memória, valores comuns, em vez dos reais do seu computador.'],
+  ['letterbox', 'Arredondar o tamanho da janela', 'A página usa sempre múltiplos de 200×100 px, para o tamanho exato da janela não identificar você. Sobram faixas vazias nas bordas.'],
   ['clearOnExit', 'Apagar cookies e cache ao fechar', 'Desliga você dos sites a cada vez que fecha o navegador.'],
 ];
 
