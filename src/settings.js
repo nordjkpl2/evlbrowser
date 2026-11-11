@@ -8,15 +8,15 @@ const path = require('path');
 // Valores usados enquanto a pessoa não escolheu nada.
 const DEFAULTS = { theme: 'dark' };
 
-function createStore(file) {
+function createStore(file, defaults = DEFAULTS) {
   let data = null;
 
   function load() {
     if (data) return data;
     try {
-      data = { ...DEFAULTS, ...JSON.parse(fs.readFileSync(file, 'utf8')) };
+      data = { ...defaults, ...JSON.parse(fs.readFileSync(file, 'utf8')) };
     } catch {
-      data = { ...DEFAULTS }; // arquivo não existe ou está quebrado
+      data = { ...defaults }; // arquivo não existe ou está quebrado
     }
     return data;
   }

@@ -386,7 +386,7 @@ dd { margin: 0; overflow-wrap: anywhere; }
 #accent {
   display: block;
   width: 100%;
-  height: 140px;
+  height: 72px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -394,6 +394,36 @@ dd { margin: 0; overflow-wrap: anywhere; }
 }
 #accent::-webkit-color-swatch-wrapper { padding: 0; }
 #accent::-webkit-color-swatch { border: 0; }
+
+/* histórico */
+.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.card-head h3 { margin: 0; }
+.text-btn {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+.text-btn:hover { background: var(--surface-active); }
+#h-list { margin: 8px 0 0; padding: 0; list-style: none; }
+.h-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 16px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.h-item:hover { background: var(--surface-active); }
+.h-title, .h-url { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.h-url { grid-column: 1; font-size: 12px; }
+.h-time { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 12px; white-space: nowrap; }
 
 .preview {
   display: flex;

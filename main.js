@@ -13,6 +13,7 @@ const {
 const path = require('path');
 const cfg = require('./src/config');
 const { createStore } = require('./src/settings');
+const { createHistory } = require('./src/history');
 const { TabManager } = require('./src/tabs');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory');
 
@@ -28,6 +29,10 @@ let ui = null; // a interface (abas, barra de endereço, Nova aba e Configuraç�
 let tabs = null;
 let policy = null;
 let store = null; // preferências salvas (tema...)
+let sessionStore = null; // abas abertas, para reabrir ao iniciar (session.json)
+let history = null; // páginas visitadas (history.json)
+let sessionTimer = null;
+let lastSession = '';
 
 // Esquema de cores (prefers-color-scheme) da interface e dos sites,
 // e a cor de fundo da janela para cada um (evita um clarão ao abrir/redimensionar).
@@ -61,6 +66,30 @@ function flushState() {
   send('state', tabs.snapshot());
   sampleMemory(false);
   policy?.refresh();
+  scheduleSession();
+}
+
+// Sessão: guarda as abas abertas. Junta mudanças (no máximo 1 gravação a cada 2 s)
+// e só escreve no disco se algo mudou de verdade.
+function saveSession() {
+  clearTimeout(sessionTimer);
+  sessionTimer = null;
+  if (!tabs) return;
+  const snap = tabs.sessionSnapshot();
+  const json = JSON.stringify(snap);
+  if (json === lastSession) return;
+  lastSession = json;
+  sessionStore.set('session', snap);
+}
+
+function scheduleSession() {
+  if (!sessionTimer) sessionTimer = setTimeout(saveSession, 2000);
+}
+
+// Abre as Configurações; com 'history', já na categoria Histórico.
+function openSettings(panel) {
+  tabs.openSettings();
+  if (panel === 'history') send('panel', panel);
 }
 
 // O número de MB no canto NÃO tem timer: é atualizado quando algo acontece
@@ -92,6 +121,14 @@ function onShortcut(input) {
 
   if (input.shift && key === 'i') {
     tabs.openDevTools();
+    return true;
+  }
+  if (input.shift && key === 't') {
+    tabs.reopenClosed();
+    return true;
+  }
+  if (key === 'h') {
+    openSettings('history');
     return true;
   }
   switch (key) {
@@ -162,14 +199,20 @@ function createWindow() {
     if (onShortcut(input)) event.preventDefault();
   });
 
-  tabs = new TabManager(win, ui, onTabsChanged, onShortcut);
+  tabs = new TabManager(win, ui, onTabsChanged, onShortcut, history);
   policy = startMemoryPolicy(tabs, (mb) => send('memory', mb));
 
   win.on('resize', () => tabs.layout());
   win.on('focus', () => sampleMemory(false));
 
-  tabs.create(); // primeira aba (em branco, sem processo extra)
+  // Reabre as abas da sessão anterior (só a ativa carrega); sem sessão, uma aba em branco.
+  const saved = sessionStore.get('session');
+  if (!tabs.restore(saved?.items, saved?.active)) tabs.create();
 
+  win.on('close', () => {
+    saveSession(); // antes de as abas serem destruídas
+    history.flush();
+  });
   win.on('closed', () => {
     policy?.stop();
     tabs?.destroyAll();
@@ -216,7 +259,12 @@ ipcMain.on('nav:go', (event, text) => {
 ipcMain.on('nav:back', (event) => fromUi(event) && tabs.back());
 ipcMain.on('nav:forward', (event) => fromUi(event) && tabs.forward());
 ipcMain.on('nav:reload', (event) => fromUi(event) && tabs.reload());
-ipcMain.on('settings:open', (event) => fromUi(event) && tabs.openSettings());
+ipcMain.on('settings:open', (event, panel) => fromUi(event) && openSettings(panel));
+ipcMain.handle('history:list', (event) => (fromUi(event) ? history.list() : []));
+ipcMain.on('history:open', (event, url) => {
+  if (fromUi(event) && typeof url === 'string') tabs.create(url);
+});
+ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
 ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));
 ipcMain.on('zoom:set', (event, action) => {
   if (!fromUi(event)) return;
@@ -244,6 +292,8 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null); // sem menu padrão (nossos atalhos ficam no código)
 
   store = createStore(path.join(app.getPath('userData'), 'settings.json'));
+  sessionStore = createStore(path.join(app.getPath('userData'), 'session.json'), {});
+  history = createHistory(path.join(app.getPath('userData'), 'history.json'));
   const savedTheme = store.get('theme');
   nativeTheme.themeSource = THEMES.has(savedTheme) ? savedTheme : 'dark';
 

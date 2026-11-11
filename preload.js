@@ -13,7 +13,10 @@ contextBridge.exposeInMainWorld('evl', {
   back: () => ipcRenderer.send('nav:back'),
   forward: () => ipcRenderer.send('nav:forward'),
   reload: () => ipcRenderer.send('nav:reload'),
-  openSettings: () => ipcRenderer.send('settings:open'),
+  openSettings: (panel) => ipcRenderer.send('settings:open', panel === 'history' ? panel : undefined),
+  historyList: () => ipcRenderer.invoke('history:list'),
+  historyOpen: (url) => ipcRenderer.send('history:open', String(url)),
+  historyClear: () => ipcRenderer.send('history:clear'),
   setAccent: (color) => ipcRenderer.send('accent:set', color === null ? null : String(color)),
   setMenu: (open) => ipcRenderer.send('menu:set', open === true),
   zoom: (action) => ipcRenderer.send('zoom:set', String(action)), // 'in' | 'out' | 'reset'
@@ -25,6 +28,7 @@ contextBridge.exposeInMainWorld('evl', {
   // Eventos que vêm do main.js
   onState: (cb) => ipcRenderer.on('state', (_event, state) => cb(state)),
   onMemory: (cb) => ipcRenderer.on('memory', (_event, mb) => cb(mb)),
+  onPanel: (cb) => ipcRenderer.on('panel', (_event, name) => cb(name)),
   onAccent: (cb) => ipcRenderer.on('accent', (_event, color) => cb(color)),
   onFocusAddress: (cb) => ipcRenderer.on('focus-address', () => cb()),
 });

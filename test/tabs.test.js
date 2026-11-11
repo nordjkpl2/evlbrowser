@@ -154,7 +154,33 @@ tabs.setMenu(true); tabs.activate(s);
 assert.strictEqual(tabs.snapshot().menuOpen, false, 'trocar de aba fecha o menu');
 tabs.activate(a);
 
-// 11) fechar tudo sempre deixa uma aba (em branco)
+// 11) histórico recebe visitas; Ctrl+Shift+T reabre; sessão é restaurada sem criar páginas
+const visits = [];
+const withHist = new TabManager(win, ui, () => {}, () => false, { add: (u) => visits.push(u), setTitle() {} });
+const h1 = withHist.create('hist.com');
+withHist.tabs.get(h1).view.webContents.emit('did-navigate', { url: 'https://hist.com/x' });
+assert.deepStrictEqual(visits, ['https://hist.com/x']);
+withHist.close(h1);
+assert.strictEqual(withHist.tabs.size, 1, 'sobra a aba em branco');
+withHist.reopenClosed();
+assert.strictEqual([...withHist.tabs.values()].filter((x) => x.kind === 'web').length, 1);
+withHist.reopenClosed(); // nada mais para reabrir
+assert.strictEqual(withHist.tabs.size, 2);
+
+const snap = withHist.sessionSnapshot();
+assert.strictEqual(snap.items.length, 1);
+const fresh = new TabManager(win, ui, () => {}, () => false);
+assert.strictEqual(fresh.restore([{ url: 'https://a.com/', title: 'A' }, { url: 'javascript:1' }, { url: 'b.com', title: 'B' }], 1), true);
+assert.strictEqual(fresh.tabs.size, 2, 'esquema perigoso ignorado');
+const states = fresh.snapshot().tabs.map((x) => x.state);
+assert.deepStrictEqual(states, ['discarded', 'active'].map((s, i) => s)); // a ativa é a 2ª
+assert.strictEqual([...fresh.tabs.values()].filter((x) => x.view).length, 1, 'só a ativa tem página');
+assert.strictEqual(new TabManager(win, ui, () => {}, () => false).restore([], 0), false);
+assert.strictEqual(new TabManager(win, ui, () => {}, () => false).restore(undefined), false);
+fresh.destroyAll(); withHist.destroyAll();
+tabs.activate([...tabs.tabs.keys()][0]);
+
+// 12) fechar tudo sempre deixa uma aba (em branco)
 for (const id of [...tabs.tabs.keys()]) tabs.close(id);
 assert.strictEqual(tabs.tabs.size, 1);
 assert.strictEqual(tabs.snapshot().activeKind, 'blank');

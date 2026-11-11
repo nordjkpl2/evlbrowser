@@ -18,6 +18,7 @@ const zoomOutBtn = $('zoom-out');
 const zoomInBtn = $('zoom-in');
 const zoomValBtn = $('zoom-val');
 const menuSettingsBtn = $('menu-settings');
+const menuHistoryBtn = $('menu-history');
 
 let current = null; // último estado recebido
 let lastKey = ''; // para pular redesenho quando nada mudou
@@ -139,6 +140,7 @@ let pollTimer = null;
 
 function startPolling() {
   if (pollTimer) return;
+  if (panel === 'history') loadHistory(); // pode ter novas visitas desde a última vez
   refreshSettings();
   pollTimer = setInterval(refreshSettings, 2000);
 }
@@ -198,6 +200,7 @@ function showPanel(name) {
     }
   }
   for (const card of cards) card.hidden = card.dataset.panel !== name;
+  if (name === 'history') loadHistory();
 }
 
 // A busca procura em todos os cartões, de qualquer categoria.
@@ -224,6 +227,45 @@ searchEl.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') showPanel(panel);
 });
 showPanel('search');
+
+// ---------- histórico ----------
+// Só busca a lista quando a categoria Histórico está aberta. Texto de sites sempre
+// vai por textContent (nunca innerHTML).
+
+const hList = $('h-list');
+const hEmpty = $('h-empty');
+
+async function loadHistory() {
+  const items = await window.evl.historyList();
+  hEmpty.hidden = items.length > 0;
+  hList.replaceChildren(
+    ...items.map((item) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'h-item';
+      btn.title = item.url;
+      const title = document.createElement('span');
+      title.className = 'h-title';
+      title.textContent = item.title;
+      const url = document.createElement('span');
+      url.className = 'h-url hint';
+      url.textContent = item.url;
+      const time = document.createElement('span');
+      time.className = 'h-time hint';
+      time.textContent = new Date(item.time).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+      btn.append(title, url, time);
+      btn.addEventListener('click', () => window.evl.historyOpen(item.url));
+      li.append(btn);
+      return li;
+    })
+  );
+}
+
+$('h-clear').addEventListener('click', async () => {
+  window.evl.historyClear();
+  await loadHistory();
+});
 
 // ---------- aparência: Claro / Escuro ----------
 // Define o esquema de cores que os SITES enxergam. A interface do Evl não muda.
@@ -285,6 +327,7 @@ zoomOutBtn.addEventListener('click', () => window.evl.zoom('out'));
 zoomInBtn.addEventListener('click', () => window.evl.zoom('in'));
 zoomValBtn.addEventListener('click', () => window.evl.zoom('reset'));
 menuSettingsBtn.addEventListener('click', () => window.evl.openSettings()); // abrir fecha o menu
+menuHistoryBtn.addEventListener('click', () => window.evl.openSettings('history'));
 
 // Clicar fora do menu (inclusive na área transparente sobre a página) ou Esc fecha.
 document.addEventListener('mousedown', (event) => {
@@ -315,5 +358,6 @@ window.evl.onMemory((mb) => {
 });
 window.evl.onFocusAddress(() => addressEl.focus());
 window.evl.onAccent(applyAccent);
+window.evl.onPanel(showPanel); // Ctrl+H / menu: abre direto no Histórico
 
 window.evl.ready(); // pede o primeiro estado

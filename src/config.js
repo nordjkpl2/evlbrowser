@@ -2,7 +2,7 @@
 // Em C seria um config.h cheio de #define.
 
 // Se você definir EVL_DISCARD_SECONDS, ele troca o tempo padrão de descarte
-// (bom para testar sem esperar 10 minutos).
+// (bom para testar sem esperar 3 minutos).
 const discardSeconds = Number(process.env.EVL_DISCARD_SECONDS);
 
 module.exports = {
@@ -11,15 +11,15 @@ module.exports = {
 
   // Espaço extra (px) que a interface ocupa por cima da página enquanto o
   // submenu do contador de memória está aberto.
-  MENU_HEIGHT: 140,
+  MENU_HEIGHT: 150,
 
   // Aba de fundo parada por este tempo tem a página destruída (libera a RAM).
-  DISCARD_AFTER_MS: discardSeconds > 0 ? discardSeconds * 1000 : 10 * 60 * 1000,
+  DISCARD_AFTER_MS: discardSeconds > 0 ? discardSeconds * 1000 : 3 * 60 * 1000,
 
   // Se o app passar deste orçamento de memória, descartamos abas de fundo
   // mais cedo (a mais antiga primeiro).
-  MEMORY_BUDGET_MB: 1500,
-  PRESSURE_DISCARD_AFTER_MS: 60 * 1000,
+  MEMORY_BUDGET_MB: 800,
+  PRESSURE_DISCARD_AFTER_MS: 20 * 1000,
 
   // A política de memória só tem timer enquanto existe aba de fundo viva.
   // Ela acorda no máximo a cada BUDGET_CHECK_MS e nunca em menos de MIN_WAIT_MS.

@@ -25,7 +25,8 @@ class TabManager {
   // win: a BaseWindow. ui: a WebContentsView da interface.
   // onChange(): chamado sempre que algo muda (sem argumentos; use snapshot()).
   // onShortcut(input): chamado para teclas digitadas dentro das páginas.
-  constructor(win, ui, onChange, onShortcut) {
+  // history (opcional): { add(url, title), setTitle(url, title) } para o histórico.
+  constructor(win, ui, onChange, onShortcut, history) {
     this.win = win;
     this.ui = ui;
     this.onChange = onChange;
@@ -34,6 +35,8 @@ class TabManager {
     this.activeId = null;
     this.nextId = 1;
     this.menuOpen = false; // submenu do contador de memória (zoom + Configurações)
+    this.history = history;
+    this.closed = []; // abas web fechadas (para Ctrl+Shift+T), a mais recente no fim
   }
 
   // ---------- criar / ativar / fechar ----------
@@ -87,6 +90,10 @@ class TabManager {
     if (!tab) return;
     const index = [...this.tabs.keys()].indexOf(id);
 
+    if (tab.kind === 'web') {
+      this.closed.push({ url: tab.url, title: tab.title });
+      if (this.closed.length > 10) this.closed.shift();
+    }
     this._destroyView(tab);
     this.tabs.delete(id);
 
@@ -101,6 +108,49 @@ class TabManager {
     } else {
       this._changed();
     }
+  }
+
+  // ---------- sessão: reabrir abas ----------
+
+  // Recria as abas da sessão anterior. Só a ativa carrega; as outras já nascem
+  // "discarded" (sem processo, sem RAM) e carregam quando você clicar nelas.
+  // Devolve false se não sobrou nenhuma aba válida.
+  restore(items, active = 0) {
+    const ids = [];
+    for (const item of Array.isArray(items) ? items : []) {
+      const url = toUrl(item?.url);
+      if (!url) continue;
+      const tab = {
+        id: this.nextId++,
+        kind: 'web',
+        title: String(item.title || url).slice(0, 200),
+        url,
+        favicon: '',
+        loading: false,
+        view: null,
+        lastActive: Date.now(),
+      };
+      this.tabs.set(tab.id, tab);
+      ids.push(tab.id);
+    }
+    if (ids.length === 0) return false;
+    this.activate(ids[Math.min(Math.max(Number(active) | 0, 0), ids.length - 1)]);
+    return true;
+  }
+
+  // As abas web de agora (para salvar a sessão) e qual delas está ativa.
+  sessionSnapshot() {
+    const web = [...this.tabs.values()].filter((t) => t.kind === 'web');
+    return {
+      items: web.map((t) => ({ url: t.url, title: t.title })),
+      active: Math.max(0, web.findIndex((t) => t.id === this.activeId)),
+    };
+  }
+
+  // Ctrl+Shift+T: reabre a última aba web fechada.
+  reopenClosed() {
+    const last = this.closed.pop();
+    if (last) this._add({ kind: 'web', title: last.title, url: last.url });
   }
 
   // ---------- navegação da aba ativa ----------
@@ -306,6 +356,7 @@ class TabManager {
 
     wc.on('page-title-updated', (_e, title) => {
       tab.title = title;
+      this.history?.setTitle(tab.url, title);
       this._changed();
     });
     wc.on('page-favicon-updated', (_e, icons) => {
@@ -323,6 +374,7 @@ class TabManager {
     // Versões novas do Electron mandam a URL em event.url; as antigas, como argumento.
     wc.on('did-navigate', (e, url) => {
       tab.url = e.url ?? url;
+      this.history?.add(tab.url, '');
       this._changed();
     });
     wc.on('did-navigate-in-page', (e, url, isMainFrame) => {
