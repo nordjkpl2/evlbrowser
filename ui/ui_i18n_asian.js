@@ -229,4 +229,6 @@ const WORDS_ZH_JA = [
   ['Modo de baixa memória', '低内存模式', '低メモリモード'],
   ['Usa menos memória em cada página (caches menores). Pode deixar sites muito pesados um pouco mais lentos.', '每个页面占用更少内存（缓存更小）。可能让特别庞大的网站稍微变慢。', '各ページが使うメモリを減らします（キャッシュが小さくなります）。とても重いサイトは少し遅くなることがあります。'],
   ['Remover do histórico', '从历史记录中移除', '履歴から削除'],
+  ['Fechar popups de venda e anúncios inesperados', '关闭促销弹窗和意外广告', '販売ポップアップや予期しない広告を閉じる'],
+  ['Bloqueia janelas que abrem sozinhas (sem você clicar) e esconde avisos de desconto, cadastro e saída da página. Janelas de login continuam funcionando.', '拦截不经点击就自动打开的窗口，并隐藏折扣、订阅和离开页面时弹出的提示。登录窗口仍可正常使用。', 'クリックしていないのに勝手に開くウィンドウをブロックし、割引・登録・離脱時のポップアップを非表示にします。ログイン用のウィンドウは引き続き動作します。'],
 ];

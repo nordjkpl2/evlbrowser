@@ -91,3 +91,43 @@ test('todo canal usado pelas páginas tem handler no main', () => {
     assert.ok(code.includes(`'${m[1]}'`), `sem handler para ${m[1]}`);
   }
 });
+
+test('popups: com "fechar popups" ligado esconde avisos e só deixa abrir janela após clique', () => {
+  const on = loadPreload('exemplo.com', { ads: false, popups: true });
+  assert.strictEqual(on.calls.css.length, 1);
+  assert.ok(on.calls.css[0].includes('.pum-overlay'));
+  assert.strictEqual(typeof on.calls.world.func, 'function');
+
+  const opened = [];
+  let clicked = 0;
+  class Anchor { click() { clicked++; } }
+  const page = { navigator: { userActivation: { isActive: false } }, HTMLAnchorElement: Anchor };
+  page.window = page;
+  page.open = (...a) => (opened.push(a), { fake: true });
+  vm.createContext(page);
+  vm.runInContext(`(${on.calls.world.func.toString()})()`, page);
+
+  assert.strictEqual(page.window.open('https://anuncio.com'), null, 'sem clique: bloqueado');
+  assert.strictEqual(opened.length, 0);
+  const a = new Anchor();
+  a.target = '_blank';
+  a.click();
+  assert.strictEqual(clicked, 0, 'clique de script em link _blank sem gesto: bloqueado');
+  a.target = '_self';
+  a.click();
+  assert.strictEqual(clicked, 1, 'mesma aba continua');
+
+  page.navigator.userActivation.isActive = true; // você clicou
+  assert.deepStrictEqual(page.window.open('https://login.com'), { fake: true });
+  assert.strictEqual(opened.length, 1);
+  a.target = '_blank';
+  a.click();
+  assert.strictEqual(clicked, 2);
+});
+
+test('popups desligado (só anúncios ligados): nada de popup é instalado', () => {
+  const r = loadPreload('exemplo.com', { ads: true, popups: false });
+  assert.strictEqual(r.calls.world, null);
+  assert.ok(!r.calls.css.some((c) => c.includes('.pum-overlay')));
+  assert.strictEqual(loadPreload('exemplo.com', { ads: false, popups: false }).calls.css.length, 0);
+});

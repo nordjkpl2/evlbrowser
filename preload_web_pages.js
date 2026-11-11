@@ -116,13 +116,55 @@ iframe[src*="adserver"], iframe[src*="/ads/"], iframe[id^="google_ads"], .advert
 { display: none !important; }
 `;
 
+// Avisos de venda, cadastro e "espere, não saia": só vendors conhecidos de popup (seletores seguros).
+const POPUP_HIDE_CSS = `
+[id^="om-"][class*="optin"], .optinmonster-overlay, .om-holder, #privy-container, .privy-popup-container,
+.klaviyo-popup, [aria-label="POPUP Form"], .needsclick.kl-private-reset-css-Xuajs1, #sumo-overlay, .sumome-overlay,
+.pum-overlay, .spu-bg, .spu-box, .mc-modal-bg, .mc-modal, .wisepops-overlay, [id^="wisepops-"], #ju_iframe_wrapper,
+[id^="ju_"][class*="popup"], #exit-intent, .exit-intent-popup, .email-popup, .newsletter-popup, .popup-newsletter,
+.ometria-overlay, [class*="popup-ad"], [id*="popup-ad"], .popupOverlay[class*="promo"]
+{ display: none !important; }
+html.pum-open, body.pum-open { overflow: auto !important; }
+`;
+
+// Roda no mundo da página, antes dos scripts dela: janelas só abrem se você clicou/tocou/digitou
+// há pouco (navigator.userActivation). Login por janela (OAuth) continua, pois nasce de um clique.
+function popupGuard() {
+  const active = () => {
+    try {
+      return !navigator.userActivation || navigator.userActivation.isActive;
+    } catch {
+      return true;
+    }
+  };
+  const realOpen = window.open;
+  window.open = function () {
+    return active() ? realOpen.apply(this, arguments) : null;
+  };
+  const realClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () {
+    if (this.target && this.target !== '_self' && !active()) return; // clique de script abrindo outra janela
+    return realClick.call(this);
+  };
+}
+
 // uma única consulta por página (só em http/https); YouTube ganha as regras extras
 if (/^https?:$/.test(location.protocol)) {
-  let on = false;
+  let ads = false;
+  let popups = false;
   try {
-    on = ipcRenderer.sendSync('adblock:enabled') === true; // ligado nas Configurações e site não permitido?
+    // { ads, popups }: ligados nas Configurações e o site não está na lista de permitidos
+    const r = ipcRenderer.sendSync('adblock:enabled');
+    ads = r === true || r?.ads === true;
+    popups = r?.popups === true;
   } catch {}
-  if (on) {
+  if (popups) {
+    webFrame.insertCSS(POPUP_HIDE_CSS);
+    try {
+      contextBridge.executeInMainWorld({ func: popupGuard });
+    } catch {}
+  }
+  if (ads) {
     webFrame.insertCSS(GENERIC_HIDE_CSS);
     if (/(^|\.)youtube\.com$/.test(location.hostname)) {
       try {

@@ -8,7 +8,8 @@ const MAX_ALLOW = 200;
 function registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork }) {
   const enabled = () => store.get('adblock') !== false; // ligado por padrão
   const allowList = () => (Array.isArray(store.get('adblockAllow')) ? store.get('adblockAllow') : []);
-  const state = () => ({ enabled: enabled(), blocked: adblock.blocked, allow: allowList() });
+  const popupsOn = () => store.get('adblockPopups') !== false; // fechar popups/anúncios inesperados: ligado por padrão
+  const state = () => ({ enabled: enabled(), popups: popupsOn(), blocked: adblock.blocked, allow: allowList() });
   adblock.setAllow(allowList());
 
   // Pergunta síncrona do preload das páginas (preload_web_pages.js): o reforço de dentro da página
@@ -18,13 +19,19 @@ function registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork }) {
     try {
       host = new URL(event.senderFrame.url).hostname;
     } catch {}
-    event.returnValue = !fromUi(event) && enabled() && !adblock.allowedHost(host);
+    const free = fromUi(event) || adblock.allowedHost(host);
+    event.returnValue = { ads: !free && enabled(), popups: !free && popupsOn() };
   });
   ipcMain.handle('adblock:get', (event) => (fromUi(event) ? state() : null));
   ipcMain.handle('adblock:set', (event, on) => {
     if (!fromUi(event) || typeof on !== 'boolean') return null;
     store.set('adblock', on);
     getNetwork().refresh();
+    return state();
+  });
+  ipcMain.handle('adblock:popups', (event, on) => {
+    if (!fromUi(event) || typeof on !== 'boolean') return null;
+    store.set('adblockPopups', on);
     return state();
   });
   // Permitir/voltar a bloquear num site: add = true inclui, false remove.
@@ -37,6 +44,7 @@ function registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork }) {
     adblock.setAllow(next);
     return state();
   });
+  return { popupsOn };
 }
 
 module.exports = { registerAdblockIpc };

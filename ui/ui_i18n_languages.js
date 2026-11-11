@@ -249,6 +249,8 @@ const WORDS = [
   ['Deixa rolagem e vídeo mais fluidos. Desligue só se notar travamentos ou quiser poupar a memória de vídeo.', 'Makes scrolling and video smoother. Turn it off only if you notice stuttering or want to save video memory.', 'Hace el desplazamiento y el vídeo más fluidos. Desactívalo solo si notas bloqueos o quieres ahorrar memoria de vídeo.'],
   ['Modo de baixa memória', 'Low-memory mode', 'Modo de poca memoria'],
   ['Usa menos memória em cada página (caches menores). Pode deixar sites muito pesados um pouco mais lentos.', 'Uses less memory per page (smaller caches). May make very heavy sites a bit slower.', 'Usa menos memoria por página (cachés menores). Puede ralentizar un poco los sitios muy pesados.'],
+  ['Fechar popups de venda e anúncios inesperados', 'Close sales popups and unexpected ads', 'Cerrar ventanas emergentes de ventas y anuncios inesperados'],
+  ['Bloqueia janelas que abrem sozinhas (sem você clicar) e esconde avisos de desconto, cadastro e saída da página. Janelas de login continuam funcionando.', 'Blocks windows that open by themselves (without you clicking) and hides discount, sign-up and exit-intent pop-ups. Login windows keep working.', 'Bloquea ventanas que se abren solas (sin que hagas clic) y oculta avisos de descuento, registro y salida de la página. Las ventanas de inicio de sesión siguen funcionando.'],
   ['Remover do histórico', 'Remove from history', 'Quitar del historial'],
 ];
 const DICT = new Map(WORDS.map(([pt, en, es]) => [pt, { en, es }]));

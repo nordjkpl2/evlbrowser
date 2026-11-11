@@ -10,6 +10,7 @@ const abAllow = $('ab-allow');
 function showAdblock(state) {
   if (!state) return;
   abSwitch.setAttribute('aria-checked', String(state.enabled));
+  $('ab-popups').setAttribute('aria-checked', String(state.popups !== false));
   abCount.textContent = String(state.blocked);
   abAllow.replaceChildren(
     ...state.allow.map((site) => {
@@ -41,4 +42,9 @@ async function loadAdblock() {
 abSwitch.addEventListener('click', async () => {
   const on = abSwitch.getAttribute('aria-checked') !== 'true';
   showAdblock(await window.evl.adblockSet(on));
+});
+
+$('ab-popups').addEventListener('click', async (event) => {
+  const on = event.currentTarget.getAttribute('aria-checked') !== 'true';
+  showAdblock(await window.evl.adblockPopups(on));
 });

@@ -287,7 +287,8 @@ function createWindow() {
 
   tabs = new TabManager(win, ui, onTabsChanged, onShortcut, history);
   tabs.setWebrtcPolicy(privacyApi.options().webrtcProtect ? 'default_public_interface_only' : 'default');
-  tabs.setPopupFilter((url) => store.get('adblock') !== false && !!adblockApi?.shouldBlock(url, 'script', ''));
+  // janela de anúncio: cortada se o bloqueador OU "fechar popups" estiver ligado
+  tabs.setPopupFilter((url) => (store.get('adblock') !== false || store.get('adblockPopups') !== false) && !!adblockApi?.shouldBlock(url, 'script', ''));
   tabs.setTabLayout(store.get('tabLayout') ?? {});
   policy = startMemoryPolicy(tabs, (mb) => send('memory', mb), () => {
     const o = speedApi.options();

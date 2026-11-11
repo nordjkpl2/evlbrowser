@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('evl', {
   passwordsClear: () => ipcRenderer.invoke('passwords:clear'),
   passwordsImport: () => ipcRenderer.invoke('passwords:import'),
   adblockGet: () => ipcRenderer.invoke('adblock:get'),
+  adblockPopups: (on) => ipcRenderer.invoke('adblock:popups', on === true),
   adblockSet: (on) => ipcRenderer.invoke('adblock:set', on === true),
   extensionsList: () => ipcRenderer.invoke('extensions:list'),
   extensionsPick: (kind) => ipcRenderer.invoke('extensions:pick', kind === 'folder' ? 'folder' : 'file'),
