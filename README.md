@@ -3,13 +3,19 @@
 Webbrowser made using electron html css and javascript with focus in using lower ram
 firefox style running in chromium and NS Nord Suite Engines
 
-/Build
+<details>
+<summary><b>/Build</b></summary>
 
 ```text
 npm install
 npm start
 npm test
 ```
+
+</details>
+
+<details>
+<summary><b>/Shortcuts Keybinds</b></summary>
 
 ## Atalhos
 
@@ -26,3 +32,21 @@ npm test
 | Ctrl+Shift+T | Reabrir a última aba fechada |
 | Ctrl+Shift+I | DevTools da aba ativa |
 | F12 | DevTools da interface do navegador 
+
+</details>
+
+<details>
+<summary><b>/Why Use Evl Browser ?</b></summary>
+
+Evl Browser is a real community made browser
+
+Open Source and everyone can help made, audit or improve evl
+
+Evl(s) browser provide:
+
+ secure navigation
+ speed of navigation using ns nord suite engine
+ tabs not can acess other for pickup personal data
+ customization 
+
+</details>
