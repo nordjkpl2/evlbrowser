@@ -251,6 +251,15 @@ const WORDS = [
   ['Usa menos memória em cada página (caches menores). Pode deixar sites muito pesados um pouco mais lentos.', 'Uses less memory per page (smaller caches). May make very heavy sites a bit slower.', 'Usa menos memoria por página (cachés menores). Puede ralentizar un poco los sitios muy pesados.'],
   ['Fechar popups de venda e anúncios inesperados', 'Close sales popups and unexpected ads', 'Cerrar ventanas emergentes de ventas y anuncios inesperados'],
   ['Bloqueia janelas que abrem sozinhas (sem você clicar) e esconde avisos de desconto, cadastro e saída da página. Janelas de login continuam funcionando.', 'Blocks windows that open by themselves (without you clicking) and hides discount, sign-up and exit-intent pop-ups. Login windows keep working.', 'Bloquea ventanas que se abren solas (sin que hagas clic) y oculta avisos de descuento, registro y salida de la página. Las ventanas de inicio de sesión siguen funcionando.'],
+  ['Mais informações', 'More information', 'Más información'],
+  ['Chromium é um renderizador de sites de código aberto.', 'Chromium is an open-source website renderer.', 'Chromium es un renderizador de sitios web de código abierto.'],
+  ['NS Nord Suite é um esquema de renderização e parâmetros de navegação.', 'NS Nord Suite is a rendering scheme and set of browsing parameters.', 'NS Nord Suite es un esquema de renderizado y parámetros de navegación.'],
+  ['Endereço', 'Address', 'Dirección'],
+  ['Título (opcional)', 'Title (optional)', 'Título (opcional)'],
+  ['Endereço inválido. Exemplo: exemplo.com', 'Invalid address. Example: example.com', 'Dirección no válida. Ejemplo: ejemplo.com'],
+  ['Densidade', 'Density', 'Densidad'],
+  ['Itens compactos', 'Compact items', 'Elementos compactos'],
+  ['Deixa as Configurações mais apertadas: menos espaço entre cartões, linhas e itens do menu.', 'Makes Settings tighter: less space between cards, rows and menu items.', 'Hace los Ajustes más compactos: menos espacio entre tarjetas, filas y elementos del menú.'],
   ['Remover do histórico', 'Remove from history', 'Quitar del historial'],
 ];
 const DICT = new Map(WORDS.map(([pt, en, es]) => [pt, { en, es }]));

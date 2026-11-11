@@ -37,3 +37,18 @@ test('gravar onde não dá (pasta inexistente de verdade) não derruba o app', (
   store.set('theme', 'light');
   assert.strictEqual(store.get('theme'), 'light');
 });
+
+test('setLater guarda na memória na hora, junta a gravação e flush() escreve o que falta', async () => {
+  const file = tempFile();
+  const store = createStore(file, {});
+  store.setLater('session', { items: [1] });
+  assert.deepStrictEqual(store.get('session'), { items: [1] });
+  store.setLater('session', { items: [1, 2] }, 10);
+  store.flush();
+  assert.deepStrictEqual(createStore(file, {}).get('session'), { items: [1, 2] });
+
+  const other = createStore(tempFile(), {});
+  other.setLater('a', 1, 10);
+  await new Promise((r) => setTimeout(r, 80));
+  assert.strictEqual(other.get('a'), 1);
+});

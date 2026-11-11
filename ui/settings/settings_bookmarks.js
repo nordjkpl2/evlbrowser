@@ -5,6 +5,8 @@
 const bList = $('b-list');
 const bEmpty = $('b-empty');
 const bTotal = $('b-total');
+const bForm = $('b-form');
+const bError = $('b-error');
 
 async function loadBookmarks() {
   const items = await window.evl.bookmarksList();
@@ -35,3 +37,25 @@ async function loadBookmarks() {
     return li;
   });
 }
+
+function closeBookmarkForm() {
+  bForm.hidden = true;
+  bForm.reset();
+  bError.hidden = true;
+}
+$('b-add').addEventListener('click', () => {
+  bForm.hidden = false;
+  $('b-url').focus();
+});
+$('b-cancel').addEventListener('click', closeBookmarkForm);
+bForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const r = await window.evl.bookmarksAdd($('b-url').value, $('b-title').value);
+  if (!r?.ok) {
+    bError.textContent = t('Endereço inválido. Exemplo: exemplo.com');
+    bError.hidden = false;
+    return;
+  }
+  closeBookmarkForm();
+  loadBookmarks();
+});

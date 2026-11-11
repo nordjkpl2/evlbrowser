@@ -231,4 +231,13 @@ const WORDS_ZH_JA = [
   ['Remover do histórico', '从历史记录中移除', '履歴から削除'],
   ['Fechar popups de venda e anúncios inesperados', '关闭促销弹窗和意外广告', '販売ポップアップや予期しない広告を閉じる'],
   ['Bloqueia janelas que abrem sozinhas (sem você clicar) e esconde avisos de desconto, cadastro e saída da página. Janelas de login continuam funcionando.', '拦截不经点击就自动打开的窗口，并隐藏折扣、订阅和离开页面时弹出的提示。登录窗口仍可正常使用。', 'クリックしていないのに勝手に開くウィンドウをブロックし、割引・登録・離脱時のポップアップを非表示にします。ログイン用のウィンドウは引き続き動作します。'],
+  ['Mais informações', '更多信息', '詳細情報'],
+  ['Chromium é um renderizador de sites de código aberto.', 'Chromium 是一个开源的网站渲染器。', 'Chromium はオープンソースのウェブサイトレンダラーです。'],
+  ['NS Nord Suite é um esquema de renderização e parâmetros de navegação.', 'NS Nord Suite 是一套渲染方案和浏览参数。', 'NS Nord Suite はレンダリング方式とブラウジング設定の仕組みです。'],
+  ['Endereço', '地址', 'アドレス'],
+  ['Título (opcional)', '标题（可选）', 'タイトル（任意）'],
+  ['Endereço inválido. Exemplo: exemplo.com', '地址无效。例如：example.com', 'アドレスが正しくありません。例: example.com'],
+  ['Densidade', '密度', '密度'],
+  ['Itens compactos', '紧凑项目', 'コンパクト表示'],
+  ['Deixa as Configurações mais apertadas: menos espaço entre cartões, linhas e itens do menu.', '让设置更紧凑：减少卡片、行和菜单项之间的间距。', '設定を詰めて表示します。カード、行、メニュー項目の間隔が狭くなります。'],
 ];

@@ -66,7 +66,6 @@ let speedApi = null; // opções de velocidade (src/ipc/speed_ipc.js)
 let privacyApi = null; // opções de privacidade (src/ipc/privacy_ipc.js)
 let vault = null; // cofre de senhas (src/data/passwords_vault.js)
 let extensions = null; // extensões do Chromium (src/extensions/extension_manager.js)
-let lastPreconnect = ''; // último site que já abrimos a conexão
 let engines = []; // motores de busca [{ id, name, url }]
 let engineId = ''; // o padrão
 let lastSession = '';
@@ -131,7 +130,7 @@ function saveSession() {
   const json = JSON.stringify(snap);
   if (json === lastSession) return;
   lastSession = json;
-  sessionStore.set('session', snap);
+  sessionStore.setLater('session', snap); // em segundo plano; garantido ao fechar (flush)
 }
 
 function scheduleSession() {
@@ -301,9 +300,11 @@ function createWindow() {
   // Reabre as abas da sessão anterior (só a ativa carrega); sem sessão, uma aba em branco.
   const saved = sessionStore.get('session');
   if (!tabs.restore(saved?.items, saved?.active)) tabs.create();
+  else warmUp(saved.items?.[saved.active ?? 0]?.url); // a aba que vai abrir já ganha a conexão pronta
 
   win.on('close', () => {
     saveSession(); // antes de as abas serem destruídas
+    sessionStore.flush();
     history.flush();
   });
   win.on('closed', () => {
@@ -376,6 +377,27 @@ ipcMain.on('lang:set', (event, lang) => {
   if (fromUi(event) && ['pt', 'en', 'es', 'zh', 'ja'].includes(lang)) store.set('lang', lang);
 });
 ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
+// Abre a conexão (DNS + TLS) com um site antes de você precisar dele. Só https, uma vez por site,
+// nada de domínio de anúncio, e só se "Conectar antes de abrir" estiver ligado em Velocidade.
+const warmed = new Set();
+function warmUp(url) {
+  let origin;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:') return;
+    origin = u.origin;
+  } catch {
+    return;
+  }
+  if (warmed.has(origin) || !speedApi.options().preconnect || adblockApi?.shouldBlock(`${origin}/`, 'script', '')) return;
+  if (warmed.size >= 50) warmed.clear();
+  warmed.add(origin);
+  session.defaultSession.preconnect({ url: origin, numSockets: 1 });
+}
+// Vem das páginas quando o mouse passa por cima de um link para outro site.
+ipcMain.on('link:hover', (event, origin) => {
+  if (!fromUi(event) && typeof origin === 'string' && origin.length < 256) warmUp(origin);
+});
 ipcMain.handle('history:suggest', (event, q) => {
   if (!fromUi(event) || typeof q !== 'string') return [];
   // favoritos (com estrela) vêm primeiro, depois os sites do histórico
@@ -383,10 +405,7 @@ ipcMain.handle('history:suggest', (event, q) => {
   const list = [...stars, ...history.suggest(q.slice(0, 200)).filter((h) => !stars.some((s) => s.url === h.url))].slice(0, 6);
   // Navegar mais rápido: enquanto você digita, já abre a conexão com o 1º site sugerido.
   const top = list[0]?.url;
-  if (top && speedApi.options().preconnect && top !== lastPreconnect && top.startsWith('https://')) {
-    lastPreconnect = top;
-    session.defaultSession.preconnect({ url: top, numSockets: 1 });
-  }
+  if (top) warmUp(top);
   return list;
 });
 // Motores de busca: lista salva em settings.json; o escolhido vale na hora para a barra de endereço.

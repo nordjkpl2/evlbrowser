@@ -10,17 +10,17 @@ const file = path.join(__dirname, '..', 'preload_web_pages.js');
 const source = fs.readFileSync(file, 'utf8');
 
 function loadPreload(hostname, adblockOn) {
-  const calls = { css: [], world: null, invoked: [] };
+  const calls = { css: [], world: null, invoked: [], sent: [], handlers: {} };
   const electron = {
-    ipcRenderer: { sendSync: () => adblockOn, invoke: async (ch) => (calls.invoked.push(ch), []) },
+    ipcRenderer: { sendSync: () => adblockOn, send: (ch, v) => calls.sent.push([ch, v]), invoke: async (ch) => (calls.invoked.push(ch), []) },
     webFrame: { insertCSS: (css) => calls.css.push(css) },
     contextBridge: { executeInMainWorld: (o) => (calls.world = o) },
   };
   const listeners = [];
   const ctx = vm.createContext({
     require: (name) => (name === 'electron' ? electron : require(name)),
-    location: { hostname, protocol: 'https:' },
-    document: { addEventListener: (t, f) => listeners.push(t), querySelector: () => null, visibilityState: 'visible' },
+    location: { hostname, protocol: 'https:', origin: `https://${hostname}` },
+    document: { addEventListener: (t, f) => (listeners.push(t), (calls.handlers[t] = f)), querySelector: () => null, visibilityState: 'visible' },
     setInterval: () => 0,
     console,
   });
@@ -130,4 +130,16 @@ test('popups desligado (só anúncios ligados): nada de popup é instalado', () 
   assert.strictEqual(r.calls.world, null);
   assert.ok(!r.calls.css.some((c) => c.includes('.pum-overlay')));
   assert.strictEqual(loadPreload('exemplo.com', { ads: false, popups: false }).calls.css.length, 0);
+});
+
+test('mouse sobre link de outro site: avisa o main uma vez por site (só https, só cliques reais)', () => {
+  const { calls } = loadPreload('exemplo.com', false);
+  const over = (href, origin, trusted = true, protocol = 'https:') =>
+    calls.handlers.pointerover({ isTrusted: trusted, target: { closest: () => ({ href, origin, protocol }) } });
+  over('https://outro.com/a', 'https://outro.com');
+  over('https://outro.com/b', 'https://outro.com'); // repetido
+  over('https://exemplo.com/x', 'https://exemplo.com'); // mesmo site
+  over('http://inseguro.com', 'http://inseguro.com', true, 'http:');
+  over('https://script.com', 'https://script.com', false); // evento falso
+  assert.deepStrictEqual(calls.sent, [['link:hover', 'https://outro.com']]);
 });

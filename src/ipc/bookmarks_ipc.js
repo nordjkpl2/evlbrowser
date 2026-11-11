@@ -22,6 +22,22 @@ function registerBookmarksIpc({ ipcMain, fromUi, getBookmarks, getActivePage, op
     refresh();
     return ok;
   });
+  // Adicionar à mão: aceita "exemplo.com" (vira https://exemplo.com) ou um endereço completo.
+  ipcMain.handle('bookmarks:add', (event, url, title) => {
+    if (!fromUi(event) || typeof url !== 'string' || (title !== undefined && typeof title !== 'string')) return { ok: false };
+    let raw = url.trim().slice(0, 2000);
+    if (!/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+    let host;
+    try {
+      host = new URL(raw).hostname;
+    } catch {
+      return { ok: false };
+    }
+    if (!host.includes('.') && host !== 'localhost') return { ok: false };
+    const ok = getBookmarks().add(raw, (title || '').trim().slice(0, 200) || host.replace(/^www\./, ''));
+    refresh();
+    return { ok };
+  });
   return { toggleActive };
 }
 

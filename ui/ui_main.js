@@ -275,6 +275,30 @@ const cards = [...document.querySelectorAll('.card')];
 
 // Cartões retráteis: clicar no título abre/fecha o conteúdo (o estado fica salvo neste computador).
 // A chave é "categoria:título em português", lida uma vez no início (antes de traduzir).
+// botão (!) do Motor de sites: mostra/esconde o texto explicativo
+$('engine-info-btn').addEventListener('click', (event) => {
+  const box = $('engine-info');
+  box.hidden = !box.hidden;
+  event.currentTarget.setAttribute('aria-expanded', String(!box.hidden));
+});
+
+// Itens compactos: Configurações mais apertadas (guardado só neste computador)
+const compactSwitch = $('compact-switch');
+function setCompact(on) {
+  document.body.classList.toggle('compact', on);
+  compactSwitch.setAttribute('aria-checked', String(on));
+}
+try {
+  setCompact(localStorage.getItem('evl.compact') === '1');
+} catch {}
+compactSwitch.addEventListener('click', () => {
+  const on = compactSwitch.getAttribute('aria-checked') !== 'true';
+  setCompact(on);
+  try {
+    localStorage.setItem('evl.compact', on ? '1' : '0');
+  } catch {}
+});
+
 let closedCards = [];
 try {
   closedCards = JSON.parse(localStorage.getItem('evl.closedCards') || '[]');
@@ -312,6 +336,12 @@ const panelTitle = $('panel-title');
 const noResults = $('no-results');
 let panel = 'search'; // categoria aberta
 
+// Cores alternadas: os cartões visíveis alternam entre a cor principal e a 2ª variação (--accent2)
+function paintCards() {
+  let n = 0;
+  for (const card of cards) card.classList.toggle('alt', !card.hidden && n++ % 2 === 1);
+}
+
 function showPanel(name) {
   panel = name;
   document.body.classList.remove('searching');
@@ -329,6 +359,7 @@ function showPanel(name) {
     }
   }
   for (const card of cards) card.hidden = card.dataset.panel !== name;
+  paintCards();
   if (name === 'history') loadHistory();
   if (name === 'cookies') loadCookies();
   if (name === 'extensions') loadExtensions();
@@ -363,6 +394,7 @@ function searchSettings() {
     if (!card.hidden) found++;
   }
   noResults.hidden = found > 0;
+  paintCards();
 }
 
 // Grupos do menu lateral: abrem e fecham (o estado fica salvo neste computador).

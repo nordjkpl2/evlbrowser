@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('evl', {
   toggleBookmark: () => ipcRenderer.send('bookmarks:toggle'),
   bookmarksList: () => ipcRenderer.invoke('bookmarks:list'),
   bookmarksOpen: (url) => ipcRenderer.send('bookmarks:open', String(url)),
+  bookmarksAdd: (url, title) => ipcRenderer.invoke('bookmarks:add', String(url), String(title ?? '')),
   bookmarksRemove: (id) => ipcRenderer.invoke('bookmarks:remove', String(id)),
   passwordsList: () => ipcRenderer.invoke('passwords:list'),
   passwordsAdd: (e) =>

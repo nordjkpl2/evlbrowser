@@ -175,6 +175,7 @@
       </button>
         </div>
       </div>
+      <div class="side-logo" aria-hidden="true">EVL</div>
     </nav>
 
     <div class="content">
@@ -211,7 +212,14 @@
         </section>
 
         <section class="card" data-panel="search">
-          <h3>Motor de sites</h3>
+          <div class="card-head">
+            <h3>Motor de sites</h3>
+            <button id="engine-info-btn" class="info-btn" type="button" aria-expanded="false" aria-controls="engine-info" aria-label="Mais informações">!</button>
+          </div>
+          <div id="engine-info" class="info-box" hidden>
+            <p>Chromium é um renderizador de sites de código aberto.</p>
+            <p>NS Nord Suite é um esquema de renderização e parâmetros de navegação.</p>
+          </div>
           <p class="hint">O que roda por baixo dos panos para mostrar as páginas.</p>
           <dl>
             <dt>Motor</dt>
@@ -304,6 +312,17 @@
           </div>
         </section>
 
+        <section class="card" data-panel="appearance">
+          <h3>Densidade</h3>
+          <div class="v-row">
+            <span class="v-text">
+              <span>Itens compactos</span>
+              <span class="v-hint hint">Deixa as Configurações mais apertadas: menos espaço entre cartões, linhas e itens do menu.</span>
+            </span>
+            <button id="compact-switch" class="switch" type="button" role="switch" aria-checked="false" aria-label="Itens compactos"></button>
+          </div>
+        </section>
+
         <section class="card color-card" data-panel="appearance">
           <input id="accent" type="color" value="#ffb429"
                  aria-label="Cor principal do navegador. Clique para escolher; botão direito volta ao padrão"
@@ -341,8 +360,24 @@
         <section class="card" data-panel="bookmarks">
           <div class="card-head">
             <h3>Favoritos <span id="b-total" class="hint"></span></h3>
+            <div class="head-actions">
+              <button id="b-add" class="white-btn" type="button">Adicionar</button>
+            </div>
           </div>
           <p class="hint">Clique na estrela da barra de endereço (ou Ctrl+D) para guardar a página. Os favoritos aparecem com estrela nas sugestões da barra.</p>
+          <form id="b-form" hidden>
+            <label>Endereço
+              <input id="b-url" type="text" spellcheck="false" autocomplete="off" placeholder="exemplo.com">
+            </label>
+            <label>Título (opcional)
+              <input id="b-title" type="text" autocomplete="off">
+            </label>
+            <p id="b-error" class="hint" role="alert" hidden></p>
+            <div class="form-actions">
+              <button type="submit" class="white-btn">Salvar</button>
+              <button id="b-cancel" type="button" class="text-btn">Cancelar</button>
+            </div>
+          </form>
           <p id="b-empty" class="hint" hidden>Nenhum favorito ainda.</p>
           <ul id="b-list"></ul>
         </section>

@@ -273,3 +273,17 @@ document.addEventListener(
   true
 );
 document.addEventListener('keydown', (event) => event.key === 'Escape' && closePicker(), true);
+
+// Navegar mais rápido: mouse sobre um link para outro site -> o main já abre a conexão (1x por site e página).
+const hovered = new Set();
+document.addEventListener(
+  'pointerover',
+  (event) => {
+    if (!event.isTrusted || hovered.size >= 20) return;
+    const link = event.target?.closest?.('a[href]');
+    if (!link || link.protocol !== 'https:' || link.origin === location.origin || hovered.has(link.origin)) return;
+    hovered.add(link.origin);
+    ipcRenderer.send('link:hover', link.origin);
+  },
+  { capture: true, passive: true }
+);

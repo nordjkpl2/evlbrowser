@@ -21,7 +21,43 @@ function createStore(file, defaults = DEFAULTS) {
     return data;
   }
 
+  // Gravação em segundo plano para o que muda toda hora (a sessão): atualiza na memória, junta as
+  // mudanças e escreve sem travar o programa. flush() escreve na hora o que estiver pendente.
+  let timer = null;
+  let dirty = false;
+  async function writeLater() {
+    timer = null;
+    if (!dirty) return;
+    dirty = false;
+    try {
+      await fs.promises.mkdir(path.dirname(file), { recursive: true });
+      await fs.promises.writeFile(file, JSON.stringify(data));
+    } catch {
+      // sem permissão de escrita: vale só até fechar o app
+    }
+  }
+
   return {
+    setLater(key, value, delay = 300) {
+      load()[key] = value;
+      dirty = true;
+      if (!timer) {
+        timer = setTimeout(writeLater, delay);
+        timer.unref?.();
+      }
+    },
+    flush() {
+      clearTimeout(timer);
+      timer = null;
+      if (!dirty) return;
+      dirty = false;
+      try {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, JSON.stringify(data));
+      } catch {
+        // idem
+      }
+    },
     get(key) {
       return load()[key];
     },
