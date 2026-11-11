@@ -98,3 +98,16 @@ test('nome da loja (__MSG_...__) vira o texto de _locales, e loadAll corrige nom
   await api.loadAll();
   assert.strictEqual(api.list()[0].name, 'uBlock Origin Lite');
 });
+
+test('readManifest resume o acesso: todos os sites e permissões sensíveis', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { readManifest } = require('../src/extension_manager');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'evlx-'));
+  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ name: 'X', version: '1', permissions: ['cookies', 'storage'], host_permissions: ['<all_urls>'] }));
+  assert.deepStrictEqual(readManifest(dir).access, { allSites: true, perms: ['cookies'] });
+  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ name: 'Y', version: '1', content_scripts: [{ matches: ['https://exemplo.com/*'] }] }));
+  assert.deepStrictEqual(readManifest(dir).access, { allSites: false, perms: [] });
+  fs.rmSync(dir, { recursive: true, force: true });
+});

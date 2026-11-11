@@ -44,10 +44,28 @@ function localizedName(root, text, defaultLocale) {
   return null;
 }
 
+// Resumo do que a extensão pode acessar (para avisar a pessoa): todos os sites e permissões sensíveis.
+const ALL_SITES = /^(<all_urls>|\*:\/\/\*\/\*|https?:\/\/\*\/\*)$/;
+const SENSITIVE = ['cookies', 'webRequest', 'webRequestBlocking', 'tabs', 'history', 'scripting', 'management', 'clipboardRead'];
+function accessOf(m) {
+  const strings = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
+  const hosts = [
+    ...strings(m.host_permissions),
+    ...strings(m.permissions),
+    ...strings(m.optional_host_permissions),
+    ...(Array.isArray(m.content_scripts) ? m.content_scripts.flatMap((c) => strings(c?.matches)) : []),
+  ];
+  const perms = strings(m.permissions);
+  return {
+    allSites: hosts.some((h) => ALL_SITES.test(h)),
+    perms: SENSITIVE.filter((p) => perms.includes(p)),
+  };
+}
+
 function readManifest(root) {
   const m = JSON.parse(stripBom(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8')));
   const name = (typeof m.name === 'string' && localizedName(root, m.name, m.default_locale)) || path.basename(root);
-  return { name: name.slice(0, 80), version: String(m.version ?? '') };
+  return { name: name.slice(0, 80), version: String(m.version ?? ''), access: accessOf(m) };
 }
 
 // `ext` é session.extensions (ou o próprio session nas versões antigas); `store` tem get/set.
@@ -83,7 +101,7 @@ function createExtensions({ ext, dir, store }) {
       for (const item of list) {
         try {
           const info = readManifest(path.join(dir, item.id));
-          if (info.name !== item.name || info.version !== item.version) {
+          if (info.name !== item.name || info.version !== item.version || JSON.stringify(info.access) !== JSON.stringify(item.access)) {
             Object.assign(item, info);
             changed = true;
           }
@@ -97,6 +115,7 @@ function createExtensions({ ext, dir, store }) {
         id: i.id,
         name: i.name,
         version: i.version,
+        access: i.access ?? { allSites: false, perms: [] },
         enabled: i.enabled,
         loaded: loaded.has(i.id),
         error: errors.get(i.id) ?? null,
@@ -118,7 +137,7 @@ function createExtensions({ ext, dir, store }) {
           fs.renameSync(tmp, dest);
         }
         const info = readManifest(dest);
-        const item = { id, name: info.name, version: info.version, enabled: true };
+        const item = { id, name: info.name, version: info.version, access: info.access, enabled: true };
         save([...items(), item]);
         await load(item);
         return this.list().find((x) => x.id === id);

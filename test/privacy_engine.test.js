@@ -69,3 +69,15 @@ test('hub: só registra o que está ligado e aplica as regras', async () => {
   assert.strictEqual(session.handlers.send, null);
   assert.strictEqual(session.handlers.recv, null);
 });
+
+test('hub: corta rede de extensões e reduz o Referer de terceiros', async () => {
+  const session = fakeSession();
+  const p = { stripParams: false, blockThirdPartyCookies: false, sendDnt: false, trimReferrer: true, blockExtensionNet: true };
+  createNetworkHub({ session, adblock: { check: () => false }, getAdblockOn: () => false, getPrivacy: () => p }).refresh();
+  assert.deepStrictEqual(await run(session.handlers.req, { resourceType: 'xhr', url: 'https://coleta.net/x', initiator: 'chrome-extension://abc' }), { cancel: true });
+  assert.deepStrictEqual(await run(session.handlers.req, { resourceType: 'xhr', url: 'https://api.site.com/x', initiator: 'https://site.com' }), {});
+  const sent = await run(session.handlers.send, { resourceType: 'image', url: 'https://t.net/p.gif', referrer: 'https://a.com/privado/pagina?q=1', requestHeaders: { Referer: 'https://a.com/privado/pagina?q=1' } });
+  assert.deepStrictEqual(sent.requestHeaders, { Referer: 'https://a.com/' });
+  const own = await run(session.handlers.send, { resourceType: 'image', url: 'https://cdn.a.com/p.gif', referrer: 'https://a.com/x?q=1', requestHeaders: { Referer: 'https://a.com/x?q=1' } });
+  assert.strictEqual(own.requestHeaders.Referer, 'https://a.com/x?q=1');
+});

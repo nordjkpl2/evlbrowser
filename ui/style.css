@@ -704,3 +704,21 @@ select:focus { border-color: var(--accent); outline: none; }
 #ab-allow { margin: 8px 0 0; padding: 0; list-style: none; }
 .ab-row { display: flex; align-items: center; gap: 12px; padding: 4px; }
 .ab-row .ab-site { margin-right: auto; }
+
+.nav-group { margin-bottom: 6px; }
+.nav-group-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 12px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--muted); font-size: calc(12px * var(--ui-scale, 1)); font-weight: 600;
+  text-transform: uppercase; letter-spacing: .05em; text-align: left; cursor: pointer;
+}
+.nav-group-head:hover { background: var(--surface); }
+.nav-group-head .chev { transition: transform var(--fast) ease; }
+.nav-group-head[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.nav-group-body[hidden] { display: none; }
+.font-row input[type="number"], .font-row input[type="text"] {
+  height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text); font: inherit; width: 140px;
+}
+
+.x-warn { flex-basis: 100%; color: var(--accent); }

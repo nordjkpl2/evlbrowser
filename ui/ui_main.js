@@ -250,6 +250,8 @@ function showPanel(name) {
     const on = item.dataset.panel === name;
     if (on) {
       item.setAttribute('aria-current', 'true');
+      const grp = item.closest('.nav-group');
+      if (grp && grp.querySelector('.nav-group-body').hidden) setGroup(grp, true);
       panelTitle.textContent = item.querySelector('span').textContent;
     } else {
       item.removeAttribute('aria-current');
@@ -290,7 +292,35 @@ function searchSettings() {
   noResults.hidden = found > 0;
 }
 
-navItems.forEach((item) => item.addEventListener('click', () => showPanel(item.dataset.panel)));
+// Grupos do menu lateral: abrem e fecham (o estado fica salvo neste computador).
+const navGroups = [...document.querySelectorAll('.nav-group')];
+let closedGroups = [];
+try {
+  closedGroups = JSON.parse(localStorage.getItem('evl.closedGroups') || '[]');
+} catch {}
+function setGroup(group, open) {
+  group.querySelector('.nav-group-head').setAttribute('aria-expanded', String(open));
+  group.querySelector('.nav-group-body').hidden = !open;
+}
+navGroups.forEach((group) => {
+  setGroup(group, !closedGroups.includes(group.dataset.group));
+  group.querySelector('.nav-group-head').addEventListener('click', () => {
+    const open = group.querySelector('.nav-group-body').hidden;
+    setGroup(group, open);
+    closedGroups = navGroups.filter((g) => g.querySelector('.nav-group-body').hidden).map((g) => g.dataset.group);
+    try {
+      localStorage.setItem('evl.closedGroups', JSON.stringify(closedGroups));
+    } catch {}
+  });
+});
+
+navItems.forEach((item) =>
+  item.addEventListener('click', () => {
+    const group = item.closest('.nav-group');
+    if (group) setGroup(group, true); // categoria aberta nunca fica escondida
+    showPanel(item.dataset.panel);
+  })
+);
 searchEl.addEventListener('input', searchSettings);
 searchEl.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') showPanel(panel);
@@ -431,22 +461,50 @@ const FONTS = {
 };
 const fontSizeEl = $('f-size');
 const fontFamilyEl = $('f-family');
+const fontNumEl = $('f-size-num');
+const fontNameEl = $('f-family-name');
+const PRESET_SCALES = ['0.9', '1', '1.15', '1.3'];
+const cleanFontName = (s) => String(s ?? '').replace(/[^\p{L}\p{N} .\-]/gu, '').trim().slice(0, 60);
 
 function applyFont(f) {
-  const scale = Number(f?.scale) || 1;
-  const family = FONTS[f?.family] ? f.family : 'system';
+  const scale = Math.min(2, Math.max(0.7, Number(f?.scale) || 1));
+  const raw = String(f?.family ?? 'system');
+  const name = raw.startsWith('custom:') ? cleanFontName(raw.slice(7)) : '';
+  const family = FONTS[raw] ? raw : name ? 'custom' : 'system';
   document.documentElement.style.setProperty('--ui-scale', String(scale));
-  document.documentElement.style.setProperty('--font-ui', FONTS[family]);
-  fontSizeEl.value = String(scale);
+  document.documentElement.style.setProperty('--font-ui', name ? `"${name}", ${FONTS.system}` : FONTS[family] ?? FONTS.system);
+  const preset = PRESET_SCALES.includes(String(scale));
+  fontSizeEl.value = preset ? String(scale) : 'custom';
+  fontNumEl.value = String(Math.round(scale * 100));
+  $('f-size-custom').hidden = preset;
   fontFamilyEl.value = family;
+  fontNameEl.value = name;
+  $('f-family-custom').hidden = family !== 'custom';
 }
 function saveFont() {
-  const f = { scale: Number(fontSizeEl.value), family: fontFamilyEl.value };
-  applyFont(f);
-  window.evl.setFont(f.scale, f.family);
+  const scale = fontSizeEl.value === 'custom' ? Math.min(200, Math.max(70, Number(fontNumEl.value) || 100)) / 100 : Number(fontSizeEl.value);
+  let family = fontFamilyEl.value;
+  if (family === 'custom') {
+    const name = cleanFontName(fontNameEl.value);
+    family = name ? `custom:${name}` : 'system';
+  }
+  applyFont({ scale, family });
+  window.evl.setFont(scale, family);
 }
-fontSizeEl.addEventListener('change', saveFont);
-fontFamilyEl.addEventListener('change', saveFont);
+fontSizeEl.addEventListener('change', () => {
+  if (fontSizeEl.value === 'custom') {
+    $('f-size-custom').hidden = false;
+    fontNumEl.focus();
+  } else saveFont();
+});
+fontNumEl.addEventListener('change', saveFont);
+fontFamilyEl.addEventListener('change', () => {
+  if (fontFamilyEl.value === 'custom') {
+    $('f-family-custom').hidden = false;
+    fontNameEl.focus();
+  } else saveFont();
+});
+fontNameEl.addEventListener('change', saveFont);
 
 // ---------- aparência: cor principal ----------
 // Troca só as variáveis --accent e --glow da interface (as páginas dos sites não mudam).

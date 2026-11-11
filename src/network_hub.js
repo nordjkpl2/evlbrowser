@@ -4,11 +4,22 @@
 
 const { cleanUrl, isThirdParty } = require('./privacy_engine');
 
+const isExtensionRequest = (d) => typeof d.initiator === 'string' && d.initiator.startsWith('chrome-extension://');
+
 const FILTER = { urls: ['http://*/*', 'https://*/*'] };
 
 // Apaga um cabeçalho sem se importar com maiúsculas ("Set-Cookie", "set-cookie").
 function dropHeader(headers, name) {
   for (const k of Object.keys(headers)) if (k.toLowerCase() === name) delete headers[k];
+}
+
+function referrerOrigin(ref) {
+  try {
+    const u = new URL(ref);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? `${u.origin}/` : null;
+  } catch {
+    return null;
+  }
 }
 
 // ctx: { session, adblock, getAdblockOn(): boolean, getPrivacy(): opções }
@@ -19,8 +30,10 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
       const adsOn = getAdblockOn();
       const p = getPrivacy();
 
-      if (adsOn || p.stripParams) {
+      if (adsOn || p.stripParams || p.blockExtensionNet) {
         requests.onBeforeRequest(FILTER, (d, callback) => {
+          // extensão (página de fundo / service worker) tentando falar com a internet
+          if (p.blockExtensionNet && isExtensionRequest(d)) return callback({ cancel: true });
           if (d.resourceType === 'mainFrame') {
             const clean = p.stripParams && d.method === 'GET' ? cleanUrl(d.url) : null;
             return callback(clean ? { redirectURL: clean } : {});
@@ -29,7 +42,7 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
         });
       } else requests.onBeforeRequest(null);
 
-      if (p.sendDnt || p.blockThirdPartyCookies) {
+      if (p.sendDnt || p.blockThirdPartyCookies || p.trimReferrer) {
         requests.onBeforeSendHeaders(FILTER, (d, callback) => {
           const headers = d.requestHeaders;
           if (p.sendDnt) {
@@ -38,6 +51,13 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
           }
           if (p.blockThirdPartyCookies && d.resourceType !== 'mainFrame' && isThirdParty(d.url, d.referrer)) {
             dropHeader(headers, 'cookie');
+          }
+          if (p.trimReferrer && d.referrer && isThirdParty(d.url, d.referrer)) {
+            const origin = referrerOrigin(d.referrer);
+            if (origin) {
+              dropHeader(headers, 'referer');
+              headers.Referer = origin;
+            }
           }
           callback({ requestHeaders: headers });
         });

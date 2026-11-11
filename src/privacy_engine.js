@@ -9,6 +9,8 @@ const PRIVACY_DEFAULTS = {
   webrtcProtect: true, // o WebRTC não revela o IP da rede local
   secureDns: true, // DNS por HTTPS (volta ao DNS do sistema se falhar)
   clearOnExit: false, // apagar cookies e cache ao fechar
+  trimReferrer: true, // sites de fora só veem o domínio de onde você veio, nunca o endereço completo
+  blockExtensionNet: true, // páginas de fundo das extensões não enviam dados para a internet
 };
 
 function privacyOptions(raw) {

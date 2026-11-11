@@ -41,6 +41,17 @@ function xRow(x) {
     loadExtensions();
   });
   li.append(name, state, toggle, del);
+  // aviso do que a extensão consegue ver
+  const a = x.access;
+  if (a && (a.allSites || a.perms.length)) {
+    const warn = document.createElement('span');
+    warn.className = 'x-warn hint';
+    const parts = [];
+    if (a.allSites) parts.push(t('Lê e altera todos os sites que você abre.'));
+    if (a.perms.length) parts.push(t('Permissões sensíveis: {lista}.', { lista: a.perms.join(', ') }));
+    warn.textContent = parts.join(' ');
+    li.append(warn);
+  }
   return li;
 }
 

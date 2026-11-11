@@ -210,6 +210,17 @@ const WORDS = [
   ['Nestes sites o bloqueador fica desligado (use se algum site quebrar).', 'The blocker is off on these sites (use it if a site breaks).', 'En estos sitios el bloqueador está desactivado (úsalo si algún sitio falla).'],
   ['Site permitido', 'Allowed site', 'Sitio permitido'],
   ['Permitir', 'Allow', 'Permitir'],
+  ['Personalizado', 'Custom', 'Personalizado'],
+  ['Tamanho (%)', 'Size (%)', 'Tamaño (%)'],
+  ['Nome da fonte', 'Font name', 'Nombre de la fuente'],
+  ['Navegação', 'Browsing', 'Navegación'],
+  ['Seus dados', 'Your data', 'Tus datos'],
+  ['Esconder de onde você veio', 'Hide where you came from', 'Ocultar de dónde vienes'],
+  ['Sites de fora veem só o domínio da página anterior, nunca o endereço completo (não vazam o que você lia em outra aba).', 'Outside sites only see the domain of the previous page, never the full address (what you were reading in another tab does not leak).', 'Los sitios externos solo ven el dominio de la página anterior, nunca la dirección completa (lo que leías en otra pestaña no se filtra).'],
+  ['Extensões não enviam dados para fora', 'Extensions cannot send data out', 'Las extensiones no envían datos al exterior'],
+  ['Corta a internet das páginas de fundo das extensões, para elas não enviarem o que leem das suas abas. Pode quebrar extensões que precisam de internet.', 'Cuts the internet of extensions’ background pages so they cannot send what they read from your tabs. May break extensions that need the internet.', 'Corta internet a las páginas de fondo de las extensiones para que no envíen lo que leen de tus pestañas. Puede romper extensiones que necesitan internet.'],
+  ['Lê e altera todos os sites que você abre.', 'Reads and changes every site you open.', 'Lee y modifica todos los sitios que abres.'],
+  ['Permissões sensíveis: {lista}.', 'Sensitive permissions: {lista}.', 'Permisos sensibles: {lista}.'],
   ['Remover do histórico', 'Remove from history', 'Quitar del historial'],
 ];
 const DICT = new Map(WORDS.map(([pt, en, es]) => [pt, { en, es }]));

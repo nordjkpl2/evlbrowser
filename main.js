@@ -428,10 +428,10 @@ ipcMain.on('theme:set', (event, theme) => {
 });
 // Cor principal do navegador (#rrggbb), ou null para o padrão do tema.
 // Tamanho e fonte do texto da interface do Evl (não muda os sites).
-const FONT_SCALES = new Set([0.9, 1, 1.15, 1.3]);
 const FONT_FAMILIES = new Set(['system', 'arial', 'verdana', 'georgia', 'times', 'mono']);
+const validFamily = (f) => typeof f === 'string' && (FONT_FAMILIES.has(f) || /^custom:[\p{L}\p{N} .\-]{1,60}$/u.test(f));
 ipcMain.on('font:set', (event, scale, family) => {
-  if (!fromUi(event) || !FONT_SCALES.has(scale) || !FONT_FAMILIES.has(family)) return;
+  if (!fromUi(event) || !Number.isFinite(scale) || scale < 0.7 || scale > 2 || !validFamily(family)) return;
   store.set('fontScale', scale);
   store.set('fontFamily', family);
 });

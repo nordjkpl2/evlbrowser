@@ -14,6 +14,8 @@
 
 const path = require('path');
 const { WebContentsView } = require('electron');
+
+const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
 const { UI_HEIGHT, MENU_HEIGHT, SUGGEST_HEIGHT } = require('./app_config');
 
@@ -250,17 +252,24 @@ class TabManager {
   }
 
   // Dessas, as paradas há pelo menos `minIdleMs`, da mais antiga para a mais nova.
-  // Abas tocando áudio nunca entram.
+  // Abas com som/vídeo tocando (ou que tocaram há pouco) nunca entram.
   idleBackgroundTabs(minIdleMs) {
     const now = Date.now();
     return this.backgroundViewTabs()
-      .filter((t) => !t.view.webContents.isCurrentlyAudible() && now - t.lastActive >= minIdleMs)
+      .filter((t) => !this._playing(t, now) && now - t.lastActive >= minIdleMs)
       .sort((a, b) => a.lastActive - b.lastActive);
+  }
+
+  _playing(tab, now = Date.now()) {
+    return !!(
+      tab.view &&
+      (tab.mediaPlaying || tab.view.webContents.isCurrentlyAudible() || now - (tab.lastAudible || 0) < AUDIO_GRACE_MS)
+    );
   }
 
   discard(id) {
     const tab = this.tabs.get(id);
-    if (!tab || id === this.activeId || !tab.view) return;
+    if (!tab || id === this.activeId || !tab.view || this._playing(tab)) return;
     this._destroyView(tab);
     this._changed();
   }
@@ -376,6 +385,16 @@ class TabManager {
     });
     const wc = view.webContents;
     wc.setWebRTCIPHandlingPolicy?.(this.webrtcPolicy);
+
+    // Som/vídeo tocando em segundo plano: a aba fica protegida do descarte, mesmo que o som
+    // falhe por instantes (buffering, troca de faixa, pausa curta).
+    tab.mediaPlaying = false;
+    tab.lastAudible = 0;
+    wc.on('media-started-playing', () => (tab.mediaPlaying = true));
+    wc.on('media-paused', () => (tab.mediaPlaying = false));
+    wc.on('audio-state-changed', (e) => {
+      if (e.audible) tab.lastAudible = Date.now();
+    });
 
     // target=_blank / window.open -> nova aba (e nunca uma janela solta).
     wc.setWindowOpenHandler(({ url }) => {
