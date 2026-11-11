@@ -1,6 +1,6 @@
 // Mensagens da categoria "Privacidade" das Configurações e a aplicação das opções.
 
-const { PRIVACY_DEFAULTS, privacyOptions } = require('../network/privacy_engine');
+const { PRIVACY_DEFAULTS, privacyOptions, webrtcPolicy } = require('../network/privacy_engine');
 
 const DOH_SERVERS = ['https://cloudflare-dns.com/dns-query', 'https://dns.google/dns-query'];
 
@@ -12,7 +12,7 @@ function registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork, 
   function apply() {
     const o = options();
     getNetwork().refresh();
-    getTabs()?.setWebrtcPolicy(o.webrtcProtect ? 'default_public_interface_only' : 'default');
+    getTabs()?.setWebrtcPolicy(webrtcPolicy(o));
     getTabs()?.setFingerprint({ webglOff: o.noWebgl, letterbox: o.letterbox });
     // "automatic": usa DNS por HTTPS e, se falhar, volta para o DNS do sistema (não trava a navegação).
     app.configureHostResolver({ secureDnsMode: o.secureDns ? 'automatic' : 'off', secureDnsServers: DOH_SERVERS });

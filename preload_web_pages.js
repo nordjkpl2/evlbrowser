@@ -159,21 +159,55 @@ function maskHardware() {
   def('deviceMemory', 8);
 }
 
+// Mundo da página: ruído invisível (1 bit em pontos espalhados) no que o site LÊ do canvas.
+// A "assinatura" do desenho muda a cada página, então não serve para reconhecer você.
+function canvasNoise() {
+  const seed = 1 + ((Math.random() * 251) | 0);
+  const tweak = (d) => {
+    for (let i = seed * 4; i < d.length; i += 4 * (97 + seed)) d[i] ^= 1;
+  };
+  const ctx = CanvasRenderingContext2D.prototype;
+  const read = ctx.getImageData;
+  ctx.getImageData = function (...a) {
+    const img = read.apply(this, a);
+    tweak(img.data);
+    return img;
+  };
+  for (const name of ['toDataURL', 'toBlob']) {
+    const orig = HTMLCanvasElement.prototype[name];
+    HTMLCanvasElement.prototype[name] = function (...a) {
+      try {
+        // só canvas 2D pequenos/médios (os de impressão digital); os grandes custariam tempo
+        const c = this.width * this.height <= 1e6 && this.getContext('2d');
+        if (c) {
+          const img = read.call(c, 0, 0, this.width, this.height);
+          tweak(img.data);
+          c.putImageData(img, 0, 0);
+        }
+      } catch {}
+      return orig.apply(this, a);
+    };
+  }
+}
+
 // uma única consulta por página (só em http/https); YouTube ganha as regras extras
 if (/^https?:$/.test(location.protocol)) {
   let ads = false;
   let popups = false;
   let mask = false;
+  let canvas = false;
   try {
     // { ads, popups }: ligados nas Configurações e o site não está na lista de permitidos
     const r = ipcRenderer.sendSync('adblock:enabled');
     ads = r === true || r?.ads === true;
     popups = r?.popups === true;
     mask = r?.mask === true;
+    canvas = r?.canvas === true;
   } catch {}
-  if (mask) {
+  for (const [on, func] of [[mask, maskHardware], [canvas, canvasNoise]]) {
+    if (!on) continue;
     try {
-      contextBridge.executeInMainWorld({ func: maskHardware });
+      contextBridge.executeInMainWorld({ func });
     } catch {}
   }
   if (popups) {

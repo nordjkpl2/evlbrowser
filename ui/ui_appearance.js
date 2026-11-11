@@ -276,11 +276,15 @@ function applyBg(url, dim) {
 try {
   applyBg(localStorage.getItem('evl.bgImage'), localStorage.getItem('evl.bgDim') ?? 35);
 } catch {}
-$('bg-pick').addEventListener('click', () => $('bg-file').click());
-$('bg-file').addEventListener('change', (event) => {
+// Lê a imagem escolhida, reduz (máx. 1920 px) e guarda em localStorage[key]; serve às Configurações e à Página inicial.
+function loadImage(event, key, status, done) {
   const file = event.currentTarget.files?.[0];
   event.currentTarget.value = '';
   if (!file) return;
+  const say = (text) => {
+    status.textContent = text;
+    status.hidden = !text;
+  };
   // lê como data: (a política de segurança da interface não aceita blob:)
   const reader = new FileReader();
   const img = new Image();
@@ -296,34 +300,132 @@ $('bg-file').addEventListener('change', (event) => {
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
     const url = canvas.toDataURL('image/jpeg', 0.82);
     try {
-      localStorage.setItem('evl.bgImage', url);
-      bgStatus.hidden = true;
-      applyBg(url, $('bg-dim').value);
+      localStorage.setItem(key, url);
+      say('');
+      done(url);
     } catch {
-      bgStatus.textContent = t('Não deu para guardar a imagem (muito grande).');
-      bgStatus.hidden = false;
+      say(t('Não deu para guardar a imagem (muito grande).'));
     }
   };
-  img.onerror = () => {
-    bgStatus.textContent = t('Não deu para abrir essa imagem.');
-    bgStatus.hidden = false;
-  };
+  img.onerror = () => say(t('Não deu para abrir essa imagem.'));
   reader.readAsDataURL(file);
-});
-$('bg-clear').addEventListener('click', () => {
+}
+const saveLocal = (key, value) => {
   try {
-    localStorage.removeItem('evl.bgImage');
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
   } catch {}
+};
+$('bg-pick').addEventListener('click', () => $('bg-file').click());
+$('bg-file').addEventListener('change', (event) => loadImage(event, 'evl.bgImage', bgStatus, (url) => applyBg(url, $('bg-dim').value)));
+$('bg-clear').addEventListener('click', () => {
+  saveLocal('evl.bgImage', null);
   applyBg(null, $('bg-dim').value);
 });
 $('bg-dim').addEventListener('input', () => {
   $('page-settings').style.setProperty('--bg-dim', String(Number($('bg-dim').value) / 100));
 });
-$('bg-dim').addEventListener('change', () => {
-  try {
-    localStorage.setItem('evl.bgDim', $('bg-dim').value);
-  } catch {}
+$('bg-dim').addEventListener('change', () => saveLocal('evl.bgDim', $('bg-dim').value));
+
+// ---------- página inicial (aba nova): título, texto, atalhos e imagem de fundo ----------
+// Tudo fica só neste computador (localStorage): evl.home = { title, sub, links }, evl.homeBg, evl.homeDim.
+
+// "Nome | endereço" por linha (só o endereço também vale); no máximo 12 atalhos.
+function homeLinks(text) {
+  const out = [];
+  for (const line of String(text || '').split('\n')) {
+    const i = line.indexOf('|');
+    const url = (i < 0 ? line : line.slice(i + 1)).trim().slice(0, 500);
+    if (url && out.length < 12) out.push([(i < 0 ? '' : line.slice(0, i).trim().slice(0, 30)) || url, url]);
+  }
+  return out;
+}
+function applyHome(h) {
+  $('home-title').textContent = h.title || 'EVL'; // textContent: nunca HTML
+  $('home-sub').textContent = h.sub || '';
+  $('home-sub').hidden = !h.sub;
+  $('home-hint').hidden = !!h.sub;
+  const links = homeLinks(h.links).map(([name, url]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'white-btn';
+    b.textContent = name;
+    b.title = url;
+    b.addEventListener('click', () => window.evl.navigate(url)); // passa pelo mesmo filtro da barra de endereço
+    return b;
+  });
+  $('home-links').replaceChildren(...links);
+  $('home-links').hidden = links.length === 0;
+}
+function applyHomeBg(url, dim) {
+  const page = $('page-blank');
+  if (url) page.style.setProperty('--home-bg', `url("${url}")`);
+  else page.style.removeProperty('--home-bg');
+  page.style.setProperty('--home-dim', String((Number(dim) || 0) / 100));
+  page.classList.toggle('has-bg', !!url);
+  $('home-bg-clear').disabled = !url;
+  $('home-dim').value = String(Number(dim) || 0);
+}
+let home = {};
+try {
+  home = JSON.parse(localStorage.getItem('evl.home')) || {};
+} catch {}
+try {
+  applyHomeBg(localStorage.getItem('evl.homeBg'), localStorage.getItem('evl.homeDim') ?? 35);
+} catch {}
+applyHome(home);
+for (const [id, key] of [['home-title-in', 'title'], ['home-sub-in', 'sub'], ['home-links-in', 'links']]) {
+  const el = $(id);
+  el.value = home[key] ?? '';
+  el.addEventListener('input', () => {
+    home[key] = el.value;
+    applyHome(home);
+  });
+  el.addEventListener('change', () => saveLocal('evl.home', JSON.stringify(home)));
+}
+$('home-edit').addEventListener('click', () => window.evl.openSettings('appearance'));
+$('home-bg-pick').addEventListener('click', () => $('home-bg-file').click());
+$('home-bg-file').addEventListener('change', (event) => loadImage(event, 'evl.homeBg', $('home-status'), (url) => applyHomeBg(url, $('home-dim').value)));
+$('home-bg-clear').addEventListener('click', () => {
+  saveLocal('evl.homeBg', null);
+  applyHomeBg(null, $('home-dim').value);
 });
+$('home-dim').addEventListener('input', () => $('page-blank').style.setProperty('--home-dim', String(Number($('home-dim').value) / 100)));
+$('home-dim').addEventListener('change', () => saveLocal('evl.homeDim', $('home-dim').value));
+
+// ---------- estilo das abas: formato, espaço, ícone, botão de fechar, só o ícone ----------
+// Só visual (CSS), guardado neste computador em evl.tabStyle.
+const tabStyle = { shape: '', gap: 2, icon: 16, iconShape: '', close: '', iconOnly: false };
+const TAB_STYLE_INPUTS = [['t-shape', 'shape'], ['t-gap', 'gap'], ['t-icon', 'icon'], ['t-icon-shape', 'iconShape'], ['t-close', 'close']];
+const between = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Math.round(Number(v)))) : d);
+function applyTabStyle(patch) {
+  Object.assign(tabStyle, patch);
+  const s = tabStyle;
+  s.gap = between(s.gap, 0, 12, 2);
+  s.icon = between(s.icon, 12, 28, 16);
+  const body = document.body.classList;
+  const root = document.documentElement.style;
+  body.toggle('tab-flat', s.shape === 'flat');
+  body.toggle('tab-pill', s.shape === 'pill');
+  body.toggle('tab-close-hover', s.close === 'hover');
+  body.toggle('tab-close-none', s.close === 'none');
+  body.toggle('tab-icon-only', s.iconOnly === true);
+  root.setProperty('--tab-gap', `${s.gap}px`);
+  root.setProperty('--tab-icon', `${s.icon}px`);
+  if (s.iconShape === 'square' || s.iconShape === 'circle') root.setProperty('--tab-icon-r', s.iconShape === 'circle' ? '50%' : '0');
+  else root.removeProperty('--tab-icon-r');
+  for (const [id, key] of TAB_STYLE_INPUTS) $(id).value = String(s[key]);
+  $('t-icon-only').setAttribute('aria-checked', String(s.iconOnly === true));
+}
+try {
+  applyTabStyle(JSON.parse(localStorage.getItem('evl.tabStyle')));
+} catch {}
+const saveTabStyle = (patch) => {
+  applyTabStyle(patch);
+  saveLocal('evl.tabStyle', JSON.stringify(tabStyle));
+};
+for (const [id, key] of TAB_STYLE_INPUTS) $(id).addEventListener('change', (event) => saveTabStyle({ [key]: event.currentTarget.value }));
+$('t-icon-only').addEventListener('click', () => saveTabStyle({ iconOnly: !tabStyle.iconOnly }));
 
 // User agent (aba Cookies)
 const uaInput = $('ua-input');
@@ -359,7 +461,7 @@ resetAsk.addEventListener('click', () => resetStep(true));
 resetNo.addEventListener('click', () => resetStep(false));
 resetYes.addEventListener('click', () => {
   try {
-    for (const k of ['compact', 'oneColor', 'lessColor', 'amoled', 'tint', 'look', 'radius', 'icons', 'tabGlow', 'bgImage', 'bgDim']) localStorage.removeItem(`evl.${k}`);
+    for (const k of ['compact', 'oneColor', 'lessColor', 'amoled', 'tint', 'look', 'radius', 'icons', 'tabGlow', 'bgImage', 'bgDim', 'home', 'homeBg', 'homeDim', 'tabStyle']) localStorage.removeItem(`evl.${k}`);
   } catch {}
   window.evl.settingsReset();
 });

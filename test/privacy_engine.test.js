@@ -94,3 +94,25 @@ test('hub: corta client hints detalhados e liga a política de anúncios do Chro
   assert.deepStrictEqual(img, {});
   assert.deepStrictEqual(await run(session.handlers.req, { resourceType: 'cspReport', url: 'https://r.net/csp' }), { cancel: true });
 });
+
+test('novas opções: só HTTPS, beacons, WebRTC e filtro com WebSocket', async () => {
+  const { httpsUrl, webrtcPolicy, privacyOptions } = require('../src/network/privacy_engine');
+  const { createNetworkHub } = require('../src/network/network_hub');
+  assert.strictEqual(httpsUrl('http://site.com/a?b=1'), 'https://site.com/a?b=1');
+  for (const u of ['https://site.com/', 'http://localhost:3000/', 'http://192.168.0.1/', 'http://impressora/', 'http://nas.local/']) assert.strictEqual(httpsUrl(u), null);
+  assert.strictEqual(webrtcPolicy(privacyOptions({ webrtcOff: true })), 'disable_non_proxied_udp');
+  assert.strictEqual(webrtcPolicy(privacyOptions(null)), 'default_public_interface_only');
+  assert.strictEqual(webrtcPolicy(privacyOptions({ webrtcProtect: false })), 'default');
+  const d = privacyOptions(null);
+  assert.ok(d.blockBeacons && !d.httpsOnly && !d.webrtcOff && !d.canvasNoise); // padrão conservador
+  let handler = null;
+  let filter = null;
+  const session = { defaultSession: { webRequest: { onBeforeRequest: (f, h) => ((filter = f), (handler = h ?? f)), onBeforeSendHeaders() {}, onHeadersReceived() {} } } };
+  createNetworkHub({ session, adblock: { check: () => false }, getAdblockOn: () => false, getPrivacy: () => privacyOptions({ httpsOnly: true }) }).refresh();
+  const ask = (req) => new Promise((done) => handler(req, done));
+  assert.ok(filter.urls.includes('wss://*/*') && filter.urls.includes('ws://*/*'));
+  assert.deepStrictEqual(await ask({ resourceType: 'mainFrame', method: 'GET', url: 'http://a.com/' }), { redirectURL: 'https://a.com/' });
+  assert.deepStrictEqual(await ask({ resourceType: 'ping', url: 'https://a.com/p' }), { cancel: true });
+  assert.deepStrictEqual(await ask({ resourceType: 'webSocket', url: 'wss://coleta.net/', initiator: 'chrome-extension://abc' }), { cancel: true });
+  assert.deepStrictEqual(await ask({ resourceType: 'image', url: 'https://a.com/i.png' }), {});
+});

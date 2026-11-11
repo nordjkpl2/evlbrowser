@@ -325,3 +325,8 @@ html.look-1900 .switch[aria-checked="true"]::after { transform: translateX(24px)
 html.look-1900 progress, html.look-1900 progress::-webkit-progress-bar { border-radius: 0; border: 2px solid var(--border); }
 html.look-1900 .tips li { border: 2px solid var(--border); border-radius: 0; }
 html.look-1900 .theme-option[aria-checked="true"] { box-shadow: 3px 3px 0 var(--accent); }
+
+/* Página inicial: caixa dos atalhos */
+.font-row label.grow { flex: 1 1 100%; }
+#home-links-in { width: 100%; min-height: 84px; padding: 8px; border: 1px solid var(--border); border-radius: calc(var(--r) * 0.6); background: var(--surface); color: var(--text); font: inherit; resize: vertical; }
+#home-links-in:focus { border-color: var(--accent); outline: none; }

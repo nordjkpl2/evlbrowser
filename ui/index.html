@@ -66,8 +66,11 @@
   <!-- Telas internas: só aparecem quando a aba ativa é "em branco" ou "configurações".
        Em aba web a interface tem só 80 px de altura e elas ficam fora da tela. -->
   <main id="page-blank" class="screen" hidden>
-    <h1 class="logo">EVL</h1>
-    <p class="hint"><kbd>Ctrl</kbd> + <kbd>L</kbd> foca a barra de endereço</p>
+    <h1 id="home-title" class="logo">EVL</h1>
+    <p id="home-hint" class="hint"><kbd>Ctrl</kbd> + <kbd>L</kbd> foca a barra de endereço</p>
+    <p id="home-sub" class="hint" hidden></p>
+    <nav id="home-links" aria-label="Atalhos" hidden></nav>
+    <button id="home-edit" class="text-btn" type="button">Editar página</button>
   </main>
 
   <main id="page-settings" class="screen" hidden aria-labelledby="settings-title">
@@ -373,6 +376,42 @@
             </span>
             <button id="tab-glow" class="switch" type="button" role="switch" aria-checked="false" aria-label="Luz na aba ativa"></button>
           </div>
+          <div class="font-row">
+            <label>Formato da aba
+              <select id="t-shape">
+                <option value="">Padrão</option>
+                <option value="flat">Reta</option>
+                <option value="pill">Pílula</option>
+              </select>
+            </label>
+            <label>Espaço entre abas (px)
+              <input id="t-gap" type="number" min="0" max="12" step="1" value="2" inputmode="numeric">
+            </label>
+            <label>Tamanho do ícone (px)
+              <input id="t-icon" type="number" min="12" max="28" step="2" value="16" inputmode="numeric">
+            </label>
+            <label>Formato do ícone
+              <select id="t-icon-shape">
+                <option value="">Arredondado</option>
+                <option value="square">Quadrado</option>
+                <option value="circle">Círculo</option>
+              </select>
+            </label>
+            <label>Botão de fechar
+              <select id="t-close">
+                <option value="">Sempre</option>
+                <option value="hover">Ao passar o mouse</option>
+                <option value="none">Escondido</option>
+              </select>
+            </label>
+          </div>
+          <div class="v-row">
+            <span class="v-text">
+              <span>Só o ícone (aba quadrada)</span>
+              <span class="v-hint hint">A aba vira um quadrado só com o ícone do site. Feche com o clique do meio ou Ctrl+W. Vale para abas em cima.</span>
+            </span>
+            <button id="t-icon-only" class="switch" type="button" role="switch" aria-checked="false" aria-label="Só o ícone (aba quadrada)"></button>
+          </div>
         </section>
 
         <section class="card" data-panel="appearance">
@@ -400,6 +439,35 @@
             </label>
           </div>
           <p id="bg-status" class="hint" role="status" hidden></p>
+        </section>
+
+        <section class="card" data-panel="appearance">
+          <h3>Página inicial</h3>
+          <p class="hint">Edite a página que aparece em uma aba nova: título, texto, atalhos e imagem de fundo. Fica guardado só neste computador.</p>
+          <div class="font-row">
+            <label>Título
+              <input id="home-title-in" type="text" maxlength="40" placeholder="EVL" spellcheck="false">
+            </label>
+            <label>Texto abaixo do título
+              <input id="home-sub-in" type="text" maxlength="120" spellcheck="false">
+            </label>
+          </div>
+          <div class="font-row">
+            <label class="grow">Atalhos (um por linha: Nome | endereço)
+              <textarea id="home-links-in" rows="4" maxlength="4000" spellcheck="false" placeholder="Wikipedia | wikipedia.org"></textarea>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button id="home-bg-pick" class="white-btn" type="button">Escolher imagem</button>
+            <button id="home-bg-clear" class="text-btn" type="button" disabled>Remover imagem</button>
+            <input id="home-bg-file" type="file" accept="image/*" hidden>
+          </div>
+          <div class="font-row">
+            <label>Escurecer a imagem (%)
+              <input id="home-dim" type="range" min="0" max="85" step="5" value="35">
+            </label>
+          </div>
+          <p id="home-status" class="hint" role="status" hidden></p>
         </section>
 
         <section class="card" data-panel="appearance">
@@ -657,17 +725,18 @@
                 <button id="x-add" class="white-btn" type="button" aria-haspopup="menu" aria-expanded="false">Instalar &#9662;</button>
                 <div id="x-menu" class="pop" role="menu" hidden>
                   <button type="button" role="menuitem" data-kind="folder">Pasta descompactada</button>
-                  <button type="button" role="menuitem" data-kind="file">Arquivo .zip ou .crx</button>
+                  <button type="button" role="menuitem" data-kind="file">Arquivo .zip, .crx ou .xpi</button>
                 </div>
               </div>
             </div>
           </div>
           <form id="x-store" class="x-store">
             <input id="x-id" type="text" spellcheck="false" autocomplete="off"
-                   aria-label="ID ou link da Chrome Web Store" placeholder="ID ou link da Chrome Web Store">
+                   aria-label="ID ou link da Chrome Web Store ou de addons.mozilla.org" placeholder="ID ou link da Chrome Web Store ou de addons.mozilla.org">
             <button class="white-btn" type="submit">Baixar</button>
           </form>
-          <p class="hint">Compatibilidade parcial: scripts de página e parte das APIs funcionam; botão e popup na barra não existem ainda.</p>
+          <p class="hint">Compatibilidade parcial: scripts de página e parte das APIs funcionam. Sem botão na barra: use Abrir e Opções. Extensões do Firefox são adaptadas ao instalar.</p>
+          <p class="hint">Isolamento: as extensões não veem a lista de abas, o histórico, os cookies nem o tráfego de outros sites, e não enviam dados para fora.</p>
           <p id="x-status" class="hint" role="status" hidden></p>
           <p id="x-empty" class="hint" hidden>Nenhuma extensão instalada.</p>
           <ul id="x-list"></ul>

@@ -105,7 +105,7 @@ button, input { font: inherit; color: inherit; }
 #tabs {
   display: flex;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--tab-gap, 2px);
   height: calc(var(--tab-h, 32px) + 6px);
   padding: 6px 8px 0;
   border-bottom: 1px solid var(--border);
@@ -136,9 +136,9 @@ button, input { font: inherit; color: inherit; }
 .tab .favicon,
 .tab .dot {
   flex: none;
-  width: 16px;
-  height: 16px;
-  border-radius: calc(var(--r) * 0.4);
+  width: min(var(--tab-icon, 16px), calc(var(--tab-h, 32px) - 6px));
+  height: min(var(--tab-icon, 16px), calc(var(--tab-h, 32px) - 6px));
+  border-radius: var(--tab-icon-r, calc(var(--r) * 0.4));
 }
 .tab .dot { background: var(--border); }
 .tab.loading .dot,
@@ -304,6 +304,7 @@ button, input { font: inherit; color: inherit; }
 .menu-item:hover { background: var(--surface-active); }
 
 #page-blank {
+  position: relative;
   display: grid;
   place-content: center;
   gap: 12px;
@@ -403,3 +404,19 @@ body[data-icons="bold"] .nav-item svg { stroke-width: 2.4; }
 body[data-icons="soft"] .nav-item svg { fill: currentColor; fill-opacity: .22; }
 body[data-icons="emoji"] .nav-item svg, body[data-icons="none"] .nav-item svg { display: none; }
 body[data-icons="emoji"] .nav-emo { display: inline-block; }
+
+/* estilo das abas (Aparência > Abas): formato, só o ícone, botão de fechar */
+body.tab-flat .tab { border-radius: 0; }
+body.tab-pill:not(.side-tabs) .tab { height: calc(var(--tab-h, 32px) - 3px); margin-bottom: 3px; border-bottom: 1px solid var(--border); border-radius: 999px; }
+body.tab-pill.side-tabs .tab { border-radius: 999px; }
+body.tab-pill:not(.tab-glow) .tab.active { box-shadow: inset 0 0 0 1px var(--accent); }
+body.tab-icon-only:not(.side-tabs) .tab { flex: 0 0 var(--tab-h, 32px); min-width: 0; justify-content: center; padding: 0; }
+body.tab-icon-only:not(.side-tabs) .tab > :not(.favicon, .dot) { display: none; }
+body.tab-close-none .tab .close, body.tab-close-hover .tab:not(:hover, .active) .close { display: none; }
+
+/* página inicial (aba nova): imagem de fundo, atalhos e botão de editar */
+#page-blank.has-bg { background: linear-gradient(rgba(0, 0, 0, var(--home-dim, 0.35)), rgba(0, 0, 0, var(--home-dim, 0.35))), var(--home-bg) center / cover no-repeat, var(--bg); }
+#page-blank.has-bg .hint { color: #fff; text-shadow: 0 1px 3px #000; }
+#home-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 640px; margin-top: 8px; }
+#home-edit { position: absolute; right: 12px; bottom: 12px; opacity: 0.6; }
+#home-edit:hover, #home-edit:focus-visible { opacity: 1; }

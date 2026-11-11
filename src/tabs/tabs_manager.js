@@ -160,6 +160,12 @@ class TabManager {
     return this._add({ kind: 'web', title: url, url });
   }
 
+  // Página interna de uma extensão (popup ou opções) numa aba: o Electron não tem o botão na barra.
+  openExtensionPage(url) {
+    if (typeof url !== 'string' || !/^chrome-extension:\/\/[a-p]{32}\/[\w\-./?=&%#]*$/.test(url)) return null;
+    return this._add({ kind: 'web', title: url, url });
+  }
+
   openSettings() {
     for (const tab of this.tabs.values()) {
       if (tab.kind === 'settings') {
@@ -253,7 +259,8 @@ class TabManager {
 
   // As abas web de agora (para salvar a sessão) e qual delas está ativa.
   sessionSnapshot() {
-    const web = [...this.tabs.values()].filter((t) => t.kind === 'web');
+    // páginas de extensão não entram na sessão (o endereço muda e não passa pelo filtro da barra)
+    const web = [...this.tabs.values()].filter((t) => t.kind === 'web' && !t.url.startsWith('chrome-extension://'));
     return {
       items: web.map((t) => ({ url: t.url, title: t.title })),
       active: Math.max(0, web.findIndex((t) => t.id === this.activeId)),

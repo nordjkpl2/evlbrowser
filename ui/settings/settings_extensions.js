@@ -1,6 +1,6 @@
 'use strict';
 // ---------- extensões ----------
-// Lista, instala (pasta, .zip/.crx ou Chrome Web Store), liga/desliga e remove.
+// Lista, instala (pasta, .zip/.crx/.xpi, Chrome Web Store ou addons.mozilla.org), abre popup/opções numa aba, liga/desliga e remove.
 
 const xList = $('x-list');
 const xEmpty = $('x-empty');
@@ -40,7 +40,24 @@ function xRow(x) {
     await window.evl.extensionsRemove(x.id);
     loadExtensions();
   });
-  li.append(name, state, toggle, del);
+  li.append(name, state);
+  // o Electron não tem o botão da extensão na barra: popup e opções abrem numa aba
+  for (const [kind, label] of [['popup', t('Abrir')], ['options', t('Opções')]]) {
+    if (!x[kind]) continue;
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'text-btn';
+    open.textContent = label;
+    open.addEventListener('click', () => window.evl.extensionsOpen(x.id, kind));
+    li.append(open);
+  }
+  li.append(toggle, del);
+  if (x.removed?.length) {
+    const cut = document.createElement('span');
+    cut.className = 'x-warn hint';
+    cut.textContent = t('Bloqueado pelo Evl (acesso entre sites): {lista}.', { lista: x.removed.join(', ') });
+    li.append(cut);
+  }
   // aviso do que a extensão consegue ver
   const a = x.access;
   if (a && (a.allSites || a.perms.length)) {

@@ -16,9 +16,13 @@ const SPEED_DEFAULTS = {
   imagesOff: false, // modo texto: não baixa imagens (páginas bem mais leves)
   rendererLimit: 0, // máximo de processos de páginas (0 = automático); menos processos = menos RAM
   jsMemoryMB: 0, // teto de memória do JavaScript por página (0 = automático)
+  parallelDownloads: false, // downloads grandes em várias conexões
+  zeroCopy: false, // a placa de vídeo recebe as imagens sem cópia (rolagem mais fluida; pode falhar em drivers antigos)
+  noSmoothScroll: false, // rolagem sem animação (resposta imediata, menos CPU)
+  rasterThreads: 0, // threads que desenham a página (0 = automático)
 };
-const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB'];
-const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096] };
+const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB', 'parallelDownloads', 'zeroCopy', 'noSmoothScroll', 'rasterThreads'];
+const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096], rasterThreads: [0, 4] };
 
 function speedOptions(raw) {
   const out = { ...SPEED_DEFAULTS };
@@ -55,7 +59,13 @@ function speedSwitches(o) {
   if (o.imagesOff) out.push(['blink-settings', 'imagesEnabled=false']);
   if (o.rendererLimit > 0) out.push(['renderer-process-limit', String(o.rendererLimit)]);
   if (o.jsMemoryMB > 0) out.push(['js-flags', `--max-old-space-size=${Math.max(64, o.jsMemoryMB)}`]);
+  if (o.zeroCopy) out.push(['enable-zero-copy']);
+  if (o.noSmoothScroll) out.push(['disable-smooth-scrolling']);
+  if (o.rasterThreads > 0) out.push(['num-raster-threads', String(o.rasterThreads)]);
   return out;
 }
 
-module.exports = { speedSwitches, SPEED_DEFAULTS, RESTART, speedOptions, checkSpeedValue, readStartupSpeed, needsRestart };
+// Recursos (enable-features) ligados pelas opções.
+const speedFeatures = (o) => (o.parallelDownloads ? ['ParallelDownloading'] : []);
+
+module.exports = { speedFeatures, speedSwitches, SPEED_DEFAULTS, RESTART, speedOptions, checkSpeedValue, readStartupSpeed, needsRestart };

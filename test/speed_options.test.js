@@ -55,3 +55,11 @@ test('renderização: flags do Chromium só para o que foi ligado', () => {
   assert.strictEqual(speedOptions({ rendererLimit: 99 }).rendererLimit, 16);
   assert.ok(needsRestart(on, speedOptions(null)));
 });
+
+test('novas opções de velocidade: desligadas por padrão e viram flags', () => {
+  const { speedOptions, speedSwitches, speedFeatures } = require('../src/app/speed_options');
+  assert.deepStrictEqual(speedFeatures(speedOptions(null)), []);
+  const on = speedOptions({ parallelDownloads: true, zeroCopy: true, noSmoothScroll: true, rasterThreads: 9 });
+  assert.deepStrictEqual(speedFeatures(on), ['ParallelDownloading']);
+  assert.deepStrictEqual(speedSwitches(on), [['enable-zero-copy'], ['disable-smooth-scrolling'], ['num-raster-threads', '4']]);
+});

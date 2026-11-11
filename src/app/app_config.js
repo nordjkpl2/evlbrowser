@@ -64,5 +64,8 @@ module.exports = {
     'NetworkTimeServiceQuerying', // consulta de hora na rede
     'PrivacySandboxAdsAPIs', // APIs de anúncios do Chromium (Topics, FLEDGE)
     'InterestFeedContentSuggestions',
+    // relatórios enviados a terceiros em segundo plano e APIs de anúncio/rastreio (nomes desconhecidos são ignorados)
+    'Reporting', 'NetworkErrorLogging', 'BrowsingTopics', 'InterestGroupStorage', 'Fledge', 'PrivateStateTokens',
+    'SharedStorageAPI', 'ConversionMeasurement', 'FencedFrames',
   ],
 };

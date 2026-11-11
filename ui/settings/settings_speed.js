@@ -16,6 +16,11 @@ const SPEED_ROWS = [
   ['blockAutoplay', 'bool', 'Não tocar vídeos sozinhos', 'Vídeos só tocam depois de um clique seu: menos rede, menos CPU e menos memória em abas abertas.', '', true, 'o', 10],
   ['hardwareAccel', 'bool', 'Usar a placa de vídeo', 'Deixa rolagem e vídeo mais fluidos. Desligue só se notar travamentos ou quiser poupar a memória de vídeo.', '', true, 'o', 10],
   ['imagesOff', 'bool', 'Não carregar imagens', 'Modo texto: as páginas abrem bem mais rápido e gastam muito menos memória e internet, mas ficam sem fotos.', '', true, 'o', 5],
+  // sem pontos na nota: ganho depende do computador (ficam desligadas por padrão)
+  ['parallelDownloads', 'bool', 'Downloads em paralelo', 'Arquivos grandes baixam em várias conexões ao mesmo tempo.', '', true, 'o', 0],
+  ['zeroCopy', 'bool', 'Imagens direto na placa de vídeo', 'Rolagem e vídeo mais fluidos (zero-copy). Desligue se aparecerem falhas na imagem.', '', true, 'o', 0],
+  ['noSmoothScroll', 'bool', 'Rolagem sem animação', 'A página responde na hora à roda do mouse e gasta menos CPU.', '', true, 'o', 0],
+  ['rasterThreads', 'num', 'Threads de desenho', 'Quantas threads desenham a página. Mais threads aceleram páginas pesadas em processadores com vários núcleos. 0 = automático.', '', true, 'o', 0],
 ];
 
 // Pontos que a opção rende com o valor atual (0 até o valor total). Números: quanto menor o teto, mais ponto.

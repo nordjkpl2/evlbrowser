@@ -15,6 +15,10 @@ const PRIVACY_DEFAULTS = {
   noWebgl: false, // desliga o WebGL nas abas novas (mapas e jogos 3D deixam de funcionar)
   maskHardware: false, // sites veem sempre 4 núcleos e 8 GB de memória
   letterbox: false, // página com tamanho em múltiplos de 200x100 px (a janela exata não identifica você)
+  blockBeacons: true, // corta pings/beacons e relatórios (só servem para medir você; nenhum site depende deles)
+  httpsOnly: false, // só abre https:// (sem voltar para http:// quando o site não oferece)
+  webrtcOff: false, // WebRTC sem conexão direta (o IP real nunca aparece; chamadas de vídeo podem falhar)
+  canvasNoise: false, // ruído invisível no canvas (a "assinatura" do desenho muda a cada página)
 };
 
 function privacyOptions(raw) {
@@ -29,6 +33,7 @@ const TRACKING_PARAMS = new Set([
   'fbclid', 'gclid', 'gclsrc', 'dclid', 'gbraid', 'wbraid', 'msclkid', 'yclid', 'twclid', 'ttclid', 'li_fat_id',
   'igshid', 'mc_eid', 'mc_cid', '_ga', '_gl', '_hsenc', '_hsmi', 'mkt_tok', 'vero_id', 'wickedid', 'oly_enc_id',
   'oly_anon_id', 's_cid', 'ref_src', 'ref_url', 'cmpid', 'ck_subscriber_id', '__s', 'rb_clickid', 'spm_id_from',
+  'srsltid', 'ysclid', '_openstat', 'mibextid', 'irclickid', 's_kwcid', 'epik', 'gad_source', 'gad_campaignid', 'igsh',
 ]);
 const TRACKING_PREFIXES = ['utm_', 'hsa_', 'pk_', 'mtm_', 'piwik_'];
 
@@ -112,6 +117,17 @@ function splitUrl(url) {
   return { host: host.toLowerCase(), where: url.slice(end, stop) };
 }
 
+// http://site -> https://site (HTTPS obrigatório). Rede local e localhost ficam como estão; null = nada a trocar.
+const LOCAL_HOST = /^(localhost|[\d.]+|\[.*\]|[^.]+|.*\.(local|lan|internal|test))$/;
+function httpsUrl(url) {
+  if (!url.startsWith('http://')) return null;
+  const host = splitUrl(url)?.host;
+  return host && !LOCAL_HOST.test(host) ? `https://${url.slice(7)}` : null;
+}
+
+// Política do WebRTC conforme as opções (a mais forte vence).
+const webrtcPolicy = (o) => (o.webrtcOff ? 'disable_non_proxied_udp' : o.webrtcProtect ? 'default_public_interface_only' : 'default');
+
 const hostOf = (url) => splitUrl(url)?.host ?? '';
 
 // Este pedido é de um site diferente da página que o fez?
@@ -122,4 +138,4 @@ function isThirdParty(requestUrl, pageUrl) {
   return !!req && siteOf(req) !== siteOf(page);
 }
 
-module.exports = { PRIVACY_DEFAULTS, privacyOptions, cleanUrl, isTrackingParam, siteOf, isThirdParty, hostOf, splitUrl };
+module.exports = { httpsUrl, webrtcPolicy, PRIVACY_DEFAULTS, privacyOptions, cleanUrl, isTrackingParam, siteOf, isThirdParty, hostOf, splitUrl };

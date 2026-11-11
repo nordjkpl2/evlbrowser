@@ -15,6 +15,10 @@ const PRIVACY_ROWS = [
   ['noWebgl', 'Desligar o WebGL', 'Impede que sites usem a placa de vídeo para desenhar e identificar o computador. Pode quebrar mapas e jogos 3D; vale para abas abertas depois.'],
   ['maskHardware', 'Esconder núcleos e memória', 'Os sites veem sempre 4 núcleos e 8 GB de memória, valores comuns, em vez dos reais do seu computador.'],
   ['letterbox', 'Arredondar o tamanho da janela', 'A página usa sempre múltiplos de 200×100 px, para o tamanho exato da janela não identificar você. Sobram faixas vazias nas bordas.'],
+  ['blockBeacons', 'Bloquear beacons e relatórios', 'Corta os avisos que as páginas mandam em segundo plano para medir cliques e tempo de leitura. Nenhum site depende deles.'],
+  ['canvasNoise', 'Ruído no canvas', 'Muda de forma invisível o que os sites leem dos desenhos da página, para a assinatura do seu computador não se repetir. Vale para páginas abertas depois.'],
+  ['httpsOnly', 'Só HTTPS', 'Endereços http:// viram https://, sem voltar atrás. Sites que só existem em http:// deixam de abrir (a rede local continua funcionando).'],
+  ['webrtcOff', 'WebRTC sem conexão direta', 'O seu IP real nunca aparece em chamadas, nem usando VPN. Chamadas de vídeo podem falhar.'],
   ['clearOnExit', 'Apagar cookies e cache ao fechar', 'Desliga você dos sites a cada vez que fecha o navegador.'],
 ];
 

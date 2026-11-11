@@ -2,7 +2,7 @@
 // O webRequest só aceita UM ouvinte por tipo de evento, então ele é registrado aqui, juntando tudo.
 // Velocidade: ouvinte desligado = o Chromium nem chama o nosso código. Só registramos o que está ligado.
 
-const { cleanUrl, isThirdParty } = require('./privacy_engine');
+const { cleanUrl, isThirdParty, httpsUrl } = require('./privacy_engine');
 
 const isExtensionRequest = (d) => typeof d.initiator === 'string' && d.initiator.startsWith('chrome-extension://');
 
@@ -11,7 +11,8 @@ const HIGH_ENTROPY_HINTS = ['sec-ch-ua-full-version-list', 'sec-ch-ua-full-versi
 // Desliga APIs de anúncio/rastreio do próprio Chromium em todas as páginas e quadros.
 const POLICY = 'browsing-topics=(), interest-cohort=(), join-ad-interest-group=(), run-ad-auction=(), attribution-reporting=()';
 
-const FILTER = { urls: ['http://*/*', 'https://*/*'] };
+// ws/wss entram no filtro: sem eles uma extensão (ou rastreador) falava com a internet por WebSocket sem passar aqui.
+const FILTER = { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] };
 
 // Apaga um cabeçalho sem se importar com maiúsculas ("Set-Cookie", "set-cookie").
 function dropHeader(headers, name) {
@@ -35,16 +36,19 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy }) {
       const adsOn = getAdblockOn();
       const p = getPrivacy();
 
-      if (adsOn || p.stripParams || p.blockExtensionNet) {
+      if (adsOn || p.stripParams || p.blockExtensionNet || p.blockBeacons || p.httpsOnly) {
         requests.onBeforeRequest(FILTER, (d, callback) => {
           // extensão (página de fundo / service worker) tentando falar com a internet
           if (p.blockExtensionNet && isExtensionRequest(d)) return callback({ cancel: true });
+          const secure = p.httpsOnly ? httpsUrl(d.url) : null;
+          if (secure) return callback({ redirectURL: secure });
           if (d.resourceType === 'mainFrame') {
             const clean = p.stripParams && d.method === 'GET' ? cleanUrl(d.url) : null;
             return callback(clean ? { redirectURL: clean } : {});
           }
           // relatórios de CSP vão para terceiros e só servem a quem rastreia: cortamos com o bloqueador ligado
-          if (adsOn && d.resourceType === 'cspReport') return callback({ cancel: true });
+          if ((adsOn || p.blockBeacons) && d.resourceType === 'cspReport') return callback({ cancel: true });
+          if (p.blockBeacons && d.resourceType === 'ping') return callback({ cancel: true }); // sendBeacon e <a ping>
           callback(adsOn && adblock.check(d.url, d.resourceType, d.referrer) ? { cancel: true } : {});
         });
       } else requests.onBeforeRequest(null);

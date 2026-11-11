@@ -1,12 +1,12 @@
 // Mensagens da aba "Extensões" das Configurações.
 
 const fs = require('fs');
-const { parseStoreId } = require('../extensions/extension_manager');
+const { parseStoreId, parseAmoSlug } = require('../extensions/extension_manager');
 
 const MAX_CRX = 100 * 1024 * 1024;
 
 // ctx: { ipcMain, fromUi, dialog, net, getExtensions, getWindow }
-function registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions, getWindow }) {
+function registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions, getWindow, getTabs = () => null }) {
   const wrap = async (fn) => {
     try {
       return { ok: true, ...(await fn()) };
@@ -23,7 +23,7 @@ function registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions, ge
       const folder = kind === 'folder';
       const r = await dialog.showOpenDialog(getWindow(), {
         properties: folder ? ['openDirectory'] : ['openFile'],
-        filters: folder ? [] : [{ name: 'Extensão (.zip, .crx)', extensions: ['zip', 'crx'] }],
+        filters: folder ? [] : [{ name: 'Extensão (.zip, .crx, .xpi)', extensions: ['zip', 'crx', 'xpi'] }],
       });
       if (r.canceled || !r.filePaths[0]) return { canceled: true };
       const src = r.filePaths[0];
@@ -35,9 +35,11 @@ function registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions, ge
   ipcMain.handle('extensions:store', (event, text) => {
     if (!fromUi(event)) return null;
     return wrap(async () => {
-      const id = parseStoreId(typeof text === 'string' ? text.trim() : '');
-      if (!id) throw new Error('Cole o ID (32 letras) ou o link da Chrome Web Store');
-      const url =
+      const input = typeof text === 'string' ? text.trim() : '';
+      const slug = parseAmoSlug(input); // link de addons.mozilla.org (Firefox)
+      const id = slug ? null : parseStoreId(input);
+      if (!id && !slug) throw new Error('Cole o ID (32 letras) ou o link da Chrome Web Store');
+      const url = slug ? `https://addons.mozilla.org/firefox/downloads/latest/${encodeURIComponent(slug)}/latest.xpi` :
         'https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx3' +
         `&prodversion=${process.versions.chrome}&x=${encodeURIComponent(`id=${id}&uc`)}`;
       const res = await net.fetch(url);
@@ -51,6 +53,12 @@ function registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions, ge
   ipcMain.handle('extensions:enable', (event, id, enabled) =>
     fromUi(event) && typeof id === 'string' ? getExtensions().setEnabled(id, enabled === true) : false
   );
+  // Popup ou opções da extensão numa aba (o Electron não tem o botão da extensão na barra).
+  ipcMain.handle('extensions:open', (event, id, kind) => {
+    if (!fromUi(event) || typeof id !== 'string') return false;
+    const url = getExtensions().pageUrl(id, kind === 'options' ? 'options' : 'popup');
+    return !!(url && getTabs()?.openExtensionPage(url));
+  });
   ipcMain.handle('extensions:remove', (event, id) =>
     fromUi(event) && typeof id === 'string' ? getExtensions().remove(id) : false
   );

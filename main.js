@@ -29,11 +29,11 @@ const { registerBookmarksIpc } = require('./src/ipc/bookmarks_ipc');
 const { createVault } = require('./src/data/passwords_vault');
 const { registerPasswordIpc } = require('./src/ipc/password_ipc');
 const { createNetworkHub } = require('./src/network/network_hub');
-const { privacyOptions } = require('./src/network/privacy_engine');
+const { privacyOptions, webrtcPolicy } = require('./src/network/privacy_engine');
 const { registerPrivacyIpc } = require('./src/ipc/privacy_ipc');
 const { createAdblock } = require('./src/network/adblock_engine');
 const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
-const { readStartupSpeed, speedSwitches } = require('./src/app/speed_options');
+const { readStartupSpeed, speedSwitches, speedFeatures } = require('./src/app/speed_options');
 const { registerSpeedIpc } = require('./src/ipc/speed_ipc');
 const { registerPermissionIpc } = require('./src/ipc/permission_ipc');
 const { registerSettingsIpc } = require('./src/ipc/settings_ipc');
@@ -56,7 +56,8 @@ for (const [name, value] of speedSwitches(startupSpeed)) app.commandLine.appendS
 // WhatsApp Web dizerem que o navegador não é compatível. A versão do Chrome continua a real.
 app.userAgentFallback = app.userAgentFallback.replace(/\s(Electron|evl[\w.-]*)\/[\d.]+/gi, '');
 const DEFAULT_UA = app.userAgentFallback;
-if (cfg.CHROMIUM_ON_FEATURES.length > 0) app.commandLine.appendSwitch('enable-features', cfg.CHROMIUM_ON_FEATURES.join(','));
+const onFeatures = [...cfg.CHROMIUM_ON_FEATURES, ...speedFeatures(startupSpeed)];
+if (onFeatures.length > 0) app.commandLine.appendSwitch('enable-features', onFeatures.join(','));
 if (cfg.CHROMIUM_OFF_FEATURES.length > 0) {
   app.commandLine.appendSwitch('disable-features', cfg.CHROMIUM_OFF_FEATURES.join(','));
 }
@@ -146,7 +147,7 @@ function scheduleSession() {
 // Abre as Configurações; com 'history', já na categoria Histórico.
 function openSettings(panel) {
   tabs.openSettings();
-  if (panel === 'history') send('panel', panel);
+  if (panel === 'history' || panel === 'appearance') send('panel', panel);
 }
 
 // O número de MB no canto NÃO tem timer: é atualizado quando algo acontece
@@ -291,7 +292,7 @@ function createWindow() {
   });
 
   tabs = new TabManager(win, ui, onTabsChanged, onShortcut, history);
-  tabs.setWebrtcPolicy(privacyApi.options().webrtcProtect ? 'default_public_interface_only' : 'default');
+  tabs.setWebrtcPolicy(webrtcPolicy(privacyApi.options()));
   // janela de anúncio: cortada se o bloqueador OU "fechar popups" estiver ligado
   tabs.setPopupFilter((url) => (store.get('adblock') !== false || store.get('adblockPopups') !== false) && !!adblockApi?.shouldBlock(url, 'script', ''));
   tabs.setFaviconColor(createFaviconColor({ net, nativeImage }));
@@ -512,7 +513,7 @@ toggleBookmark = registerBookmarksIpc({
 }).toggleActive;
 registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: () => vault, getWindow: () => win });
 registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
-registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win });
+registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win, getTabs: () => tabs });
 const permissions = registerPermissionIpc({ ipcMain, fromUi, session, getStore: () => store, getTabs: () => tabs, send });
 const settingsApi = registerSettingsIpc({
   ipcMain,
@@ -567,7 +568,7 @@ app.whenReady().then(() => {
     getAdblockOn: () => store.get('adblock') !== false,
     getPrivacy: () => privacyOptions(store.get('privacy')),
   });
-  registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network, getMask: () => privacyOptions(store.get('privacy')).maskHardware });
+  registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network, getMask: () => privacyOptions(store.get('privacy')).maskHardware, getCanvas: () => privacyOptions(store.get('privacy')).canvasNoise });
   privacyApi = registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork: () => network, getTabs: () => tabs });
   privacyApi.apply();
   speedApi = registerSpeedIpc({ ipcMain, fromUi, store, app, startup: startupSpeed });

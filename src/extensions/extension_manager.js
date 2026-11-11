@@ -1,5 +1,6 @@
-// Extensões do Chromium. O Electron só carrega extensões DESCOMPACTADAS e com suporte parcial
-// às APIs (sem botão/popup na barra). Guardamos uma cópia de cada uma e recarregamos ao abrir.
+// Extensões do Chromium (e do Firefox, adaptadas). O Electron só carrega extensões DESCOMPACTADAS e com suporte
+// parcial às APIs (sem botão na barra: popup e opções abrem numa aba). Guardamos uma cópia de cada uma.
+// A cópia passa por secure(): saem as permissões que deixam a extensão acompanhar você ENTRE sites.
 
 const fs = require('fs');
 const path = require('path');
@@ -44,6 +45,102 @@ function localizedName(root, text, defaultLocale) {
   return null;
 }
 
+// "meu-addon" a partir de um link de addons.mozilla.org.
+function parseAmoSlug(text) {
+  const m = String(text).match(/addons\.mozilla\.org\/(?:[\w-]+\/)?(?:firefox|android)\/addon\/([\w.@+-]{1,80})/);
+  return m ? m[1] : null;
+}
+
+// ---------- isolamento: a extensão não olha entre sites ----------
+// Com estas permissões uma extensão vê a lista de abas, o histórico, os cookies ou o tráfego de TODOS os sites.
+// Elas saem do manifest da nossa cópia; o Chromium então nega essas APIs. Scripts de página continuam valendo
+// (cada um só enxerga a página onde roda) e a rede da extensão é cortada em network_hub.js.
+const CROSS_SITE = new Set([
+  'tabs', 'history', 'cookies', 'webRequest', 'webRequestBlocking', 'webRequestAuthProvider', 'webNavigation', 'management',
+  'topSites', 'sessions', 'browsingData', 'clipboardRead', 'proxy', 'debugger', 'nativeMessaging', 'pageCapture',
+  'tabCapture', 'desktopCapture', 'declarativeNetRequestFeedback', 'processes',
+]);
+function isolate(m) {
+  const removed = [];
+  for (const key of ['permissions', 'optional_permissions']) {
+    if (!Array.isArray(m[key])) continue;
+    m[key] = m[key].filter((p) => !CROSS_SITE.has(p) || (removed.push(p), false));
+  }
+  // sites conversando direto com a extensão e atualização automática (contato com servidor de fora)
+  for (const key of ['externally_connectable', 'update_url']) delete m[key];
+  return [...new Set(removed)];
+}
+
+// ---------- Firefox: `browser.*` com Promise e fundo em service worker ----------
+const SHIM = 'evl_browser.js';
+const SHIM_CODE = `// Evl: extensões do Firefox usam browser.* (com Promise); o Chromium só tem chrome.*.
+if (typeof globalThis.browser === 'undefined' && typeof chrome !== 'undefined') {
+  const wrap = (o) => new Proxy(o, { get(t, k) {
+    const v = t[k];
+    if (typeof v === 'function') return (...a) => {
+      if (typeof a[a.length - 1] === 'function') return v.apply(t, a);
+      let ok, bad;
+      const p = new Promise((res, rej) => { ok = res; bad = rej; });
+      try {
+        v.call(t, ...a, (r) => (chrome.runtime.lastError ? bad(new Error(chrome.runtime.lastError.message)) : ok(r)));
+        return p;
+      } catch { return v.apply(t, a); } // função sem callback (getURL, getManifest...)
+    };
+    return v && typeof v === 'object' ? wrap(v) : v;
+  } });
+  globalThis.browser = chrome.runtime.getManifest().manifest_version >= 3 ? chrome : wrap(chrome);
+}
+`;
+
+function adaptFirefox(root, m) {
+  if (!m.browser_specific_settings && !m.applications) return;
+  delete m.browser_specific_settings;
+  delete m.applications;
+  fs.writeFileSync(path.join(root, SHIM), SHIM_CODE);
+  const first = (list) => [SHIM, ...list.filter((x) => x !== SHIM)];
+  for (const c of Array.isArray(m.content_scripts) ? m.content_scripts : []) if (Array.isArray(c?.js)) c.js = first(c.js);
+  const bg = m.background;
+  if (Array.isArray(bg?.scripts)) {
+    if (m.manifest_version >= 3) {
+      // o Firefox aceita background.scripts no manifest v3; o Chromium exige um service worker
+      const mod = bg.type === 'module';
+      const lines = first(bg.scripts).map((s) => (mod ? `import ${JSON.stringify(`./${s.replace(/^\/+/, '')}`)};` : `importScripts(${JSON.stringify(s)});`));
+      fs.writeFileSync(path.join(root, 'evl_sw.js'), `${lines.join('\n')}\n`);
+      m.background = { service_worker: 'evl_sw.js', ...(mod ? { type: 'module' } : {}) };
+    } else bg.scripts = first(bg.scripts);
+  }
+  // páginas da extensão (popup, opções, fundo): o shim entra antes do primeiro script
+  const p = pagesOf(m);
+  for (const page of [p.popup, p.options, bg?.page]) {
+    try {
+      const file = path.join(root, page.split(/[?#]/)[0]);
+      const html = fs.readFileSync(file, 'utf8');
+      if (file.startsWith(root + path.sep) && !html.includes(SHIM)) fs.writeFileSync(file, html.replace(/<script/i, `<script src="/${SHIM}"></script><script`));
+    } catch {}
+  }
+}
+
+// Popup e página de opções (caminhos dentro da extensão), para abrir numa aba.
+function pagesOf(m) {
+  const clean = (v) => (typeof v === 'string' && v ? v.replace(/^\/+/, '') : null);
+  return {
+    popup: clean(m.action?.default_popup ?? m.browser_action?.default_popup ?? m.page_action?.default_popup),
+    options: clean(m.options_ui?.page ?? m.options_page),
+  };
+}
+
+// Aplica o isolamento e a adaptação na cópia instalada. Devolve as permissões tiradas. Pode rodar de novo sem efeito.
+function secure(root) {
+  const file = path.join(root, 'manifest.json');
+  const before = stripBom(fs.readFileSync(file, 'utf8'));
+  const m = JSON.parse(before);
+  const removed = isolate(m);
+  adaptFirefox(root, m);
+  const after = JSON.stringify(m, null, 2);
+  if (JSON.stringify(JSON.parse(before)) !== JSON.stringify(m)) fs.writeFileSync(file, after);
+  return removed;
+}
+
 // Resumo do que a extensão pode acessar (para avisar a pessoa): todos os sites e permissões sensíveis.
 const ALL_SITES = /^(<all_urls>|\*:\/\/\*\/\*|https?:\/\/\*\/\*)$/;
 const SENSITIVE = ['cookies', 'webRequest', 'webRequestBlocking', 'tabs', 'history', 'scripting', 'management', 'clipboardRead'];
@@ -65,7 +162,7 @@ function accessOf(m) {
 function readManifest(root) {
   const m = JSON.parse(stripBom(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8')));
   const name = (typeof m.name === 'string' && localizedName(root, m.name, m.default_locale)) || path.basename(root);
-  return { name: name.slice(0, 80), version: String(m.version ?? ''), access: accessOf(m) };
+  return { name: name.slice(0, 80), version: String(m.version ?? ''), access: accessOf(m), pages: pagesOf(m) };
 }
 
 // `ext` é session.extensions (ou o próprio session nas versões antigas); `store` tem get/set.
@@ -93,16 +190,29 @@ function createExtensions({ ext, dir, store }) {
     } catch {}
   }
 
+  // chrome-extension://<id do Chromium>/<popup ou opções>, só com a extensão carregada
+  const pageUrl = (item, kind) => {
+    const e = loaded.get(item.id);
+    const file = item.pages?.[kind];
+    return e && file ? `chrome-extension://${e.id}/${file}` : null;
+  };
+
   return {
+    pageUrl: (id, kind) => {
+      const item = items().find((i) => i.id === id);
+      return item ? pageUrl(item, kind) : null;
+    },
     async loadAll() {
       // extensões instaladas antes de resolvermos __MSG_...__ ficaram com o nome da pasta: corrige
       const list = items();
       let changed = false;
       for (const item of list) {
         try {
-          const info = readManifest(path.join(dir, item.id));
-          if (info.name !== item.name || info.version !== item.version || JSON.stringify(info.access) !== JSON.stringify(item.access)) {
-            Object.assign(item, info);
+          // extensões instaladas antes do isolamento passam por ele aqui (nada de permissão antiga sobrando)
+          const removed = [...new Set([...(item.removed ?? []), ...secure(path.join(dir, item.id))])];
+          const next = { ...item, ...readManifest(path.join(dir, item.id)), removed };
+          if (JSON.stringify(next) !== JSON.stringify(item)) {
+            Object.assign(item, next);
             changed = true;
           }
         } catch {}
@@ -112,6 +222,9 @@ function createExtensions({ ext, dir, store }) {
     },
     list() {
       return items().map((i) => ({
+        popup: pageUrl(i, 'popup'),
+        options: pageUrl(i, 'options'),
+        removed: i.removed ?? [],
         id: i.id,
         name: i.name,
         version: i.version,
@@ -136,8 +249,8 @@ function createExtensions({ ext, dir, store }) {
           fs.rmSync(dest, { recursive: true, force: true });
           fs.renameSync(tmp, dest);
         }
-        const info = readManifest(dest);
-        const item = { id, name: info.name, version: info.version, access: info.access, enabled: true };
+        const removed = secure(dest);
+        const item = { id, ...readManifest(dest), removed, enabled: true };
         save([...items(), item]);
         await load(item);
         return this.list().find((x) => x.id === id);
@@ -166,4 +279,4 @@ function createExtensions({ ext, dir, store }) {
   };
 }
 
-module.exports = { createExtensions, parseStoreId, findRoot, readManifest, localizedName };
+module.exports = { createExtensions, parseAmoSlug, secure, isolate, pagesOf, parseStoreId, findRoot, readManifest, localizedName };
