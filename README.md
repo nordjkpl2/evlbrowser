@@ -1,7 +1,7 @@
 # Evl Browser
 
-Webbrowser made using electron html css and javascript with focus in using lower ram
-firefox style running in chromium and NS Nord Suite Engines
+✦ Web-browser made using electron , html , css and javascript with focus in using lower ram
+firefox style running in chromium and NS Nord Suite Engine(s)
 
 <details>
 <summary><b>/Build</b></summary>
@@ -44,9 +44,12 @@ Open Source and everyone can help made, audit or improve evl
 
 Evl(s) browser provide:
 
- secure navigation
- speed of navigation using ns nord suite engine
- tabs not can acess other for pickup personal data
- customization 
+ >secure navigation
+ 
+ >speed of navigation using ns nord suite engine
+ 
+ >tabs not can acess other for pickup personal data
+ 
+ >customization 
 
 </details>
