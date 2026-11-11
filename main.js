@@ -13,6 +13,7 @@ const {
   safeStorage,
   dialog,
   net,
+  nativeImage,
 } = require('electron');
 const path = require('path');
 const cfg = require('./src/app/app_config');
@@ -35,6 +36,7 @@ const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
 const { readStartupSpeed, speedOptions } = require('./src/app/speed_options');
 const { registerSpeedIpc } = require('./src/ipc/speed_ipc');
 const { TabManager } = require('./src/tabs/tabs_manager');
+const { createFaviconColor } = require('./src/tabs/favicon_color');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/tabs/memory_policy');
 
 // Chromium só com o que o navegador precisa (listas em src/app/app_config.js).
@@ -288,6 +290,7 @@ function createWindow() {
   tabs.setWebrtcPolicy(privacyApi.options().webrtcProtect ? 'default_public_interface_only' : 'default');
   // janela de anúncio: cortada se o bloqueador OU "fechar popups" estiver ligado
   tabs.setPopupFilter((url) => (store.get('adblock') !== false || store.get('adblockPopups') !== false) && !!adblockApi?.shouldBlock(url, 'script', ''));
+  tabs.setFaviconColor(createFaviconColor({ net, nativeImage }));
   tabs.setTabLayout(store.get('tabLayout') ?? {});
   policy = startMemoryPolicy(tabs, (mb) => send('memory', mb), () => {
     const o = speedApi.options();

@@ -175,7 +175,6 @@
       </button>
         </div>
       </div>
-      <div class="side-logo" aria-hidden="true">EVL</div>
     </nav>
 
     <div class="content">
@@ -310,6 +309,21 @@
               <input id="t-side-w" type="number" min="180" max="320" step="10" value="220" inputmode="numeric">
             </label>
           </div>
+          <div class="v-row">
+            <span class="v-text">
+              <span>Linha colorida sobre o ícone das abas</span>
+              <span class="v-hint hint">Põe um traço (_) em cima do ícone de cada site, na cor do ícone. Se o ícone não tiver cor, usa uma cor fixa do site.</span>
+            </span>
+            <button id="t-line" class="switch" type="button" role="switch" aria-checked="false" aria-label="Linha colorida sobre o ícone das abas"></button>
+          </div>
+          <div class="v-row" id="t-line-color-row">
+            <span class="v-text">
+              <span>Cor da linha</span>
+              <span class="v-hint hint">Automática usa a cor de cada ícone. Escolha uma cor para usar a mesma em todas as abas.</span>
+            </span>
+            <input id="t-line-color" type="color" value="#ffb429" aria-label="Cor da linha sobre o ícone das abas">
+            <button id="t-line-auto" class="text-btn" type="button">Automática</button>
+          </div>
         </section>
 
         <section class="card" data-panel="appearance">
@@ -320,6 +334,24 @@
               <span class="v-hint hint">Deixa as Configurações mais apertadas: menos espaço entre cartões, linhas e itens do menu.</span>
             </span>
             <button id="compact-switch" class="switch" type="button" role="switch" aria-checked="false" aria-label="Itens compactos"></button>
+          </div>
+        </section>
+
+        <section class="card" data-panel="appearance">
+          <h3>Cores</h3>
+          <div class="v-row">
+            <span class="v-text">
+              <span>Menos cor</span>
+              <span class="v-hint hint">Tira os brilhos, as linhas e as setas coloridas das Configurações; só os detalhes essenciais ficam na cor principal.</span>
+            </span>
+            <button id="less-color" class="switch" type="button" role="switch" aria-checked="false" aria-label="Menos cor"></button>
+          </div>
+          <div class="v-row">
+            <span class="v-text">
+              <span>Usar apenas 1 cor principal</span>
+              <span class="v-hint hint">Desliga a 2ª variação: tudo usa só a cor principal, sem alternar.</span>
+            </span>
+            <button id="one-color" class="switch" type="button" role="switch" aria-checked="false" aria-label="Usar apenas 1 cor principal"></button>
           </div>
         </section>
 
@@ -493,6 +525,7 @@
       </div>
     </div>
 
+    <div class="side-logo" aria-hidden="true">EVL</div>
     <footer class="copyright">&copy; Evl Browser</footer>
   </main>
 

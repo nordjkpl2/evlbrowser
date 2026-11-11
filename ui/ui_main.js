@@ -56,6 +56,11 @@ function makeTab(tab) {
   const label = tab.kind === 'settings' ? t('Configurações') : tab.kind === 'blank' ? t('Nova aba') : tab.title;
   el.title = label; // textContent/title: nunca innerHTML com texto de site
 
+  if (/^#[0-9a-f]{6}$/i.test(tab.color || '')) {
+    el.classList.add('has-line');
+    el.style.setProperty('--tab-line', tab.color);
+  }
+
   if (tab.favicon) {
     const img = document.createElement('img');
     img.className = 'favicon';
@@ -629,13 +634,69 @@ function applyTabLayout(l) {
   tabHEl.value = String(l?.tabH ?? 32);
   tabWEl.value = String(l?.tabW ?? 200);
   sideWEl.value = String(l?.sideW ?? 220);
+  $('t-line').setAttribute('aria-checked', String(l?.line === true));
+  const custom = /^#[0-9a-f]{6}$/i.test(l?.lineColor || '');
+  lineColorValue = custom ? l.lineColor : '';
+  if (custom && l.line === true) root.setProperty('--ring', l.lineColor);
+  else root.removeProperty('--ring');
+  if (custom) $('t-line-color').value = l.lineColor;
+  $('t-line-auto').disabled = !custom; // já está em automático
+  $('t-line-color-row').hidden = l?.line !== true;
   $('t-w-label').hidden = mode === 'side';
   $('t-side-label').hidden = mode !== 'side';
 }
+let lineColorValue = ''; // '' = automática (cor do ícone/site)
 function saveTabLayout() {
-  window.evl.setTabLayout({ mode: tabModeEl.value, tabH: Number(tabHEl.value), tabW: Number(tabWEl.value), sideW: Number(sideWEl.value) });
+  window.evl.setTabLayout({ mode: tabModeEl.value, tabH: Number(tabHEl.value), tabW: Number(tabWEl.value), sideW: Number(sideWEl.value), line: $('t-line').getAttribute('aria-checked') === 'true', lineColor: lineColorValue });
 }
 [tabModeEl, tabHEl, tabWEl, sideWEl].forEach((el) => el.addEventListener('change', saveTabLayout));
+$('t-line-color').addEventListener('change', (event) => {
+  lineColorValue = event.currentTarget.value;
+  saveTabLayout();
+});
+$('t-line-auto').addEventListener('click', () => {
+  lineColorValue = '';
+  saveTabLayout();
+});
+$('t-line').addEventListener('click', (event) => {
+  const on = event.currentTarget.getAttribute('aria-checked') !== 'true';
+  event.currentTarget.setAttribute('aria-checked', String(on));
+  saveTabLayout();
+});
+
+// Menos cor: tira brilhos, linhas e setas coloridas das Configurações
+const lessColor = $('less-color');
+function setLessColor(on) {
+  document.body.classList.toggle('less-color', on);
+  lessColor.setAttribute('aria-checked', String(on));
+}
+try {
+  setLessColor(localStorage.getItem('evl.lessColor') === '1');
+} catch {}
+lessColor.addEventListener('click', () => {
+  const on = lessColor.getAttribute('aria-checked') !== 'true';
+  setLessColor(on);
+  try {
+    localStorage.setItem('evl.lessColor', on ? '1' : '0');
+  } catch {}
+});
+
+// Usar só 1 cor: a 2ª variação (--accent2) passa a ser igual à principal
+const oneColor = $('one-color');
+function setOneColor(on) {
+  document.body.classList.toggle('one-color', on);
+  oneColor.setAttribute('aria-checked', String(on));
+}
+try {
+  setOneColor(localStorage.getItem('evl.oneColor') === '1');
+} catch {}
+oneColor.addEventListener('click', () => {
+  const on = oneColor.getAttribute('aria-checked') !== 'true';
+  setOneColor(on);
+  try {
+    localStorage.setItem('evl.oneColor', on ? '1' : '0');
+  } catch {}
+});
 
 // ---------- aparência: cor principal ----------
 // Troca só as variáveis --accent e --glow da interface (as páginas dos sites não mudam).

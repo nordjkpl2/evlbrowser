@@ -218,7 +218,7 @@ console.log('smoke OK');
   assert.strictEqual(wc.mutedNow, false);
 
   const l = tabs.setTabLayout({ mode: 'side', tabH: 999, tabW: 10, sideW: 250 });
-  assert.deepStrictEqual(l, { mode: 'side', tabH: 48, tabW: 100, sideW: 250 }, 'tamanhos limitados');
+  assert.deepStrictEqual(l, { mode: 'side', tabH: 48, tabW: 100, sideW: 250, line: false, lineColor: '' }, 'tamanhos limitados');
   assert.strictEqual(tabs.toolbarBottom(), 90);
   assert.strictEqual(tabs.setTabLayout({ mode: 'x' }).mode, 'top', 'modo inválido volta ao padrão');
   assert.strictEqual(tabs.topHeight(), 80);
@@ -226,3 +226,27 @@ console.log('smoke OK');
   assert.strictEqual(typeof tabs.popupBlocked, 'function');
 }
 console.log('layout/som OK');
+
+// 9) Linha colorida sobre o ícone: desligada = sem cor; ligada = cor do site, depois a do ícone
+{
+  const lt = new TabManager(win, ui, () => {}, () => false);
+  const id = lt.create('https://exemplo.com/');
+  const snap = () => lt.snapshot().tabs.find((x) => x.id === id);
+  assert.strictEqual(snap().color, '', 'sem a opção, sem cor');
+  lt.setFaviconColor(async () => '#112233');
+  lt.setTabLayout({ line: true });
+  assert.match(snap().color, /^#[0-9a-f]{6}$/, 'na hora: cor fixa do site');
+  const before = snap().color;
+  const view = [...lt.tabs.values()].find((x) => x.id === id).view;
+  view.webContents.emit('page-favicon-updated', {}, ['https://exemplo.com/icon.png']);
+  setImmediate(() => {
+    assert.strictEqual(snap().color, '#112233', 'depois: cor do ícone');
+    assert.notStrictEqual(before, '#112233');
+    lt.setTabLayout({ line: true, lineColor: '#AA0000' });
+    assert.strictEqual(snap().color, '#aa0000', 'cor escolhida vale para todas as abas');
+    lt.setTabLayout({ line: true, lineColor: 'vermelho' });
+    assert.strictEqual(lt.tabLayout.lineColor, '', 'cor inválida volta ao automático');
+    lt.setTabLayout({ line: false });
+    assert.strictEqual(snap().color, '', 'desligar tira a cor');
+  });
+}

@@ -17,9 +17,10 @@ const { WebContentsView } = require('electron');
 
 const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
+const { hostColor } = require('./favicon_color');
 const { MENU_HEIGHT, SUGGEST_HEIGHT } = require('../app/app_config');
 
-const DEFAULT_TAB_LAYOUT = { mode: 'top', tabH: 32, tabW: 200, sideW: 220 };
+const DEFAULT_TAB_LAYOUT = { mode: 'top', tabH: 32, tabW: 200, sideW: 220, line: false, lineColor: '' };
 const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Math.round(Number(v)))) : d);
 
 const SETTINGS_URL = 'evl://settings';
@@ -57,10 +58,45 @@ class TabManager {
       tabH: clampInt(l.tabH, 24, 48, d.tabH),
       tabW: clampInt(l.tabW, 100, 300, d.tabW),
       sideW: clampInt(l.sideW, 180, 320, d.sideW),
+      line: l.line === true, // linha colorida sobre o ícone das abas
+      lineColor: /^#[0-9a-f]{6}$/i.test(l.lineColor || '') ? l.lineColor.toLowerCase() : '', // '' = cor do ícone/site
     };
+    for (const tab of this.tabs.values()) this._paintTab(tab);
     this.layout();
     this._changed();
     return this.tabLayout;
+  }
+
+  // Função async (urlDoÍcone, urlDaPágina) -> '#rrggbb' (vem do main.js; usa a rede e o nativeImage).
+  setFaviconColor(fn) {
+    this.faviconColor = typeof fn === 'function' ? fn : null;
+  }
+
+  // Cor da linha sobre o ícone: na hora a do nome do site; depois a do próprio ícone.
+  _paintTab(tab) {
+    if (!this.tabLayout.line || tab.kind !== 'web') {
+      tab.color = '';
+      return;
+    }
+    if (this.tabLayout.lineColor) {
+      tab.color = this.tabLayout.lineColor; // cor escolhida por você
+      return;
+    }
+    let host = '';
+    try {
+      host = new URL(tab.url).hostname;
+    } catch {}
+    tab.color = hostColor(host);
+    const icon = tab.favicon;
+    if (!icon || !this.faviconColor) return;
+    this.faviconColor(icon, tab.url)
+      .then((color) => {
+        if (this.tabLayout.line && tab.favicon === icon && color && color !== tab.color) {
+          tab.color = color;
+          this._changed();
+        }
+      })
+      .catch(() => {});
   }
 
   setPopupFilter(fn) {
@@ -359,6 +395,7 @@ class TabManager {
         title: t.title,
         url: t.url,
         favicon: t.favicon,
+        color: this.tabLayout.line ? t.color || '' : '',
         loading: t.loading,
         audible: !!t.audible,
         muted: !!t.muted,
@@ -464,6 +501,7 @@ class TabManager {
     });
     wc.on('page-favicon-updated', (_e, icons) => {
       tab.favicon = icons[0] || '';
+      this._paintTab(tab);
       this._changed();
     });
     wc.on('did-start-loading', () => {
@@ -477,6 +515,7 @@ class TabManager {
     // Versões novas do Electron mandam a URL em event.url; as antigas, como argumento.
     wc.on('did-navigate', (e, url) => {
       tab.url = e.url ?? url;
+      if (this.tabLayout.line) this._paintTab(tab);
       this.history?.add(tab.url, '');
       this._changed();
     });

@@ -9,7 +9,7 @@
   --text: #ece9e2;
   --muted: #8a8780;
   --accent: #ffb429;
-  --accent2: oklch(from var(--accent) l c calc(h + 50));
+  --accent2: oklch(from var(--accent) l calc(c * 0.5) calc(h + 50));
   --glow: rgba(255, 180, 41, 0.35);
 
   --font-ui: "Segoe UI", system-ui, sans-serif;
@@ -721,10 +721,10 @@ body:not(.searching) .card.collapsed > h3 { margin-bottom: 0; }
 .info-box p { margin: 4px 0; }
 
 /* mais cor nas Configurações: setas, títulos e cartões usam a cor principal */
-.card.collapsible h3::before { border-color: var(--accent); width: 7px; height: 7px; }
-.card.collapsible h3:hover::before { border-color: var(--accent); filter: brightness(1.25); }
-.card { position: relative; background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, transparent), transparent 70px); }
-.nav-group-head .chev { color: var(--accent); stroke-width: 2.4; }
+.card.collapsible h3::before { border-color: color-mix(in srgb, var(--accent) 55%, var(--muted)); width: 6px; height: 6px; }
+.card.collapsible h3:hover::before { border-color: var(--accent); }
+.card { position: relative; background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 2%, transparent), transparent 60px); }
+.nav-group-head .chev { color: color-mix(in srgb, var(--accent) 55%, var(--muted)); }
 .nav-item:hover svg { color: var(--accent); }
 
 /* Itens compactos (Aparência > Densidade) */
@@ -737,28 +737,49 @@ body.compact .nav-group { margin-bottom: 2px; }
 body.compact .v-row { padding: 4px; }
 body.compact .h-item { padding: 4px 8px; }
 body.compact th, body.compact td { padding: 3px 8px; }
-.nav-group[data-group="web"] .nav-group-head { color: var(--accent); }
+.nav-group[data-group="web"] .nav-group-head { color: color-mix(in srgb, var(--accent) 65%, var(--muted)); }
 
 /* logo "EVL" em cima do título das Configurações */
 .side { display: flex; flex-direction: column; }
-.side-logo { margin: auto 0 0 12px; padding-top: 16px; position: sticky; bottom: 0; font-size: calc(24px * var(--ui-scale, 1)); font-weight: 800; letter-spacing: 0.06em; line-height: 1; color: var(--accent); text-shadow: 0 0 20px var(--glow); user-select: none; }
-body.compact .side-logo { font-size: calc(18px * var(--ui-scale, 1)); }
+/* logo EVL: canto inferior direito */
+.side-logo { position: absolute; right: 24px; bottom: 36px; z-index: 1; pointer-events: none; font-size: calc(16px * var(--ui-scale, 1)); font-weight: 800; letter-spacing: 0.06em; line-height: 1; color: var(--accent); text-shadow: 0 0 20px var(--glow); user-select: none; }
+body.compact .side-logo { font-size: calc(14px * var(--ui-scale, 1)); }
 
 /* 2ª variação da cor principal: alterna com a primeira */
-.card.alt { background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent2) 5%, transparent), transparent 70px); }
-.card.collapsible.alt h3::before { border-color: var(--accent2); }
+.card.alt { background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent2) 2%, transparent), transparent 60px); }
+.card.collapsible.alt h3::before { border-color: color-mix(in srgb, var(--accent2) 55%, var(--muted)); }
 .card.collapsible.alt h3:hover::before { border-color: var(--accent2); }
 .nav-item:nth-child(even)[aria-current="true"] svg { color: var(--accent2); }
 .nav-item:nth-child(even)[aria-current="true"]::before { background: var(--accent2); }
 .nav-item:nth-child(even):hover svg { color: var(--accent2); }
-.nav-group[data-group="user"] .chev { color: var(--accent2); }
+.nav-group[data-group="user"] .chev { color: color-mix(in srgb, var(--accent2) 55%, var(--muted)); }
 .side-logo { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 0 10px var(--glow)); }
 
 /* linha colorida no topo dos cartões: só até a metade, sumindo para a direita */
-.card::after { content: ""; position: absolute; top: -1px; left: 0; width: 50%; height: 2px; border-top-left-radius: 8px; background: linear-gradient(90deg, var(--accent), transparent); pointer-events: none; }
-.card.alt::after { background: linear-gradient(90deg, var(--accent2), transparent); }
+.card::after { content: ""; position: absolute; top: -1px; left: 0; width: 50%; height: 1px; border-top-left-radius: 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 45%, transparent), transparent); pointer-events: none; }
+.card.alt::after { background: linear-gradient(90deg, color-mix(in srgb, var(--accent2) 45%, transparent), transparent); }
 .color-card::after { display: none; }
 
 /* textos de apoio e contadores das Configurações (ex.: "7 bloqueados nesta sessão") mais visíveis */
 .card .hint, .card .v-hint { color: color-mix(in srgb, var(--text) 78%, transparent); }
 #ab-count { color: var(--text); font-weight: 700; }
+
+/* usar apenas 1 cor principal */
+body.one-color { --accent2: var(--accent); }
+
+/* linha (_) sobre o ícone da aba, na cor do ícone/site */
+.tab.has-line .favicon, .tab.has-line .dot { box-shadow: 0 -3px 0 0 var(--tab-line); }
+
+/* menos cor: sem brilhos, linhas e setas coloridas nas Configurações */
+body.less-color .card { background-image: none; }
+body.less-color .card::after { display: none; }
+body.less-color .card.collapsible h3::before,
+body.less-color .card.collapsible.alt h3::before,
+body.less-color .nav-group-head .chev,
+body.less-color .nav-group[data-group="user"] .chev { border-color: var(--muted); color: var(--muted); }
+body.less-color .side-logo { background: none; color: var(--muted); filter: none; }
+body.less-color .nav-item:hover svg, body.less-color .nav-item:nth-child(even):hover svg { color: var(--muted); }
+
+/* luz (anel de foco) segue o tema: cor principal, ou a "Cor da linha" escolhida em Aparência > Abas */
+:where(button, [tabindex], input, select, a):focus-visible { outline: 2px solid var(--ring, var(--accent)); outline-offset: -2px; }
+.tab:focus-visible { outline-offset: -3px; }

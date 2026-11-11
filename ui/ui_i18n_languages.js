@@ -260,6 +260,16 @@ const WORDS = [
   ['Densidade', 'Density', 'Densidad'],
   ['Itens compactos', 'Compact items', 'Elementos compactos'],
   ['Deixa as Configurações mais apertadas: menos espaço entre cartões, linhas e itens do menu.', 'Makes Settings tighter: less space between cards, rows and menu items.', 'Hace los Ajustes más compactos: menos espacio entre tarjetas, filas y elementos del menú.'],
+  ['Linha colorida sobre o ícone das abas', 'Colored line above the tab icon', 'Línea de color sobre el icono de las pestañas'],
+  ['Põe um traço (_) em cima do ícone de cada site, na cor do ícone. Se o ícone não tiver cor, usa uma cor fixa do site.', 'Puts a dash (_) above the icon of each site, in the icon color. If the icon has no color, a fixed color for the site is used.', 'Pone un guion (_) sobre el icono de cada sitio, del color del icono. Si el icono no tiene color, usa un color fijo del sitio.'],
+  ['Cores', 'Colors', 'Colores'],
+  ['Usar apenas 1 cor principal', 'Use only 1 main color', 'Usar solo 1 color principal'],
+  ['Desliga a 2ª variação: tudo usa só a cor principal, sem alternar.', 'Turns off the 2nd variation: everything uses just the main color, with no alternating.', 'Desactiva la 2.ª variación: todo usa solo el color principal, sin alternar.'],
+  ['Menos cor', 'Less color', 'Menos color'],
+  ['Tira os brilhos, as linhas e as setas coloridas das Configurações; só os detalhes essenciais ficam na cor principal.', 'Removes the glows, lines and colored arrows from Settings; only the essential details stay in the main color.', 'Quita los brillos, las líneas y las flechas de colores de Ajustes; solo los detalles esenciales quedan en el color principal.'],
+  ['Cor da linha', 'Line color', 'Color de la línea'],
+  ['Automática usa a cor de cada ícone. Escolha uma cor para usar a mesma em todas as abas.', 'Automatic uses the color of each icon. Pick a color to use the same one on all tabs.', 'Automática usa el color de cada icono. Elige un color para usar el mismo en todas las pestañas.'],
+  ['Automática', 'Automatic', 'Automática'],
   ['Remover do histórico', 'Remove from history', 'Quitar del historial'],
 ];
 const DICT = new Map(WORDS.map(([pt, en, es]) => [pt, { en, es }]));
