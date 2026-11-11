@@ -64,6 +64,17 @@ if (cfg.CHROMIUM_OFF_FEATURES.length > 0) {
   app.commandLine.appendSwitch('disable-features', cfg.CHROMIUM_OFF_FEATURES.join(','));
 }
 
+// Um Evl por vez: abrir de novo (ou um link vindo do sistema) só traz a janela da frente
+// e abre o endereço numa aba nova. Dois processos não brigam pelos mesmos arquivos.
+if (!app.requestSingleInstanceLock()) app.exit(0);
+app.on('second-instance', (_event, argv) => {
+  if (!win) return;
+  if (win.isMinimized()) win.restore();
+  win.focus();
+  const url = argv.slice(1).find((a) => /^https?:\/\//i.test(a));
+  if (url) tabs?.create(url);
+});
+
 let win = null;
 let ui = null; // a interface (abas, barra de endereço, Nova aba e Configurações)
 let tabs = null;

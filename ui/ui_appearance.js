@@ -50,10 +50,10 @@ tintSwitch.addEventListener('click', () => {
   } catch {}
 });
 
-// Estilo visual: Atual ('') ou Antigo 1800/1900 (classes no <html> definidas em settings.css).
+// Estilo visual: Atual (''), Lua (Pale Moon) ou Antigo 1800/1900 (classes no <html> definidas em settings.css).
 // Nos antigos os cantos são fixos (o estilo manda); a escolha de Cantos volta ao sair deles.
 const lookOptions = [...document.querySelectorAll('[data-look]')];
-const RETRO_R = { 1800: '3', 1900: '0' };
+const RETRO_R = { lua: '4', 1800: '3', 1900: '0' };
 const radiusEl = $('radius');
 let look = '';
 let radius = '8';
@@ -64,9 +64,10 @@ function applyRadius() {
   radiusEl.disabled = look !== '';
 }
 function setLook(v) {
-  look = v === '1800' || v === '1900' ? v : '';
-  htmlEl.classList.remove('retro', 'look-1800', 'look-1900');
-  if (look) htmlEl.classList.add('retro', `look-${look}`);
+  look = Object.hasOwn(RETRO_R, v) ? v : '';
+  htmlEl.classList.remove('retro', 'look-lua', 'look-1800', 'look-1900');
+  if (look) htmlEl.classList.add(`look-${look}`);
+  if (look && look !== 'lua') htmlEl.classList.add('retro');
   for (const o of lookOptions) o.setAttribute('aria-checked', String(o.dataset.look === look));
   applyRadius();
 }

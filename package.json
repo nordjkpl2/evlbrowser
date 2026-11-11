@@ -1,16 +1,64 @@
 {
   "name": "evl-browser",
+  "productName": "Evl Browser",
   "version": "1.0.0",
-  "description": "Evl + nord suite + browser",
+  "description": "Navegador leve feito com Electron, focado em usar pouca memória RAM",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test"
+    "test": "node --test",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
   },
-  "keywords": ["evl", "browser"],
+  "keywords": ["evl", "browser", "electron", "low-ram"],
   "author": "EvlCorp and nordjkpl collab",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^45.2.3"
+    "electron": "^45.2.3",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.evlcorp.evlbrowser",
+    "productName": "Evl Browser",
+    "artifactName": "EvlBrowser-${version}-${os}-${arch}.${ext}",
+    "directories": { "output": "dist" },
+    "asar": true,
+    "compression": "maximum",
+    "electronLanguages": ["pt-BR", "en-US", "es", "zh-CN", "ja"],
+    "files": [
+      "main.js",
+      "preload.js",
+      "preload_web_pages.js",
+      "LICENSE",
+      "src/app/**",
+      "src/data/**",
+      "src/extensions/**",
+      "src/network/**",
+      "src/tabs/**",
+      "src/ipc/*_ipc.js",
+      "ui/index.html",
+      "ui/style.css",
+      "ui/settings.css",
+      "ui/ui_*.js",
+      "ui/settings/**"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Evl Browser"
+    },
+    "portable": { "artifactName": "EvlBrowser-${version}-portable.${ext}" },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Network"
+    }
   }
 }

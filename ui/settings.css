@@ -1,7 +1,7 @@
-/* Configurações do Evl. Três visuais: Atual (padrão; Nintendo + Pale Moon: pílulas, cartões em
+/* Configurações do Evl. Quatro visuais: Atual (padrão; Nintendo + Pale Moon: pílulas, cartões em
    grade, linhas de ajuste), Antigo 1800 (cartas hanafuda da Nintendo: papel, tinta e vermelho)
-   e Antigo 1900 (era Famicom: bege, vermelho e sombras duras). O visual vem de classes no <html>
-   (look-1800, look-1900, retro); o JS só troca a classe (ui_appearance.js). */
+   Antigo 1900 (era Famicom) e Lua (Pale Moon: barra clássica azulada, abas arredondadas). O visual vem de classes no <html>
+   (look-lua, look-1800, look-1900, retro); o JS só troca a classe (ui_appearance.js). */
 
 :root { --on-accent: oklch(from var(--accent) clamp(0.12, calc((0.62 - l) * 1000), 0.98) 0 0); }
 
@@ -334,3 +334,55 @@ html.look-1900 .theme-option[aria-checked="true"] { box-shadow: 3px 3px 0 var(--
 /* linhas longas (histórico, favoritos, cookies, senhas, downloads): o que está fora da tela não é desenhado */
 #h-list > li, #b-list > li, #c-list > li, #p-list > li, #d-list > li { content-visibility: auto; contain-intrinsic-size: auto 36px; }
 #d-list progress { width: 90px; height: 6px; }
+
+/* =====================================================================
+   LUA — inspirado no Pale Moon: barra clássica cinza-azulada com degradê,
+   abas arredondadas no topo, campo de endereço branco, botões com relevo
+   e azul "lua" de destaque. Sempre claro, letras do sistema (Segoe UI).
+   ===================================================================== */
+html.look-lua {
+  color-scheme: light;
+  --bg-base: #dfe6f0; --surface-base: #f7f9fc; --active-base: #e4ebf5; --border-base: #a3b1c6;
+  --text: #1b1f27; --muted: #5a6474; --accent: #3a6cb3; --accent2: #6d8fbf; --glow: rgba(58, 108, 179, 0.25);
+  --on-accent: #fff;
+  --lua-hi: linear-gradient(#fdfeff, #e9eff8);
+  --lua-btn: linear-gradient(#fcfdfe, #e2e8f1);
+  --lua-sel: linear-gradient(#eaf3fd, #cfe2f8);
+}
+/* barra do topo */
+html.look-lua #chrome { background: linear-gradient(#d3dcea, #c3cfe1); }
+html.look-lua #tabs { border-bottom-color: #8e9fb8; }
+html.look-lua .tab { border-color: #8e9fb8; background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.2)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7); }
+html.look-lua .tab:hover { background: linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.45)); }
+html.look-lua .tab.active { position: relative; margin-bottom: -1px; height: calc(var(--tab-h, 32px) + 1px); background: linear-gradient(#ffffff, #f1f4f9); box-shadow: inset 0 1px 0 #fff; font-weight: 600; }
+html.look-lua #toolbar { background: linear-gradient(#f1f4f9, #dfe6f0); border-bottom: 1px solid #a3b1c6; }
+html.look-lua .icon-btn { border: 1px solid transparent; }
+html.look-lua .icon-btn:hover:not(:disabled) { border-color: #8e9fb8; background: var(--lua-btn); box-shadow: inset 0 1px 0 #fff; }
+html.look-lua .icon-btn:active:not(:disabled) { background: linear-gradient(#d5deea, #e6ecf4); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2); }
+html.look-lua #new-tab { color: #3b4658; }
+html.look-lua #address { height: 26px; border-color: #94a4bb; background: #fff; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12); }
+html.look-lua #address:focus { border-color: #3a6cb3; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 2px rgba(58, 108, 179, 0.22); }
+html.look-lua #mem { border-color: #8e9fb8; background: var(--lua-btn); color: #2a4f86; box-shadow: inset 0 1px 0 #fff; }
+html.look-lua #mem:hover { background: var(--lua-sel); border-color: #6f97cf; }
+/* menus e painéis: estilo de menu clássico */
+html.look-lua #menu, html.look-lua #perm, html.look-lua #suggest { border-color: #8e9fb8; background: #fbfcfe; box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.22); }
+/* Configurações: estilo da janela de Preferências */
+html.look-lua #page-settings { background: #eef2f7; }
+html.look-lua .side { background: linear-gradient(90deg, #e6ecf4, #dde5ef); border-right: 1px solid #a3b1c6; }
+html.look-lua .nav-item { border: 1px solid transparent; }
+html.look-lua .nav-item:hover { background: #e8f0fa; border-color: #b8cfea; }
+html.look-lua .nav-item[aria-current="true"] { background: var(--lua-sel); color: #1b1f27; border-color: #7da2ce; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8); }
+html.look-lua .nav-item[aria-current="true"] svg { color: #3a6cb3; }
+html.look-lua .content h2 { font-weight: 600; color: #1e3a66; }
+html.look-lua .card { background: var(--lua-hi); border-color: #b3c0d2; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+html.look-lua .card::after { display: none; }
+html.look-lua .card h3 { font-weight: 600; color: #1e3a66; }
+html.look-lua .white-btn { border: 1px solid #8e9cb0; background: var(--lua-btn); color: #1b1f27; font-weight: 400; box-shadow: inset 0 1px 0 #fff; }
+html.look-lua .white-btn:hover:not(:disabled) { filter: none; border-color: #3c7fb1; background: var(--lua-sel); }
+html.look-lua .switch { border-color: #8e9fb8; background: linear-gradient(#e3e8ef, #f6f8fb); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15); }
+html.look-lua .switch::after { background: var(--lua-btn); border: 1px solid #8e9fb8; box-sizing: border-box; }
+html.look-lua .switch[aria-checked="true"] { border-color: #2f5a97; background: linear-gradient(#5b8ed3, #3a6cb3); }
+html.look-lua .switch[aria-checked="true"]::after { background: #fff; border-color: #2f5a97; }
+html.look-lua .theme-option[aria-checked="true"] { background: var(--lua-sel); border-color: #7da2ce; box-shadow: none; }
+html.look-lua progress::-webkit-progress-value { background: linear-gradient(#7fb0ec, #3a6cb3); }
+.pv-lua { background: linear-gradient(#d3dcea 0 18px, #f1f4f9 18px); box-shadow: inset 0 0 0 1px #8e9fb8; } .pv-lua i { background: #a3b1c6; } .pv-lua .bar { background: #3a6cb3; border-radius: 3px 3px 0 0; }

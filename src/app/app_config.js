@@ -67,5 +67,6 @@ module.exports = {
     // relatórios enviados a terceiros em segundo plano e APIs de anúncio/rastreio (nomes desconhecidos são ignorados)
     'Reporting', 'NetworkErrorLogging', 'BrowsingTopics', 'InterestGroupStorage', 'Fledge', 'PrivateStateTokens',
     'SharedStorageAPI', 'ConversionMeasurement', 'FencedFrames',
+    'SpareRendererForSitePerProcess', // não deixa um processo de página vazio esperando (economiza ~30 MB)
   ],
 };

@@ -4,3 +4,5 @@ out/
 *.log
 .env
 mapa.md
+MAPA.md
+bun.lock
