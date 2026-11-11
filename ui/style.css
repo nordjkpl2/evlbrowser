@@ -197,18 +197,14 @@ button, input { font: inherit; color: inherit; }
   padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 6px;
-  background-color: transparent;
-  /* medidor: o fundo enche conforme a RAM chega perto do limite (--p de 0 a 1) */
-  background-image: linear-gradient(90deg, var(--glow) calc(var(--p, 0) * 100%), transparent 0);
-  color: var(--accent);
+  background: transparent;
+  color: var(--accent); /* sempre a cor principal escolhida em Aparência */
   font: 12px var(--font-mono);
   text-align: right;
   cursor: pointer;
   transition: background var(--fast) ease, border-color var(--fast) ease;
 }
 #mem:hover { background-color: var(--surface-active); border-color: var(--border); }
-#mem[data-level="warn"] { color: #ff9f43; }
-#mem[data-level="hot"] { color: #ff5c5c; }
 
 /* O atributo hidden sempre vence qualquer "display:" definido abaixo. */
 [hidden] { display: none !important; }
@@ -321,6 +317,7 @@ kbd {
 
 /* ---------- Configurações (estilo Firefox: menu lateral + cartões) ---------- */
 #page-settings {
+  position: relative;
   display: grid;
   grid-template-columns: 252px 1fr;
   overflow: hidden;
@@ -441,6 +438,66 @@ dd { margin: 0; overflow-wrap: anywhere; }
 }
 #accent::-webkit-color-swatch-wrapper { padding: 0; }
 #accent::-webkit-color-swatch { border: 0; }
+
+/* rodapé das Configurações */
+.copyright {
+  position: absolute;
+  right: 16px;
+  bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* cookies */
+.import { position: relative; }
+.white-btn {
+  padding: 3px 10px;
+  border: 1px solid #d7d7e0;
+  border-radius: 6px;
+  background: #fff;
+  color: #15141a;
+  font-size: 12px;
+  cursor: pointer;
+}
+.white-btn:hover:not(:disabled) { background: #ececf1; }
+.white-btn:disabled { opacity: 0.6; cursor: default; }
+.pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  min-width: 190px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+.pop button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.pop button:hover { background: var(--surface-active); }
+#c-status { margin: 8px 0 0; }
+#c-list { margin: 8px 0 0; padding: 0; list-style: none; }
+#c-list summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#c-list summary:hover { background: var(--surface-active); }
+.c-names { padding: 0 8px 8px; font-size: 12px; overflow-wrap: anywhere; }
 
 /* histórico */
 .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }

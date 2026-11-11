@@ -160,6 +160,7 @@ async function refreshSettings() {
 
   $('s-engine').textContent = report.search.name;
   $('s-engine-url').textContent = report.search.url;
+  $('s-chromium').textContent = report.chromium;
 
   $('s-total').textContent = String(report.totalMB);
   const rows = report.processes.map((p) => {
@@ -205,11 +206,15 @@ function showPanel(name) {
   }
   for (const card of cards) card.hidden = card.dataset.panel !== name;
   if (name === 'history') loadHistory();
+  if (name === 'cookies') loadCookies();
 }
+
+// Ignora maiúsculas e acentos: "memoria" acha "Memória".
+const norm = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 // A busca procura em todos os cartões, de qualquer categoria.
 function searchSettings() {
-  const q = searchEl.value.trim().toLowerCase();
+  const q = norm(searchEl.value.trim());
   if (!q) {
     showPanel(panel);
     return;
@@ -218,8 +223,12 @@ function searchSettings() {
   panelTitle.textContent = 'Resultados da busca';
   let found = 0;
   for (const card of cards) {
-    const text = `${card.textContent} ${card.dataset.keywords}`.toLowerCase();
-    card.hidden = !text.includes(q);
+    // Procura no texto que o cartão mostra (títulos, descrições, valores) e nos rótulos
+    // de acessibilidade (para cartões sem texto, como a Cor principal). Nada é cadastrado à mão.
+    const labels = [...card.querySelectorAll('[aria-label],[title]')]
+      .map((el) => `${el.getAttribute('aria-label') ?? ''} ${el.title}`)
+      .join(' ');
+    card.hidden = !norm(`${card.textContent} ${labels}`).includes(q);
     if (!card.hidden) found++;
   }
   noResults.hidden = found > 0;
@@ -232,6 +241,40 @@ searchEl.addEventListener('keydown', (event) => {
 });
 showPanel('search');
 
+// ---------- listas longas: só desenha o que aparece ----------
+// Desenha um primeiro bloco de linhas e, quando você rola até o fim da lista, o próximo.
+// Uma lista de 500 sites custa o mesmo que uma de 30 até você rolar.
+
+const lazyObservers = new WeakMap();
+
+function lazyList(listEl, items, makeRow, step = 30) {
+  lazyObservers.get(listEl)?.disconnect();
+  listEl.replaceChildren();
+  let shown = 0;
+  const sentinel = document.createElement('li'); // marca o fim do que já foi desenhado
+  sentinel.setAttribute('aria-hidden', 'true');
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((e) => e.isIntersecting)) more();
+    },
+    { rootMargin: '300px' }
+  );
+  lazyObservers.set(listEl, observer);
+
+  function more() {
+    observer.unobserve(sentinel);
+    sentinel.remove();
+    const rows = items.slice(shown, shown + step).map(makeRow);
+    shown += rows.length;
+    listEl.append(...rows);
+    if (shown < items.length) {
+      listEl.append(sentinel);
+      observer.observe(sentinel); // observar de novo avisa na hora se ainda está à vista
+    }
+  }
+  more();
+}
+
 // ---------- histórico ----------
 // Só busca a lista quando a categoria Histórico está aberta. Texto de sites sempre
 // vai por textContent (nunca innerHTML).
@@ -242,34 +285,101 @@ const hEmpty = $('h-empty');
 async function loadHistory() {
   const items = await window.evl.historyList();
   hEmpty.hidden = items.length > 0;
-  hList.replaceChildren(
-    ...items.map((item) => {
-      const li = document.createElement('li');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'h-item';
-      btn.title = item.url;
-      const title = document.createElement('span');
-      title.className = 'h-title';
-      title.textContent = item.host || item.url;
-      const url = document.createElement('span');
-      url.className = 'h-url hint';
-      url.textContent = item.title; // título da última página vista neste site
-      const time = document.createElement('span');
-      time.className = 'h-time hint';
-      time.textContent = new Date(item.time).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-      btn.append(title, url, time);
-      btn.addEventListener('click', () => window.evl.historyOpen(item.url));
-      li.append(btn);
-      return li;
-    })
-  );
+  lazyList(hList, items, (item) => {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'h-item';
+    btn.title = item.url;
+    const title = document.createElement('span');
+    title.className = 'h-title';
+    title.textContent = item.host || item.url;
+    const url = document.createElement('span');
+    url.className = 'h-url hint';
+    url.textContent = item.title; // título da última página vista neste site
+    const time = document.createElement('span');
+    time.className = 'h-time hint';
+    time.textContent = new Date(item.time).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    btn.append(title, url, time);
+    btn.addEventListener('click', () => window.evl.historyOpen(item.url));
+    li.append(btn);
+    return li;
+  });
 }
 
 $('h-clear').addEventListener('click', async () => {
   window.evl.historyClear();
   await loadHistory();
 });
+
+// ---------- cookies ----------
+// A lista mostra só o site e os nomes (nunca os valores). Só consulta com a categoria aberta.
+
+const cList = $('c-list');
+const cEmpty = $('c-empty');
+const cTotal = $('c-total');
+const cStatus = $('c-status');
+const cImport = $('c-import');
+const cMenu = $('c-menu');
+
+async function loadCookies() {
+  const data = await window.evl.cookiesList();
+  if (!data) return;
+  cTotal.textContent = data.total ? `· ${data.total}` : '';
+  cEmpty.hidden = data.total > 0;
+  lazyList(cList, data.domains, (d) => {
+    const li = document.createElement('li');
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    const domain = document.createElement('span');
+    domain.textContent = d.domain;
+    const count = document.createElement('span');
+    count.className = 'hint';
+    count.textContent = String(d.count);
+    summary.append(domain, count);
+    const names = document.createElement('div');
+    names.className = 'c-names mono hint';
+    // os nomes só são escritos quando você abre o site
+    details.addEventListener('toggle', () => {
+      if (details.open && !names.textContent) {
+        names.textContent = d.names.join('  ·  ') + (d.count > d.names.length ? '  ·  …' : '');
+      }
+    });
+    details.append(summary, names);
+    li.append(details);
+    return li;
+  });
+}
+
+function setImportMenu(open) {
+  cMenu.hidden = !open;
+  cImport.setAttribute('aria-expanded', String(open));
+}
+
+cImport.addEventListener('click', () => setImportMenu(cMenu.hidden));
+document.addEventListener('mousedown', (event) => {
+  if (!cMenu.hidden && !cMenu.contains(event.target) && event.target !== cImport) setImportMenu(false);
+});
+cMenu.querySelectorAll('button').forEach((btn) =>
+  btn.addEventListener('click', async () => {
+    setImportMenu(false);
+    const label = btn.dataset.from === 'firefox' ? 'Firefox' : 'Chromium';
+    cStatus.hidden = false;
+    cStatus.textContent = `Importando do ${label}…`;
+    cImport.disabled = true;
+    const r = await window.evl.cookiesImport(btn.dataset.from);
+    cImport.disabled = false;
+    if (!r) cStatus.textContent = 'Não foi possível importar agora.';
+    else if (!r.ok) cStatus.textContent = r.message;
+    else {
+      const parts = [`${r.imported} importados`];
+      if (r.skipped) parts.push(`${r.skipped} ignorados (vencidos ou recusados)`);
+      if (r.encrypted) parts.push(`${r.encrypted} protegidos pelo navegador de origem (não dá para ler)`);
+      cStatus.textContent = `${label}: ${parts.join(', ')}.`;
+    }
+    loadCookies();
+  })
+);
 
 // ---------- aparência: Claro / Escuro ----------
 // Define o esquema de cores que os SITES enxergam. A interface do Evl não muda.
@@ -426,18 +536,8 @@ addressEl.addEventListener('keydown', (event) => {
 // ---------- eventos do main.js ----------
 
 window.evl.onState(render);
-// O contador vira um medidor: enche conforme a RAM se aproxima do limite (MEMORY_BUDGET_MB)
-// e muda de cor perto dele.
-let budget = 0;
-window.evl.onBudget((mb) => {
-  budget = mb;
-});
 window.evl.onMemory((mb) => {
   memEl.textContent = `${mb} MB`;
-  if (!budget) return;
-  const p = Math.min(mb / budget, 1);
-  memEl.style.setProperty('--p', p.toFixed(3));
-  memEl.dataset.level = p >= 0.95 ? 'hot' : p >= 0.75 ? 'warn' : '';
 });
 window.evl.onFocusAddress(() => addressEl.focus());
 window.evl.onAccent(applyAccent);

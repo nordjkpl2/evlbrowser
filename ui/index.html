@@ -92,6 +92,14 @@
         </svg>
         <span>Histórico</span>
       </button>
+      <button class="nav-item" type="button" data-panel="cookies">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 2a6 6 0 1 0 6 6 3 3 0 0 1-3-3 3 3 0 0 1-3-3z"/>
+          <circle cx="6" cy="7" r=".6" fill="currentColor"/><circle cx="8.5" cy="10.5" r=".6" fill="currentColor"/>
+        </svg>
+        <span>Cookies</span>
+      </button>
     </nav>
 
     <div class="content">
@@ -101,8 +109,7 @@
         <h2 id="panel-title">Pesquisa</h2>
         <p id="no-results" class="hint" hidden>Nenhuma configuração encontrada.</p>
 
-        <section class="card" data-panel="search"
-                 data-keywords="busca pesquisa motor buscador duckduckgo endereço">
+        <section class="card" data-panel="search">
           <h3>Motor de busca</h3>
           <p class="hint">Usado quando o que você digita na barra de endereço não parece um endereço.</p>
           <dl>
@@ -114,8 +121,18 @@
           <p class="hint">Para trocar, edite SEARCH_NAME e SEARCH_URL em src/config.js.</p>
         </section>
 
-        <section class="card" data-panel="memory"
-                 data-keywords="memória ram processos gpu interface página uso total mb">
+        <section class="card" data-panel="search">
+          <h3>Motor de sites</h3>
+          <p class="hint">O que roda por baixo dos panos para mostrar as páginas.</p>
+          <dl>
+            <dt>Motor</dt>
+            <dd>Chromium e NS Nord Suite</dd>
+            <dt>Versão do Chromium</dt>
+            <dd id="s-chromium" class="mono">—</dd>
+          </dl>
+        </section>
+
+        <section class="card" data-panel="memory">
           <h3>Uso de memória</h3>
           <p class="total"><span id="s-total" class="mono">—</span> MB no total
             <span class="hint">· atualiza a cada 2 s enquanto esta tela está aberta</span></p>
@@ -128,8 +145,7 @@
           </table>
         </section>
 
-        <section class="card" data-panel="appearance"
-                 data-keywords="aparência tema claro escuro cores sites modo noturno">
+        <section class="card" data-panel="appearance">
           <h3>Tema</h3>
           <p class="hint">Escolha o esquema de cores do Evl. Os sites que respeitam a preferência de tema seguem a mesma escolha.</p>
           <div class="theme-options" role="radiogroup" aria-label="Tema">
@@ -144,15 +160,13 @@
           </div>
         </section>
 
-        <section class="card color-card" data-panel="appearance"
-                 data-keywords="aparência cor principal destaque accent âmbar cores navegador">
+        <section class="card color-card" data-panel="appearance">
           <input id="accent" type="color" value="#ffb429"
                  aria-label="Cor principal do navegador. Clique para escolher; botão direito volta ao padrão"
                  title="Clique para trocar a cor · botão direito volta ao padrão">
         </section>
 
-        <section class="card" data-panel="history"
-                 data-keywords="histórico visitados sites páginas recentes limpar apagar">
+        <section class="card" data-panel="history">
           <div class="card-head">
             <h3>Páginas visitadas</h3>
             <button id="h-clear" class="text-btn" type="button">Limpar histórico</button>
@@ -160,8 +174,26 @@
           <p id="h-empty" class="hint" hidden>Nenhuma página visitada ainda.</p>
           <ul id="h-list"></ul>
         </section>
+
+        <section class="card" data-panel="cookies">
+          <div class="card-head">
+            <h3>Cookies <span id="c-total" class="hint"></span></h3>
+            <div class="import">
+              <button id="c-import" class="white-btn" type="button" aria-haspopup="menu" aria-expanded="false">Importar &#9662;</button>
+              <div id="c-menu" class="pop" role="menu" hidden>
+                <button type="button" role="menuitem" data-from="firefox">Importar do Firefox</button>
+                <button type="button" role="menuitem" data-from="chromium">Importar do Chromium</button>
+              </div>
+            </div>
+          </div>
+          <p id="c-status" class="hint" role="status" hidden></p>
+          <p id="c-empty" class="hint" hidden>Nenhum cookie salvo ainda.</p>
+          <ul id="c-list"></ul>
+        </section>
       </div>
     </div>
+
+    <footer class="copyright">&copy; Evl Browser</footer>
   </main>
 
   <script src="ui.js"></script>

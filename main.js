@@ -16,6 +16,7 @@ const cfg = require('./src/config');
 const { UI_HEIGHT } = cfg;
 const { createStore } = require('./src/settings');
 const { createHistory } = require('./src/history');
+const { importCookies } = require('./src/cookies-import');
 const { TabManager } = require('./src/tabs');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory');
 
@@ -36,6 +37,7 @@ let store = null; // preferências salvas (tema...)
 let sessionStore = null; // abas abertas, para reabrir ao iniciar (session.json)
 let history = null; // páginas visitadas (history.json)
 let sessionTimer = null;
+let importing = false; // importação de cookies em andamento
 let lastSession = '';
 
 // Esquema de cores (prefers-color-scheme) da interface e dos sites,
@@ -259,6 +261,7 @@ function settingsReport() {
   return {
     ...processReport(tabs, ui.webContents),
     search: { name: cfg.SEARCH_NAME, url: cfg.SEARCH_URL },
+    chromium: process.versions.chrome,
     theme: nativeTheme.themeSource,
     accent: store.get('accent') ?? null,
   };
@@ -272,7 +275,6 @@ const isId = (id) => Number.isInteger(id);
 
 ipcMain.on('ui:ready', (event) => {
   if (!fromUi(event)) return;
-  send('budget', cfg.MEMORY_BUDGET_MB);
   send('accent', store.get('accent') ?? null);
   send('state', tabs.snapshot());
   sampleMemory(true);
@@ -303,6 +305,36 @@ ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
 ipcMain.handle('history:suggest', (event, q) =>
   fromUi(event) && typeof q === 'string' ? history.suggest(q.slice(0, 200)) : []
 );
+// Cookies: a lista nunca leva o valor (só domínio e nome); a importação roda aqui no main.
+ipcMain.handle('cookies:list', async (event) => {
+  if (!fromUi(event)) return null;
+  const all = await session.defaultSession.cookies.get({});
+  const byDomain = new Map();
+  for (const c of all) {
+    const domain = c.domain.replace(/^\./, '');
+    let entry = byDomain.get(domain);
+    if (!entry) byDomain.set(domain, (entry = { domain, count: 0, names: [] }));
+    entry.count++;
+    if (entry.names.length < 30) entry.names.push(c.name);
+  }
+  const domains = [...byDomain.values()]
+    .sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain))
+    .slice(0, 300);
+  return { total: all.length, domains };
+});
+ipcMain.handle('cookies:import', async (event, from) => {
+  if (!fromUi(event) || importing || (from !== 'firefox' && from !== 'chromium')) return null;
+  importing = true;
+  try {
+    const env = { appData: app.getPath('appData'), localAppData: process.env.LOCALAPPDATA ?? '' };
+    const result = await importCookies(from, env, (c) => session.defaultSession.cookies.set(c));
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, message: String(error?.message ?? error) };
+  } finally {
+    importing = false;
+  }
+});
 ipcMain.on('suggest:set', (event, open) => fromUi(event) && tabs.setSuggest(open === true));
 ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));
 ipcMain.on('zoom:set', (event, action) => {

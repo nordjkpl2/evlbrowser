@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('evl', {
   historyList: () => ipcRenderer.invoke('history:list'),
   historyOpen: (url) => ipcRenderer.send('history:open', String(url)),
   historyClear: () => ipcRenderer.send('history:clear'),
+  cookiesList: () => ipcRenderer.invoke('cookies:list'),
+  cookiesImport: (from) => ipcRenderer.invoke('cookies:import', String(from)),
   suggest: (text) => ipcRenderer.invoke('history:suggest', String(text)),
   setSuggest: (open) => ipcRenderer.send('suggest:set', open === true),
   setAccent: (color) => ipcRenderer.send('accent:set', color === null ? null : String(color)),
@@ -30,7 +32,6 @@ contextBridge.exposeInMainWorld('evl', {
   // Eventos que vêm do main.js
   onState: (cb) => ipcRenderer.on('state', (_event, state) => cb(state)),
   onMemory: (cb) => ipcRenderer.on('memory', (_event, mb) => cb(mb)),
-  onBudget: (cb) => ipcRenderer.on('budget', (_event, mb) => cb(mb)),
   onPanel: (cb) => ipcRenderer.on('panel', (_event, name) => cb(name)),
   onAccent: (cb) => ipcRenderer.on('accent', (_event, color) => cb(color)),
   onFocusAddress: (cb) => ipcRenderer.on('focus-address', () => cb()),
