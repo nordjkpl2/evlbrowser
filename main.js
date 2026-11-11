@@ -10,6 +10,7 @@ const {
   session,
   nativeTheme,
   clipboard,
+  safeStorage,
   dialog,
   net,
 } = require('electron');
@@ -23,6 +24,8 @@ const { validateEngine, normalizeList, uniqueId } = require('./src/search_engine
 const { registerCookiesIpc } = require('./src/ipc/cookies_ipc');
 const { registerExtensionsIpc } = require('./src/ipc/extension_ipc');
 const { createExtensions } = require('./src/extension_manager');
+const { createVault } = require('./src/passwords_vault');
+const { registerPasswordIpc } = require('./src/ipc/password_ipc');
 const { createAdblock } = require('./src/adblock_engine');
 const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
 const { TabManager } = require('./src/tabs_manager');
@@ -45,6 +48,7 @@ let store = null; // preferências salvas (tema...)
 let sessionStore = null; // abas abertas, para reabrir ao iniciar (session.json)
 let history = null; // páginas visitadas (history.json)
 let sessionTimer = null;
+let vault = null; // cofre de senhas (src/passwords_vault.js)
 let extensions = null; // extensões do Chromium (src/extension_manager.js)
 let lastPreconnect = ''; // último site que já abrimos a conexão
 let engines = []; // motores de busca [{ id, name, url }]
@@ -408,6 +412,7 @@ ipcMain.on('accent:set', (event, color) => {
 });
 ipcMain.handle('settings:report', (event) => (fromUi(event) ? settingsReport() : null));
 
+registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: () => vault, getWindow: () => win });
 registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
 registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win });
 
@@ -425,6 +430,13 @@ app.whenReady().then(() => {
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(ALLOWED_PERMISSIONS.has(permission));
+  });
+
+  // Senhas: cifradas com a proteção do sistema (safeStorage); sem ela, o cofre fica desativado.
+  vault = createVault(path.join(app.getPath('userData'), 'passwords.json'), {
+    available: () => safeStorage.isEncryptionAvailable(),
+    encrypt: (text) => safeStorage.encryptString(text).toString('base64'),
+    decrypt: (b64) => safeStorage.decryptString(Buffer.from(b64, 'base64')),
   });
 
   const ses = session.defaultSession;

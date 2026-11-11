@@ -123,6 +123,13 @@
         </svg>
         <span>Extensões</span>
       </button>
+      <button class="nav-item" type="button" data-panel="passwords">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="5.5" cy="8" r="2.5"/><path d="M8 8h6.5M12 8v2.5M14.5 8v1.5"/>
+        </svg>
+        <span>Senhas</span>
+      </button>
       <button class="nav-item" type="button" data-panel="adblock">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -238,6 +245,38 @@
           <p id="c-empty" class="hint" hidden>Nenhum cookie salvo ainda.</p>
           <ul id="c-list"></ul>
         </section>
+        <section class="card" data-panel="passwords">
+          <div class="card-head">
+            <h3>Senhas <span id="p-total" class="hint"></span></h3>
+            <div class="head-actions">
+              <button id="p-clear" class="text-btn" type="button">Apagar todas</button>
+              <button id="p-add" class="text-btn" type="button">Adicionar</button>
+              <button id="p-import" class="white-btn" type="button">Importar</button>
+            </div>
+          </div>
+          <p class="hint">Cifradas pelo sistema. Importe o CSV exportado do Firefox ou do Chrome. Os logins são preenchidos quando você clica no campo de usuário ou senha do site.</p>
+          <p id="p-off" class="hint" role="alert" hidden>O cofre do sistema não está disponível neste computador.</p>
+          <form id="p-form" hidden>
+            <label>Site
+              <input id="p-site" type="text" spellcheck="false" autocomplete="off" placeholder="exemplo.com">
+            </label>
+            <label>Usuário
+              <input id="p-user" type="text" spellcheck="false" autocomplete="off">
+            </label>
+            <label>Senha
+              <input id="p-pass" type="password" autocomplete="new-password">
+            </label>
+            <p id="p-error" class="hint" role="alert" hidden></p>
+            <div class="form-actions">
+              <button type="submit" class="white-btn">Salvar</button>
+              <button id="p-cancel" type="button" class="text-btn">Cancelar</button>
+            </div>
+          </form>
+          <p id="p-status" class="hint" role="status" hidden></p>
+          <p id="p-empty" class="hint" hidden>Nenhuma senha salva ainda.</p>
+          <ul id="p-list"></ul>
+        </section>
+
         <section class="card" data-panel="adblock">
           <div class="card-head">
             <h3>Bloqueador de anúncios</h3>
@@ -283,6 +322,7 @@
   <script src="settings_search_engines.js"></script>
   <script src="settings_extensions.js"></script>
   <script src="settings_adblock.js"></script>
+  <script src="settings_passwords.js"></script>
   <script src="ui_boot.js"></script>
 </body>
 </html>

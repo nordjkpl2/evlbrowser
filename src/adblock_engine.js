@@ -45,7 +45,7 @@ function createAdblock({ domains = BLOCK_DOMAINS, paths = BLOCK_PATHS } = {}) {
       if (entry && entry !== (page && listed(page))) return true;
 
       for (const [domain, part] of paths) {
-        if ((host === domain || host.endsWith(`.${domain}`)) && u.pathname.includes(part)) {
+        if ((host === domain || host.endsWith(`.${domain}`)) && (u.pathname + u.search).includes(part)) {
           return true;
         }
       }

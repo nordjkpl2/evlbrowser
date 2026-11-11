@@ -31,6 +31,18 @@ contextBridge.exposeInMainWorld('evl', {
   cookiesList: () => ipcRenderer.invoke('cookies:list'),
   cookiesRemove: (domain) => ipcRenderer.invoke('cookies:remove', domain === null ? null : String(domain)),
   cookiesImport: (from) => ipcRenderer.invoke('cookies:import', String(from)),
+  passwordsList: () => ipcRenderer.invoke('passwords:list'),
+  passwordsAdd: (e) =>
+    ipcRenderer.invoke('passwords:add', {
+      site: String(e?.site ?? ''),
+      username: String(e?.username ?? ''),
+      password: String(e?.password ?? ''),
+    }),
+  passwordsShow: (id) => ipcRenderer.invoke('passwords:show', String(id)),
+  passwordsCopy: (id) => ipcRenderer.invoke('passwords:copy', String(id)),
+  passwordsRemove: (id) => ipcRenderer.invoke('passwords:remove', String(id)),
+  passwordsClear: () => ipcRenderer.invoke('passwords:clear'),
+  passwordsImport: () => ipcRenderer.invoke('passwords:import'),
   adblockGet: () => ipcRenderer.invoke('adblock:get'),
   adblockSet: (on) => ipcRenderer.invoke('adblock:set', on === true),
   extensionsList: () => ipcRenderer.invoke('extensions:list'),

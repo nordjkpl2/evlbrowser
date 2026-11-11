@@ -210,6 +210,7 @@ function showPanel(name) {
   if (name === 'cookies') loadCookies();
   if (name === 'extensions') loadExtensions();
   if (name === 'adblock') loadAdblock();
+  if (name === 'passwords') loadPasswords();
 }
 
 // Ignora maiúsculas e acentos: "memoria" acha "Memória".

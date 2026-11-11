@@ -13,6 +13,10 @@ function registerAdblockIpc({ ipcMain, fromUi, adblock, store, session }) {
     });
   }
 
+  // Pergunta síncrona do preload das páginas (preload_web_pages.js): o reforço do YouTube segue o interruptor.
+  ipcMain.on('adblock:enabled', (event) => {
+    event.returnValue = !fromUi(event) && enabled();
+  });
   ipcMain.handle('adblock:get', (event) => (fromUi(event) ? { enabled: enabled(), blocked: adblock.blocked } : null));
   ipcMain.handle('adblock:set', (event, on) => {
     if (!fromUi(event) || typeof on !== 'boolean') return null;

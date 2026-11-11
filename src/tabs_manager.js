@@ -12,6 +12,7 @@
 //
 // Clicar numa aba "discarded" recria a página e carrega a URL de novo.
 
+const path = require('path');
 const { WebContentsView } = require('electron');
 const { toUrl } = require('./url_address_parser');
 const { UI_HEIGHT, MENU_HEIGHT, SUGGEST_HEIGHT } = require('./app_config');
@@ -359,7 +360,12 @@ class TabManager {
 
     // A página da aba NÃO tem acesso ao Node nem ao Electron.
     const view = new WebContentsView({
-      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+      webPreferences: {
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        preload: path.join(__dirname, '..', 'preload_web_pages.js'), // senhas e YouTube (só mundo isolado)
+      },
     });
     const wc = view.webContents;
 
