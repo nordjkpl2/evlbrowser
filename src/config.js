@@ -9,6 +9,10 @@ module.exports = {
   // Altura (em pixels) da interface fixa no topo: abas (38) + barra de endereço (42).
   UI_HEIGHT: 80,
 
+  // Espaço extra (px) que a interface ocupa por cima da página enquanto o
+  // submenu do contador de memória está aberto.
+  MENU_HEIGHT: 140,
+
   // Aba de fundo parada por este tempo tem a página destruída (libera a RAM).
   DISCARD_AFTER_MS: discardSeconds > 0 ? discardSeconds * 1000 : 10 * 60 * 1000,
 

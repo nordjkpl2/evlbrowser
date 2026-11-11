@@ -14,9 +14,12 @@
 
 const { WebContentsView } = require('electron');
 const { toUrl } = require('./url');
-const { UI_HEIGHT } = require('./config');
+const { UI_HEIGHT, MENU_HEIGHT } = require('./config');
 
 const SETTINGS_URL = 'evl://settings';
+
+// Passos de zoom (1 = 100%), iguais aos do Chrome: 25% ... 500%.
+const ZOOM_FACTORS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
 
 class TabManager {
   // win: a BaseWindow. ui: a WebContentsView da interface.
@@ -30,6 +33,7 @@ class TabManager {
     this.tabs = new Map(); // id -> tab (o Map guarda a ordem de criação)
     this.activeId = null;
     this.nextId = 1;
+    this.menuOpen = false; // submenu do contador de memória (zoom + Configurações)
   }
 
   // ---------- criar / ativar / fechar ----------
@@ -56,6 +60,7 @@ class TabManager {
     const tab = this.tabs.get(id);
     if (!tab) return;
 
+    this.menuOpen = false; // trocar de aba fecha o submenu (a página nova ficaria por cima dele)
     const prev = this.tabs.get(this.activeId);
     if (prev && prev !== tab && prev.view) {
       this.win.contentView.removeChildView(prev.view); // vira "sleeping"
@@ -136,6 +141,35 @@ class TabManager {
     this.tabs.get(this.activeId)?.view?.webContents.openDevTools({ mode: 'detach' });
   }
 
+  // Zoom da aba ativa (Ctrl + / Ctrl - / Ctrl 0). Mesmos passos do Chrome.
+  // O Chromium guarda o zoom por site (origem), então vale para o site todo.
+  zoomIn() {
+    this._zoomStep(1);
+  }
+  zoomOut() {
+    this._zoomStep(-1);
+  }
+  zoomReset() {
+    this.tabs.get(this.activeId)?.view?.webContents.setZoomLevel(0);
+    this._changed();
+  }
+
+  // Zoom da aba ativa em % (100 = normal), ou null se a aba não é uma página web viva.
+  zoomPercent() {
+    const wc = this.tabs.get(this.activeId)?.view?.webContents;
+    return wc ? Math.round(Math.pow(1.2, wc.getZoomLevel()) * 100) : null;
+  }
+
+  // Abre/fecha o submenu do contador de memória. Aberto, a interface cresce por
+  // cima da página (e vai para o topo da pilha de views) para caber o menu.
+  setMenu(open) {
+    if (this.menuOpen === open) return;
+    this.menuOpen = open;
+    if (open) this.win.contentView.addChildView(this.ui); // já é filha: só sobe para o topo
+    this.layout();
+    this._changed();
+  }
+
   // ---------- política de memória (usada por memory.js) ----------
 
   // Abas web de fundo com página viva (candidatas a descarte).
@@ -168,7 +202,8 @@ class TabManager {
     const tab = this.tabs.get(this.activeId);
     const web = tab?.kind === 'web';
 
-    this.ui.setBounds({ x: 0, y: 0, width, height: web ? UI_HEIGHT : height });
+    const uiHeight = web ? UI_HEIGHT + (this.menuOpen ? MENU_HEIGHT : 0) : height;
+    this.ui.setBounds({ x: 0, y: 0, width, height: Math.min(uiHeight, height) });
     if (web && tab.view) {
       tab.view.setBounds({
         x: 0,
@@ -186,6 +221,8 @@ class TabManager {
     return {
       activeId: this.activeId,
       activeKind: active?.kind ?? 'blank',
+      menuOpen: this.menuOpen,
+      zoom: this.zoomPercent(),
       canGoBack: !!nav?.canGoBack(),
       canGoForward: !!nav?.canGoForward(),
       tabs: [...this.tabs.values()].map((t) => ({
@@ -236,6 +273,22 @@ class TabManager {
     this.onChange();
   }
 
+  // Anda um passo na lista ZOOM_FACTORS a partir do zoom atual da página.
+  _zoomStep(direction, tab = this.tabs.get(this.activeId)) {
+    const wc = tab?.view?.webContents;
+    if (!wc) return;
+    const current = Math.pow(1.2, wc.getZoomLevel()); // nível do Chromium -> fator (1 = 100%)
+    let index = ZOOM_FACTORS.findIndex((f) => f >= current - 0.001);
+    if (index === -1) index = ZOOM_FACTORS.length - 1;
+    const exact = Math.abs(ZOOM_FACTORS[index] - current) < 0.01;
+    // se o zoom atual não é um dos passos, o primeiro passo só "encaixa" na lista
+    const next =
+      direction > 0 ? (exact ? index + 1 : index) : index - 1;
+    const factor = ZOOM_FACTORS[Math.min(ZOOM_FACTORS.length - 1, Math.max(0, next))];
+    wc.setZoomLevel(Math.log(factor) / Math.log(1.2));
+    this._changed();
+  }
+
   _ensureView(tab) {
     if (tab.view) return;
 
@@ -279,6 +332,10 @@ class TabManager {
     });
     wc.on('before-input-event', (event, input) => {
       if (this.onShortcut(input)) event.preventDefault();
+    });
+    // Ctrl + roda do mouse
+    wc.on('zoom-changed', (_e, direction) => {
+      this._zoomStep(direction === 'in' ? 1 : -1, tab);
     });
 
     tab.view = view;

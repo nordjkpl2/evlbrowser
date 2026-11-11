@@ -38,7 +38,7 @@ html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: var(--bg);
+  background: transparent; /* a área sob o submenu deixa a página aparecer */
   color: var(--text);
   font: 13px/1.4 var(--font-ui);
   user-select: none;
@@ -65,7 +65,7 @@ button, input { font: inherit; color: inherit; }
 }
 
 /* ---------- topo: abas (38px) + barra de ferramentas (42px) = 80px ---------- */
-#chrome { flex: none; height: 80px; }
+#chrome { flex: none; height: 80px; background: var(--bg); }
 
 #tabs {
   display: flex;
@@ -191,7 +191,62 @@ button, input { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
 
 /* ---------- telas internas (só visíveis com a interface em tela cheia) ---------- */
-.screen { flex: 1; min-height: 0; overflow: auto; }
+.screen { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
+
+/* ---------- submenu do contador de memória ---------- */
+#menu {
+  position: fixed;
+  top: 84px; /* logo abaixo da barra de 80 px */
+  right: 8px;
+  width: 264px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+#menu hr { margin: 6px 0; border: 0; border-top: 1px solid var(--border); }
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 6px;
+}
+.menu-label { color: var(--muted); }
+
+.zoom-ctrl { display: flex; align-items: center; gap: 2px; }
+.zoom-ctrl .icon-btn { width: 30px; height: 30px; font-size: 18px; }
+#zoom-val {
+  min-width: 56px;
+  height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font: 13px var(--font-mono);
+  text-align: center;
+  cursor: pointer;
+  transition: background var(--fast) ease;
+}
+#zoom-val:hover:not(:disabled) { background: var(--surface-active); }
+#zoom-val:disabled { color: var(--muted); opacity: 0.4; cursor: default; }
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--fast) ease;
+}
+.menu-item:hover { background: var(--surface-active); }
 
 #page-blank {
   display: grid;

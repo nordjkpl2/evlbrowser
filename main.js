@@ -111,6 +111,20 @@ function onShortcut(input) {
     case ',':
       tabs.openSettings();
       return true;
+    // Zoom: "+" (com ou sem Shift, "=" na maioria dos teclados) e "-"; "0" volta a 100%.
+    case '+':
+    case '=':
+    case 'add':
+      tabs.zoomIn();
+      return true;
+    case '-':
+    case '_':
+    case 'subtract':
+      tabs.zoomOut();
+      return true;
+    case '0':
+      tabs.zoomReset();
+      return true;
     default:
       return false;
   }
@@ -135,6 +149,9 @@ function createWindow() {
       spellcheck: false, // a interface não precisa de corretor ortográfico
     },
   });
+  // Fundo transparente: com o submenu aberto, a interface cobre parte da página
+  // e só o menu (e a barra do topo) devem aparecer. Os fundos ficam no CSS.
+  ui.setBackgroundColor('#00000000');
   win.contentView.addChildView(ui);
   ui.webContents.loadFile(path.join(__dirname, 'ui', 'index.html'));
 
@@ -198,6 +215,13 @@ ipcMain.on('nav:back', (event) => fromUi(event) && tabs.back());
 ipcMain.on('nav:forward', (event) => fromUi(event) && tabs.forward());
 ipcMain.on('nav:reload', (event) => fromUi(event) && tabs.reload());
 ipcMain.on('settings:open', (event) => fromUi(event) && tabs.openSettings());
+ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));
+ipcMain.on('zoom:set', (event, action) => {
+  if (!fromUi(event)) return;
+  if (action === 'in') tabs.zoomIn();
+  else if (action === 'out') tabs.zoomOut();
+  else if (action === 'reset') tabs.zoomReset();
+});
 ipcMain.on('theme:set', (event, theme) => {
   if (!fromUi(event) || !THEMES.has(theme)) return;
   nativeTheme.themeSource = theme; // a interface e os sites passam a ver este esquema

@@ -13,6 +13,11 @@ const addressEl = $('address');
 const memEl = $('mem');
 const pageBlank = $('page-blank');
 const pageSettings = $('page-settings');
+const menuEl = $('menu');
+const zoomOutBtn = $('zoom-out');
+const zoomInBtn = $('zoom-in');
+const zoomValBtn = $('zoom-val');
+const menuSettingsBtn = $('menu-settings');
 
 let current = null; // último estado recebido
 let lastKey = ''; // para pular redesenho quando nada mudou
@@ -78,6 +83,28 @@ function showAddress() {
   addressEl.value = active && active.kind !== 'blank' ? active.url : '';
 }
 
+// ---------- submenu do contador de memória (zoom + Configurações) ----------
+// Quem decide se está aberto é o main.js (state.menuOpen): ele também aumenta a
+// altura da interface para o menu caber por cima da página.
+
+let menuWasOpen = false;
+
+function showMenu(state) {
+  menuEl.hidden = !state.menuOpen;
+  memEl.setAttribute('aria-expanded', String(state.menuOpen));
+
+  const hasZoom = typeof state.zoom === 'number'; // só páginas web têm zoom
+  zoomValBtn.textContent = hasZoom ? `${state.zoom}%` : '—';
+  zoomValBtn.disabled = !hasZoom;
+  zoomOutBtn.disabled = !hasZoom;
+  zoomInBtn.disabled = !hasZoom;
+
+  // Ao abrir, o foco vai para o menu (teclado); ao fechar, volta para o botão.
+  if (state.menuOpen && !menuWasOpen) (hasZoom ? zoomInBtn : menuSettingsBtn).focus();
+  else if (!state.menuOpen && menuWasOpen && menuEl.contains(document.activeElement)) memEl.focus();
+  menuWasOpen = state.menuOpen;
+}
+
 function render(state) {
   current = state;
 
@@ -85,6 +112,8 @@ function render(state) {
   const key = JSON.stringify(state);
   if (key !== lastKey) {
     lastKey = key;
+
+    showMenu(state);
 
     tabsEl.querySelectorAll('.tab').forEach((n) => n.remove());
     for (const t of state.tabs) tabsEl.insertBefore(makeTab(t), newTabBtn);
@@ -219,7 +248,21 @@ newTabBtn.addEventListener('click', () => window.evl.newTab());
 backBtn.addEventListener('click', () => window.evl.back());
 forwardBtn.addEventListener('click', () => window.evl.forward());
 reloadBtn.addEventListener('click', () => window.evl.reload());
-memEl.addEventListener('click', () => window.evl.openSettings());
+memEl.addEventListener('click', () => window.evl.setMenu(!current?.menuOpen));
+zoomOutBtn.addEventListener('click', () => window.evl.zoom('out'));
+zoomInBtn.addEventListener('click', () => window.evl.zoom('in'));
+zoomValBtn.addEventListener('click', () => window.evl.zoom('reset'));
+menuSettingsBtn.addEventListener('click', () => window.evl.openSettings()); // abrir fecha o menu
+
+// Clicar fora do menu (inclusive na área transparente sobre a página) ou Esc fecha.
+document.addEventListener('mousedown', (event) => {
+  if (current?.menuOpen && !menuEl.contains(event.target) && !memEl.contains(event.target)) {
+    window.evl.setMenu(false);
+  }
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && current?.menuOpen) window.evl.setMenu(false);
+});
 
 addressEl.addEventListener('focus', () => addressEl.select());
 addressEl.addEventListener('keydown', (event) => {

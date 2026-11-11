@@ -20,10 +20,29 @@
       <button id="reload" class="icon-btn" type="button" title="Recarregar (Ctrl+R)" aria-label="Recarregar">&#8635;</button>
       <input id="address" type="text" spellcheck="false" autocomplete="off"
              aria-label="Endereço ou busca" placeholder="Digite um endereço ou faça uma busca">
-      <button id="mem" type="button" title="Memória do Evl Browser. Clique para abrir as Configurações (Ctrl+,)"
-              aria-label="Abrir Configurações">-- MB</button>
+      <button id="mem" type="button" title="Memória do Evl Browser. Clique para abrir o menu"
+              aria-label="Menu do Evl: memória, zoom e configurações"
+              aria-haspopup="menu" aria-expanded="false" aria-controls="menu">-- MB</button>
     </div>
   </header>
+
+  <!-- Submenu do contador de memória. Fica por cima da página (a interface cresce
+       enquanto ele está aberto; ver setMenu em src/tabs.js). -->
+  <div id="menu" role="menu" aria-label="Menu do Evl" hidden>
+    <div class="menu-row">
+      <span id="zoom-label" class="menu-label">Zoom</span>
+      <div class="zoom-ctrl" role="group" aria-labelledby="zoom-label">
+        <button id="zoom-out" class="icon-btn" type="button" title="Diminuir zoom (Ctrl+-)" aria-label="Diminuir zoom">&minus;</button>
+        <button id="zoom-val" type="button" title="Voltar para 100% (Ctrl+0)" aria-label="Zoom atual. Clique para voltar a 100%">100%</button>
+        <button id="zoom-in" class="icon-btn" type="button" title="Aumentar zoom (Ctrl++)" aria-label="Aumentar zoom">+</button>
+      </div>
+    </div>
+    <hr>
+    <button id="menu-settings" class="menu-item" type="button" role="menuitem">
+      <span>Configurações</span>
+      <kbd>Ctrl ,</kbd>
+    </button>
+  </div>
 
   <!-- Telas internas: só aparecem quando a aba ativa é "em branco" ou "configurações".
        Em aba web a interface tem só 80 px de altura e elas ficam fora da tela. -->

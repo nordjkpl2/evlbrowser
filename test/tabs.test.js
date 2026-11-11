@@ -11,6 +11,8 @@ class FakeWC extends EventEmitter {
   focus() { this.focused = true; } reload() {} openDevTools() {} send() {}
   setWindowOpenHandler(fn) { this.openHandler = fn; }
   isCurrentlyAudible() { return this.audible; }
+  getZoomLevel() { return this.zoom ?? 0; }
+  setZoomLevel(l) { this.zoom = l; }
   getOSProcessId() { return this.pid; }
   close() { this.closed = true; }
 }
@@ -117,7 +119,42 @@ assert.ok(rep.processes[0].label.length > 0 && rep.processes[0].label !== 'Pági
 assert.ok(rep.processes.some((p) => p.label === 'Interface do Evl'));
 assert.ok(rep.processes.some((p) => p.label === 'GPU'));
 
-// 9) fechar tudo sempre deixa uma aba (em branco)
+// 9) zoom: passos do Chrome, reset e porcentagem no estado
+tabs.activate(a);
+assert.strictEqual(tabs.snapshot().zoom, 100);
+const steps = [];
+for (let i = 0; i < 3; i++) { tabs.zoomIn(); steps.push(tabs.snapshot().zoom); }
+assert.deepStrictEqual(steps, [110, 125, 150]);
+tabs.zoomOut(); assert.strictEqual(tabs.snapshot().zoom, 125);
+for (let i = 0; i < 30; i++) tabs.zoomIn();
+assert.strictEqual(tabs.snapshot().zoom, 500, 'máximo 500%');
+for (let i = 0; i < 30; i++) tabs.zoomOut();
+assert.strictEqual(tabs.snapshot().zoom, 25, 'mínimo 25%');
+tabs.zoomReset(); assert.strictEqual(tabs.snapshot().zoom, 100);
+tabs.tabs.get(a).view.webContents.setZoomLevel(Math.log(1.15) / Math.log(1.2)); // zoom "quebrado" (115%)
+tabs.zoomIn(); assert.strictEqual(tabs.snapshot().zoom, 125, 'encaixa no próximo passo');
+tabs.zoomReset();
+tabs.tabs.get(a).view.webContents.emit('zoom-changed', {}, 'in'); // Ctrl + roda
+assert.strictEqual(tabs.snapshot().zoom, 110);
+tabs.zoomReset();
+tabs.activate(s);
+assert.strictEqual(tabs.snapshot().zoom, null, 'Configurações não tem zoom');
+
+// 10) submenu do contador de memória: a interface cresce por cima da página
+const { MENU_HEIGHT } = cfg;
+tabs.activate(a);
+assert.strictEqual(tabs.snapshot().menuOpen, false);
+tabs.setMenu(true);
+assert.strictEqual(tabs.snapshot().menuOpen, true);
+assert.deepStrictEqual(ui.bounds, { x: 0, y: 0, width: 1000, height: 80 + MENU_HEIGHT });
+assert.ok(attached.has(ui), 'interface sobe para o topo');
+tabs.setMenu(false);
+assert.deepStrictEqual(ui.bounds, { x: 0, y: 0, width: 1000, height: 80 });
+tabs.setMenu(true); tabs.activate(s);
+assert.strictEqual(tabs.snapshot().menuOpen, false, 'trocar de aba fecha o menu');
+tabs.activate(a);
+
+// 11) fechar tudo sempre deixa uma aba (em branco)
 for (const id of [...tabs.tabs.keys()]) tabs.close(id);
 assert.strictEqual(tabs.tabs.size, 1);
 assert.strictEqual(tabs.snapshot().activeKind, 'blank');
