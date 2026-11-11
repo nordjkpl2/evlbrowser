@@ -183,6 +183,7 @@ function settingsReport() {
     ...processReport(tabs, ui.webContents),
     search: { name: cfg.SEARCH_NAME, url: cfg.SEARCH_URL },
     theme: nativeTheme.themeSource,
+    accent: store.get('accent') ?? null,
   };
 }
 
@@ -194,6 +195,7 @@ const isId = (id) => Number.isInteger(id);
 
 ipcMain.on('ui:ready', (event) => {
   if (!fromUi(event)) return;
+  send('accent', store.get('accent') ?? null);
   send('state', tabs.snapshot());
   sampleMemory(true);
 });
@@ -227,6 +229,12 @@ ipcMain.on('theme:set', (event, theme) => {
   nativeTheme.themeSource = theme; // a interface e os sites passam a ver este esquema
   win?.setBackgroundColor(WINDOW_BG[theme]);
   store.set('theme', theme);
+});
+// Cor principal do navegador (#rrggbb), ou null para o padrão do tema.
+ipcMain.on('accent:set', (event, color) => {
+  if (!fromUi(event)) return;
+  if (color !== null && !(typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color))) return;
+  store.set('accent', color);
 });
 ipcMain.handle('settings:report', (event) => (fromUi(event) ? settingsReport() : null));
 

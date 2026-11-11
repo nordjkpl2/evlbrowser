@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('evl', {
   forward: () => ipcRenderer.send('nav:forward'),
   reload: () => ipcRenderer.send('nav:reload'),
   openSettings: () => ipcRenderer.send('settings:open'),
+  setAccent: (color) => ipcRenderer.send('accent:set', color === null ? null : String(color)),
   setMenu: (open) => ipcRenderer.send('menu:set', open === true),
   zoom: (action) => ipcRenderer.send('zoom:set', String(action)), // 'in' | 'out' | 'reset'
   setTheme: (theme) => ipcRenderer.send('theme:set', String(theme)),
@@ -24,5 +25,6 @@ contextBridge.exposeInMainWorld('evl', {
   // Eventos que vêm do main.js
   onState: (cb) => ipcRenderer.on('state', (_event, state) => cb(state)),
   onMemory: (cb) => ipcRenderer.on('memory', (_event, mb) => cb(mb)),
+  onAccent: (cb) => ipcRenderer.on('accent', (_event, color) => cb(color)),
   onFocusAddress: (cb) => ipcRenderer.on('focus-address', () => cb()),
 });

@@ -19,5 +19,8 @@ npm test
 | Ctrl+W | Fechar aba |
 | Ctrl+L | Focar a barra de endereço |
 | Ctrl+R | Recarregar |
+| Ctrl++ / Ctrl+- | Aumentar / diminuir o zoom (também Ctrl + roda do mouse) |
+| Ctrl+0 | Zoom em 100% |
+| Ctrl+, | Configurações |
 | Ctrl+Shift+I | DevTools da aba ativa |
 | F12 | DevTools da interface do navegador 

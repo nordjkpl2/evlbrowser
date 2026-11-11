@@ -172,6 +172,7 @@ async function refreshSettings() {
   $('s-procs').replaceChildren(...rows);
 
   showTheme(report.theme);
+  if (!accent) applyAccent(null); // sem escolha: o quadrado acompanha o tema claro/escuro
 }
 
 // ---------- menu lateral e busca das Configurações ----------
@@ -242,6 +243,37 @@ themeOptions.forEach((opt) =>
   })
 );
 
+// ---------- aparência: cor principal ----------
+// Troca só as variáveis --accent e --glow da interface (as páginas dos sites não mudam).
+
+const accentEl = $('accent');
+let accent = null; // #rrggbb escolhido, ou null = padrão do tema
+
+function applyAccent(color) {
+  accent = color;
+  const root = document.documentElement.style;
+  if (color) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
+    root.setProperty('--accent', color);
+    root.setProperty('--glow', `rgba(${r}, ${g}, ${b}, 0.35)`);
+  } else {
+    root.removeProperty('--accent');
+    root.removeProperty('--glow');
+  }
+  // o quadrado mostra a cor em uso (a do tema, quando não há escolha)
+  const shown = color ?? getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  if (/^#[0-9a-f]{6}$/i.test(shown)) accentEl.value = shown.toLowerCase();
+}
+
+accentEl.addEventListener('input', () => applyAccent(accentEl.value)); // ao vivo
+accentEl.addEventListener('change', () => window.evl.setAccent(accentEl.value)); // salva ao confirmar
+// botão direito no bloco de cor volta ao padrão do tema
+accentEl.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+  applyAccent(null);
+  window.evl.setAccent(null);
+});
+
 // ---------- ações ----------
 
 newTabBtn.addEventListener('click', () => window.evl.newTab());
@@ -282,5 +314,6 @@ window.evl.onMemory((mb) => {
   memEl.textContent = `${mb} MB`;
 });
 window.evl.onFocusAddress(() => addressEl.focus());
+window.evl.onAccent(applyAccent);
 
 window.evl.ready(); // pede o primeiro estado

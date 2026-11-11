@@ -1,9 +1,9 @@
 ## Como a memória é economizada
 
 1. Cada aba é uma `WebContentsView` (leve), e a interface inteira é uma página pequena sem framework.
-2. Aba de fundo sai da janela ("sleeping"). Depois de `DISCARD_AFTER_MS` (10 min) a página é
+2. Aba de fundo sai da janela ("sleeping"). Depois de `DISCARD_AFTER_MS` (3 min) a página é
    **destruída** ("discarded"): guardamos só URL, título e ícone.
-3. Se o app passar de `MEMORY_BUDGET_MB` (1500), a aba de fundo mais antiga é descartada antes.
+3. Se o app passar de `MEMORY_BUDGET_MB` (800), a aba de fundo mais antiga (parada há 20 s) é descartada antes.
 4. Aba tocando áudio e aba ativa nunca são descartadas.
 5. O medidor no canto direito mostra a RAM total do app para medirmos de verdade.
 
@@ -42,7 +42,7 @@ src/url.js       transforma o que foi digitado em URL segura (testável sem Elec
 ui/              barra de abas e endereço (HTML/CSS/JS puros, tema Evl em style.css)
 test/            testes (npm test)
 ```
-/Para testar o descarte de abas sem esperar 10 minutos (aba de fundo descarta após 20 s):
+/Para testar o descarte de abas sem esperar 3 minutos (aba de fundo descarta após 20 s):
 
 ```text
 :: cmd
