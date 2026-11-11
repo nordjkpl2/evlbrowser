@@ -10,6 +10,7 @@ const backBtn = $('back');
 const forwardBtn = $('forward');
 const reloadBtn = $('reload');
 const addressEl = $('address');
+const starBtn = $('star');
 const memEl = $('mem');
 const pageBlank = $('page-blank');
 const pageSettings = $('page-settings');
@@ -109,6 +110,17 @@ function showMenu(state) {
   menuWasOpen = state.menuOpen;
 }
 
+// A estrela da barra: cheia e na cor principal quando a página já é favorita.
+function showStar(web, on) {
+  starBtn.disabled = !web;
+  starBtn.classList.toggle('on', on);
+  starBtn.setAttribute('aria-pressed', String(on));
+  starBtn.textContent = on ? '\u2605' : '\u2606';
+  const label = t(on ? 'Remover dos favoritos (Ctrl+D)' : 'Adicionar aos favoritos (Ctrl+D)');
+  starBtn.title = label;
+  starBtn.setAttribute('aria-label', label.replace(' (Ctrl+D)', ''));
+}
+
 function render(state) {
   current = state;
 
@@ -125,6 +137,7 @@ function render(state) {
     for (const t of state.tabs) tabsEl.insertBefore(makeTab(t), newTabBtn);
 
     const web = state.activeKind === 'web';
+    showStar(web, state.bookmarked === true);
     backBtn.disabled = !web || !state.canGoBack;
     forwardBtn.disabled = !web || !state.canGoForward;
 
@@ -211,6 +224,7 @@ function showPanel(name) {
   if (name === 'extensions') loadExtensions();
   if (name === 'adblock') loadAdblock();
   if (name === 'passwords') loadPasswords();
+  if (name === 'bookmarks') loadBookmarks();
 }
 
 // Ignora maiúsculas e acentos: "memoria" acha "Memória".
@@ -427,6 +441,7 @@ function renderSuggest() {
       const host = document.createElement('span');
       host.className = 'sg-host';
       host.textContent = s.host;
+      if (s.star) row.classList.add('star');
       const title = document.createElement('span');
       title.className = 'sg-title hint';
       title.textContent = s.title === s.host ? '' : s.title;
@@ -468,6 +483,7 @@ newTabBtn.addEventListener('click', () => window.evl.newTab());
 backBtn.addEventListener('click', () => window.evl.back());
 forwardBtn.addEventListener('click', () => window.evl.forward());
 reloadBtn.addEventListener('click', () => window.evl.reload());
+starBtn.addEventListener('click', () => window.evl.toggleBookmark());
 memEl.addEventListener('click', () => window.evl.setMenu(!current?.menuOpen));
 zoomOutBtn.addEventListener('click', () => window.evl.zoom('out'));
 zoomInBtn.addEventListener('click', () => window.evl.zoom('in'));

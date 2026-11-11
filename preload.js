@@ -31,6 +31,10 @@ contextBridge.exposeInMainWorld('evl', {
   cookiesList: () => ipcRenderer.invoke('cookies:list'),
   cookiesRemove: (domain) => ipcRenderer.invoke('cookies:remove', domain === null ? null : String(domain)),
   cookiesImport: (from) => ipcRenderer.invoke('cookies:import', String(from)),
+  toggleBookmark: () => ipcRenderer.send('bookmarks:toggle'),
+  bookmarksList: () => ipcRenderer.invoke('bookmarks:list'),
+  bookmarksOpen: (url) => ipcRenderer.send('bookmarks:open', String(url)),
+  bookmarksRemove: (id) => ipcRenderer.invoke('bookmarks:remove', String(id)),
   passwordsList: () => ipcRenderer.invoke('passwords:list'),
   passwordsAdd: (e) =>
     ipcRenderer.invoke('passwords:add', {

@@ -169,6 +169,12 @@ const WORDS = [
   ['O cofre do sistema não está disponível.', 'The system vault is not available.', 'La bóveda del sistema no está disponible.'],
   ['O arquivo está vazio.', 'The file is empty.', 'El archivo está vacío.'],
   ['Não parece um CSV de senhas do Firefox ou do Chrome.', 'Does not look like a Firefox or Chrome password CSV.', 'No parece un CSV de contraseñas de Firefox o Chrome.'],
+  ['Favoritos', 'Bookmarks', 'Favoritos'],
+  ['Adicionar aos favoritos (Ctrl+D)', 'Add to bookmarks (Ctrl+D)', 'Añadir a favoritos (Ctrl+D)'],
+  ['Remover dos favoritos (Ctrl+D)', 'Remove from bookmarks (Ctrl+D)', 'Quitar de favoritos (Ctrl+D)'],
+  ['Adicionar aos favoritos', 'Add to bookmarks', 'Añadir a favoritos'],
+  ['Clique na estrela da barra de endereço (ou Ctrl+D) para guardar a página. Os favoritos aparecem com estrela nas sugestões da barra.', 'Click the star in the address bar (or Ctrl+D) to save the page. Bookmarks appear with a star in the address bar suggestions.', 'Haz clic en la estrella de la barra de direcciones (o Ctrl+D) para guardar la página. Los favoritos aparecen con estrella en las sugerencias de la barra.'],
+  ['Nenhum favorito ainda.', 'No bookmarks yet.', 'Aún no hay favoritos.'],
   ['Remover do histórico', 'Remove from history', 'Quitar del historial'],
 ];
 const DICT = new Map(WORDS.map(([pt, en, es]) => [pt, { en, es }]));

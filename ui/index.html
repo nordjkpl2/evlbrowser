@@ -20,6 +20,7 @@
       <button id="reload" class="icon-btn" type="button" title="Recarregar (Ctrl+R)" aria-label="Recarregar">&#8635;</button>
       <input id="address" type="text" spellcheck="false" autocomplete="off"
              aria-label="Endereço ou busca" placeholder="Digite um endereço ou faça uma busca">
+      <button id="star" class="icon-btn" type="button" title="Adicionar aos favoritos (Ctrl+D)" aria-label="Adicionar aos favoritos" aria-pressed="false">&#9734;</button>
       <button id="mem" type="button" title="Memória do Evl Browser. Clique para abrir o menu"
               aria-label="Menu do Evl: memória, zoom e configurações"
               aria-haspopup="menu" aria-expanded="false" aria-controls="menu">-- MB</button>
@@ -122,6 +123,13 @@
           <path d="M6 2h4v3h3v4h-3v3H6V9H3V5h3z"/>
         </svg>
         <span>Extensões</span>
+      </button>
+      <button class="nav-item" type="button" data-panel="bookmarks">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6 4.2 13.6l.7-4.3-3.1-3 4.3-.6z"/>
+        </svg>
+        <span>Favoritos</span>
       </button>
       <button class="nav-item" type="button" data-panel="passwords">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -245,6 +253,15 @@
           <p id="c-empty" class="hint" hidden>Nenhum cookie salvo ainda.</p>
           <ul id="c-list"></ul>
         </section>
+        <section class="card" data-panel="bookmarks">
+          <div class="card-head">
+            <h3>Favoritos <span id="b-total" class="hint"></span></h3>
+          </div>
+          <p class="hint">Clique na estrela da barra de endereço (ou Ctrl+D) para guardar a página. Os favoritos aparecem com estrela nas sugestões da barra.</p>
+          <p id="b-empty" class="hint" hidden>Nenhum favorito ainda.</p>
+          <ul id="b-list"></ul>
+        </section>
+
         <section class="card" data-panel="passwords">
           <div class="card-head">
             <h3>Senhas <span id="p-total" class="hint"></span></h3>
@@ -323,6 +340,7 @@
   <script src="settings_extensions.js"></script>
   <script src="settings_adblock.js"></script>
   <script src="settings_passwords.js"></script>
+  <script src="settings_bookmarks.js"></script>
   <script src="ui_boot.js"></script>
 </body>
 </html>

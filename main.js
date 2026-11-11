@@ -24,6 +24,8 @@ const { validateEngine, normalizeList, uniqueId } = require('./src/search_engine
 const { registerCookiesIpc } = require('./src/ipc/cookies_ipc');
 const { registerExtensionsIpc } = require('./src/ipc/extension_ipc');
 const { createExtensions } = require('./src/extension_manager');
+const { createBookmarks } = require('./src/bookmarks_store');
+const { registerBookmarksIpc } = require('./src/ipc/bookmarks_ipc');
 const { createVault } = require('./src/passwords_vault');
 const { registerPasswordIpc } = require('./src/ipc/password_ipc');
 const { createAdblock } = require('./src/adblock_engine');
@@ -48,6 +50,8 @@ let store = null; // preferências salvas (tema...)
 let sessionStore = null; // abas abertas, para reabrir ao iniciar (session.json)
 let history = null; // páginas visitadas (history.json)
 let sessionTimer = null;
+let bookmarks = null; // favoritos (src/bookmarks_store.js)
+let toggleBookmark = () => {}; // Ctrl+D e a estrela
 let vault = null; // cofre de senhas (src/passwords_vault.js)
 let extensions = null; // extensões do Chromium (src/extension_manager.js)
 let lastPreconnect = ''; // último site que já abrimos a conexão
@@ -88,10 +92,16 @@ function onTabsChanged() {
   setTimeout(flushState, 30);
 }
 
+// Página web da aba ativa ({ url, title }), ou null (aba em branco/Configurações).
+function activePage() {
+  const tab = tabs?.tabs.get(tabs.activeId);
+  return tab && tab.kind === 'web' && tab.url ? { url: tab.url, title: tab.title } : null;
+}
+
 function flushState() {
   statePending = false;
   if (!tabs) return;
-  send('state', tabs.snapshot());
+  send('state', { ...tabs.snapshot(), bookmarked: !!activePage() && bookmarks.has(activePage().url) });
   sampleMemory(false);
   policy?.refresh();
   scheduleSession();
@@ -153,6 +163,10 @@ function onShortcut(input) {
   }
   if (input.shift && key === 't') {
     tabs.reopenClosed();
+    return true;
+  }
+  if (key === 'd') {
+    toggleBookmark();
     return true;
   }
   if (key === 'h') {
@@ -332,7 +346,9 @@ ipcMain.on('lang:set', (event, lang) => {
 ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
 ipcMain.handle('history:suggest', (event, q) => {
   if (!fromUi(event) || typeof q !== 'string') return [];
-  const list = history.suggest(q.slice(0, 200));
+  // favoritos (com estrela) vêm primeiro, depois os sites do histórico
+  const stars = bookmarks.suggest(q.slice(0, 200), 3);
+  const list = [...stars, ...history.suggest(q.slice(0, 200)).filter((h) => !stars.some((s) => s.url === h.url))].slice(0, 6);
   // Navegar mais rápido: enquanto você digita, já abre a conexão com o 1º site sugerido.
   const top = list[0]?.url;
   if (top && top !== lastPreconnect && top.startsWith('https://')) {
@@ -412,6 +428,14 @@ ipcMain.on('accent:set', (event, color) => {
 });
 ipcMain.handle('settings:report', (event) => (fromUi(event) ? settingsReport() : null));
 
+toggleBookmark = registerBookmarksIpc({
+  ipcMain,
+  fromUi,
+  getBookmarks: () => bookmarks,
+  getActivePage: activePage,
+  openUrl: (url) => tabs.create(url),
+  refresh: () => onTabsChanged(),
+}).toggleActive;
 registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: () => vault, getWindow: () => win });
 registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
 registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win });
@@ -423,6 +447,7 @@ app.whenReady().then(() => {
 
   store = createStore(path.join(app.getPath('userData'), 'settings.json'));
   sessionStore = createStore(path.join(app.getPath('userData'), 'session.json'), {});
+  bookmarks = createBookmarks(path.join(app.getPath('userData'), 'bookmarks.json'));
   history = createHistory(path.join(app.getPath('userData'), 'history.json'));
   loadEngines();
   const savedTheme = store.get('theme');

@@ -667,3 +667,15 @@ tbody tr:last-child td { border-bottom: 0; }
 .p-user { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-secret { font-size: 12px; overflow-wrap: anywhere; }
 #p-status { margin: 8px 0 0; }
+
+/* favoritos */
+#star { flex: none; font-size: 16px; }
+#star.on { color: var(--accent); }
+.sg-item.star .sg-host::before { content: '\2605'; margin-right: 6px; color: var(--accent); }
+.b-row { display: flex; align-items: center; gap: 4px; }
+.b-row .h-item { flex: 1; min-width: 0; }
+.b-star { color: var(--accent); }
+#b-list { margin: 8px 0 0; padding: 0; list-style: none; }
+.b-item { grid-template-columns: auto 1fr; text-align: left; }
+.b-item .b-star { grid-row: 1 / span 2; align-self: center; }
+.b-item .h-url { grid-column: 2; }
