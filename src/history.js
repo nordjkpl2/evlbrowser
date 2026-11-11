@@ -100,6 +100,15 @@ function createHistory(file, { max = 500, delay = 3000 } = {}) {
       }
       return [...starts, ...other].slice(0, n).map(({ url, host, title }) => ({ url, host, title }));
     },
+    // Remove um site (pelo nome, ex.: "youtube.com") da lista.
+    remove(host) {
+      const list = load();
+      const i = list.findIndex((x) => x.host === host);
+      if (i === -1) return false;
+      list.splice(i, 1);
+      later();
+      return true;
+    },
     list: () => load().slice(),
     clear() {
       items = [];

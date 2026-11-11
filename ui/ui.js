@@ -27,20 +27,21 @@ let lastKey = ''; // para pular redesenho quando nada mudou
 
 // ---------- barra de abas ----------
 
-function makeTab(t) {
+function makeTab(tab) {
   const el = document.createElement('div');
-  el.className = `tab ${t.state}${t.loading ? ' loading' : ''}`;
+  el.className = `tab ${tab.state}${tab.loading ? ' loading' : ''}`;
   el.setAttribute('role', 'tab');
-  el.setAttribute('aria-selected', String(t.state === 'active'));
+  el.setAttribute('aria-selected', String(tab.state === 'active'));
   el.tabIndex = 0;
-  el.title = t.title; // textContent/title: nunca innerHTML com texto de site
+  const label = tab.kind === 'settings' ? t('Configurações') : tab.kind === 'blank' ? t('Nova aba') : tab.title;
+  el.title = label; // textContent/title: nunca innerHTML com texto de site
 
-  if (t.favicon) {
+  if (tab.favicon) {
     const img = document.createElement('img');
     img.className = 'favicon';
     img.referrerPolicy = 'no-referrer'; // não conta ao site de onde o ícone foi pedido
     img.decoding = 'async';
-    img.src = t.favicon;
+    img.src = tab.favicon;
     img.alt = '';
     el.append(img);
   } else {
@@ -51,31 +52,31 @@ function makeTab(t) {
 
   const title = document.createElement('span');
   title.className = 'title';
-  title.textContent = t.title;
+  title.textContent = label;
   el.append(title);
 
   const close = document.createElement('button');
   close.className = 'close';
   close.type = 'button';
   close.textContent = '×';
-  close.title = 'Fechar aba (Ctrl+W)';
-  close.setAttribute('aria-label', 'Fechar aba');
+  close.title = t('Fechar aba (Ctrl+W)');
+  close.setAttribute('aria-label', t('Fechar aba'));
   close.addEventListener('click', (event) => {
     event.stopPropagation();
-    window.evl.closeTab(t.id);
+    window.evl.closeTab(tab.id);
   });
   el.append(close);
 
-  el.addEventListener('click', () => window.evl.activateTab(t.id));
+  el.addEventListener('click', () => window.evl.activateTab(tab.id));
   el.addEventListener('keydown', (event) => {
     if (event.target === el && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
-      window.evl.activateTab(t.id);
+      window.evl.activateTab(tab.id);
     }
   });
   // clique com o botão do meio fecha a aba
   el.addEventListener('auxclick', (event) => {
-    if (event.button === 1) window.evl.closeTab(t.id);
+    if (event.button === 1) window.evl.closeTab(tab.id);
   });
   return el;
 }
@@ -206,6 +207,7 @@ function showPanel(name) {
   for (const card of cards) card.hidden = card.dataset.panel !== name;
   if (name === 'history') loadHistory();
   if (name === 'cookies') loadCookies();
+  if (name === 'extensions') loadExtensions();
 }
 
 // Ignora maiúsculas e acentos: "memoria" acha "Memória".
@@ -219,7 +221,7 @@ function searchSettings() {
     return;
   }
   navItems.forEach((item) => item.removeAttribute('aria-current'));
-  panelTitle.textContent = 'Resultados da busca';
+  panelTitle.textContent = t('Resultados da busca');
   let found = 0;
   for (const card of cards) {
     // Procura no texto que o cartão mostra (títulos, descrições, valores) e nos rótulos
@@ -298,214 +300,49 @@ async function loadHistory() {
     url.textContent = item.title; // título da última página vista neste site
     const time = document.createElement('span');
     time.className = 'h-time hint';
-    time.textContent = new Date(item.time).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    time.textContent = new Date(item.time).toLocaleString(LOCALES[lang], { dateStyle: 'short', timeStyle: 'short' });
     btn.append(title, url, time);
     btn.addEventListener('click', () => window.evl.historyOpen(item.url));
+    btn.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      openCtx(event.clientX, event.clientY, item.host, li);
+    });
     li.append(btn);
     return li;
   });
 }
 
+// Botão direito num site do histórico: "Remover do histórico".
+const ctxEl = $('ctx');
+let ctxTarget = null;
+
+function openCtx(x, y, host, li) {
+  ctxTarget = { host, li };
+  ctxEl.style.left = `${Math.min(x, innerWidth - 200)}px`;
+  ctxEl.style.top = `${Math.min(y, innerHeight - 50)}px`;
+  ctxEl.hidden = false;
+}
+function closeCtx() {
+  ctxEl.hidden = true;
+  ctxTarget = null;
+}
+$('ctx-del').addEventListener('click', () => {
+  if (!ctxTarget) return;
+  window.evl.historyRemove(ctxTarget.host);
+  ctxTarget.li.remove();
+  hEmpty.hidden = hList.children.length > 0;
+  closeCtx();
+});
+document.addEventListener('mousedown', (event) => {
+  if (!ctxEl.hidden && !ctxEl.contains(event.target)) closeCtx();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeCtx();
+});
+
 $('h-clear').addEventListener('click', async () => {
   window.evl.historyClear();
   await loadHistory();
-});
-
-// ---------- cookies ----------
-// A lista mostra só o site e os nomes (nunca os valores). Só consulta com a categoria aberta.
-
-const cList = $('c-list');
-const cEmpty = $('c-empty');
-const cTotal = $('c-total');
-const cStatus = $('c-status');
-const cImport = $('c-import');
-const cMenu = $('c-menu');
-
-async function loadCookies() {
-  const data = await window.evl.cookiesList();
-  if (!data) return;
-  cTotal.textContent = data.total ? `· ${data.total}` : '';
-  cEmpty.hidden = data.total > 0;
-  lazyList(cList, data.domains, (d) => {
-    const li = document.createElement('li');
-    const details = document.createElement('details');
-    const summary = document.createElement('summary');
-    const domain = document.createElement('span');
-    domain.textContent = d.domain;
-    const count = document.createElement('span');
-    count.className = 'hint';
-    count.textContent = String(d.count);
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'text-btn c-del';
-    del.textContent = 'Apagar';
-    del.title = `Apagar os cookies de ${d.domain}`;
-    del.addEventListener('click', async (event) => {
-      event.preventDefault(); // não abre nem fecha a linha
-      event.stopPropagation();
-      reportRemoved(await window.evl.cookiesRemove(d.domain), d.domain);
-    });
-    summary.append(domain, count, del);
-    const names = document.createElement('div');
-    names.className = 'c-names mono hint';
-    // os nomes só são escritos quando você abre o site
-    details.addEventListener('toggle', () => {
-      if (details.open && !names.textContent) {
-        names.textContent = d.names.join('  ·  ') + (d.count > d.names.length ? '  ·  …' : '');
-      }
-    });
-    details.append(summary, names);
-    li.append(details);
-    return li;
-  });
-}
-
-function setImportMenu(open) {
-  cMenu.hidden = !open;
-  cImport.setAttribute('aria-expanded', String(open));
-}
-
-cImport.addEventListener('click', () => setImportMenu(cMenu.hidden));
-document.addEventListener('mousedown', (event) => {
-  if (!cMenu.hidden && !cMenu.contains(event.target) && event.target !== cImport) setImportMenu(false);
-});
-cMenu.querySelectorAll('button').forEach((btn) =>
-  btn.addEventListener('click', async () => {
-    setImportMenu(false);
-    const label = { firefox: 'Firefox', chromium: 'Chromium', json: 'Arquivo' }[btn.dataset.from];
-    cStatus.hidden = false;
-    cStatus.textContent = 'Importando…';
-    cImport.disabled = true;
-    const r = await window.evl.cookiesImport(btn.dataset.from);
-    cImport.disabled = false;
-    if (r?.canceled) {
-      cStatus.hidden = true; // fechou a janela de escolher arquivo
-      return;
-    }
-    if (!r) cStatus.textContent = 'Não foi possível importar agora.';
-    else if (!r.ok) cStatus.textContent = r.message;
-    else {
-      const parts = [`${r.imported} importados`];
-      if (r.skipped) parts.push(`${r.skipped} ignorados (vencidos ou recusados)`);
-      if (r.encrypted) parts.push(`${r.encrypted} protegidos pelo navegador de origem (não dá para ler)`);
-      cStatus.textContent = `${label}: ${parts.join(', ')}.`;
-    }
-    loadCookies();
-  })
-);
-
-// Apagar: um site (botão "Apagar" da linha) ou todos (pede um segundo clique para confirmar).
-const cClear = $('c-clear');
-let armedTimer = null;
-
-async function reportRemoved(result, domain) {
-  cStatus.hidden = false;
-  cStatus.textContent = result
-    ? `${result.removed} cookies apagados${domain ? ` de ${domain}` : ''}.`
-    : 'Não foi possível apagar agora.';
-  await loadCookies();
-}
-
-function disarmClear() {
-  clearTimeout(armedTimer);
-  delete cClear.dataset.armed;
-  cClear.textContent = 'Apagar todos';
-}
-
-cClear.addEventListener('click', async () => {
-  if (!cClear.dataset.armed) {
-    cClear.dataset.armed = '1';
-    cClear.textContent = 'Confirmar: apagar todos';
-    armedTimer = setTimeout(disarmClear, 4000); // desiste sozinho
-    return;
-  }
-  disarmClear();
-  reportRemoved(await window.evl.cookiesRemove(null), '');
-});
-
-// ---------- motores de busca ----------
-const eList = $('e-list');
-const eForm = $('e-form');
-const eName = $('e-name');
-const eUrl = $('e-url');
-const eError = $('e-error');
-let engines = [];
-let editingId = null; // null = adicionando um novo
-
-function textButton(label, onClick) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'text-btn';
-  btn.textContent = label;
-  btn.addEventListener('click', onClick);
-  return btn;
-}
-
-function showEngines(data) {
-  if (!data) return;
-  engines = data.engines;
-  eList.replaceChildren(
-    ...engines.map((e) => {
-      const li = document.createElement('li');
-      li.className = 'e-row';
-      const pick = document.createElement('button');
-      pick.type = 'button';
-      pick.className = 'e-pick';
-      pick.setAttribute('role', 'radio');
-      pick.setAttribute('aria-checked', String(e.id === data.selected));
-      const dot = document.createElement('span');
-      dot.className = 'e-dot';
-      dot.setAttribute('aria-hidden', 'true');
-      const name = document.createElement('span');
-      name.className = 'e-name';
-      name.textContent = e.name;
-      const url = document.createElement('span');
-      url.className = 'e-url mono hint';
-      url.textContent = e.url;
-      pick.append(dot, name, url);
-      pick.addEventListener('click', async () => showEngines(await window.evl.enginesSelect(e.id)));
-      const del = textButton('Apagar', async () => showEngines(await window.evl.enginesRemove(e.id)));
-      del.disabled = engines.length <= 1; // sempre sobra um
-      li.append(pick, textButton('Editar', () => openEngineForm(e)), del);
-      return li;
-    })
-  );
-}
-
-async function loadEngines() {
-  showEngines(await window.evl.enginesList());
-}
-
-function openEngineForm(engine) {
-  editingId = engine?.id ?? null;
-  eName.value = engine?.name ?? '';
-  eUrl.value = engine?.url ?? '';
-  eError.hidden = true;
-  eForm.hidden = false;
-  eName.focus();
-}
-
-function closeEngineForm() {
-  eForm.hidden = true;
-  editingId = null;
-}
-
-$('e-add').addEventListener('click', () => openEngineForm(null));
-$('e-cancel').addEventListener('click', closeEngineForm);
-eForm.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeEngineForm();
-});
-eForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const r = await window.evl.enginesSave({ id: editingId, name: eName.value, url: eUrl.value });
-  if (!r) return;
-  if (!r.ok) {
-    eError.textContent = r.error;
-    eError.hidden = false;
-    return;
-  }
-  showEngines(r);
-  closeEngineForm();
 });
 
 // ---------- aparência: Claro / Escuro ----------
@@ -659,15 +496,3 @@ addressEl.addEventListener('keydown', (event) => {
     renderSuggest();
   }
 });
-
-// ---------- eventos do main.js ----------
-
-window.evl.onState(render);
-window.evl.onMemory((mb) => {
-  memEl.textContent = `${mb} MB`;
-});
-window.evl.onFocusAddress(() => addressEl.focus());
-window.evl.onAccent(applyAccent);
-window.evl.onPanel(showPanel); // Ctrl+H / menu: abre direto no Histórico
-
-window.evl.ready(); // pede o primeiro estado

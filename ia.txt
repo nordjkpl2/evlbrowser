@@ -7,7 +7,7 @@
 4. Aba tocando áudio e aba ativa nunca são descartadas.
 5. O medidor no canto direito mostra a RAM total do app para medirmos de verdade.
 
-Ajuste os números em `src/config.js`.
+Ajuste os números em `src/app_config.js`.
 
 ## Segurança (ponto de partida)
 
@@ -35,10 +35,10 @@ Ajuste os números em `src/config.js`.
 ```
 main.js          inicia o app, cria a janela, recebe mensagens da interface
 preload.js       expõe a pequena API window.evl para a interface
-src/config.js    todas as constantes (tempos, orçamento de memória, buscador)
-src/tabs.js      abas: criar, trocar, fechar, dormir, descartar
-src/memory.js    política de memória + medidor de RAM
-src/url.js       transforma o que foi digitado em URL segura (testável sem Electron)
+src/app_config.js    todas as constantes (tempos, orçamento de memória, buscador)
+src/tabs_manager.js      abas: criar, trocar, fechar, dormir, descartar
+src/memory_policy.js    política de memória + medidor de RAM
+src/url_address_parser.js       transforma o que foi digitado em URL segura (testável sem Electron)
 ui/              barra de abas e endereço (HTML/CSS/JS puros, tema Evl em style.css)
 test/            testes (npm test)
 ```

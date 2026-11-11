@@ -27,7 +27,7 @@
   </header>
 
   <!-- Submenu do contador de memória. Fica por cima da página (a interface cresce
-       enquanto ele está aberto; ver setMenu em src/tabs.js). -->
+       enquanto ele está aberto; ver setMenu em src/tabs_manager.js). -->
   <div id="menu" role="menu" aria-label="Menu do Evl" hidden>
     <div class="menu-row">
       <span id="zoom-label" class="menu-label">Zoom</span>
@@ -60,7 +60,23 @@
 
   <main id="page-settings" class="screen" hidden aria-labelledby="settings-title">
     <nav class="side" aria-label="Categorias de configurações">
-      <h1 id="settings-title">Configurações</h1>
+      <div class="side-head">
+        <h1 id="settings-title">Configurações</h1>
+        <div class="import">
+            <button id="lang-btn" class="white-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Idioma / Language"></button>
+            <div id="lang-menu" class="pop" role="menu" hidden>
+              <button type="button" role="menuitemradio" data-lang="pt" aria-checked="true">
+                <svg viewBox="0 0 20 14" width="20" height="14" aria-hidden="true"><rect width="20" height="14" fill="#009b3a"/><path d="M10 2 18 7 10 12 2 7z" fill="#fedf00"/><circle cx="10" cy="7" r="3" fill="#002776"/></svg>Português (BR)
+              </button>
+              <button type="button" role="menuitemradio" data-lang="en" aria-checked="false">
+                <svg viewBox="0 0 20 14" width="20" height="14" aria-hidden="true"><rect width="20" height="14" fill="#fff"/><path d="M0 1h20M0 3.8h20M0 6.6h20M0 9.4h20M0 12.2h20" stroke="#b22234" stroke-width="1.4"/><rect width="9" height="7.6" fill="#3c3b6e"/></svg>English (US)
+              </button>
+              <button type="button" role="menuitemradio" data-lang="es" aria-checked="false">
+                <svg viewBox="0 0 20 14" width="20" height="14" aria-hidden="true"><rect width="20" height="14" fill="#c60b1e"/><rect y="3.5" width="20" height="7" fill="#ffc400"/></svg>Español (ES)
+              </button>
+            </div>
+          </div>
+      </div>
       <button class="nav-item" type="button" data-panel="search">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
              stroke-linecap="round" aria-hidden="true">
@@ -100,6 +116,20 @@
         </svg>
         <span>Cookies</span>
       </button>
+      <button class="nav-item" type="button" data-panel="extensions">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 2h4v3h3v4h-3v3H6V9H3V5h3z"/>
+        </svg>
+        <span>Extensões</span>
+      </button>
+      <button class="nav-item" type="button" data-panel="adblock">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 1.5 13.5 4v4c0 3-2.3 5.2-5.5 6.5C4.8 13.2 2.5 11 2.5 8V4z"/><path d="M5.5 8.2 7.2 9.8 10.5 6.5"/>
+        </svg>
+        <span>Anúncios</span>
+      </button>
     </nav>
 
     <div class="content">
@@ -107,6 +137,9 @@
         <input id="s-search" type="search" spellcheck="false" autocomplete="off"
                aria-label="Procurar em configurações" placeholder="Procurar em configurações">
         <h2 id="panel-title">Pesquisa</h2>
+        <div id="ctx" class="pop" role="menu" hidden>
+          <button id="ctx-del" type="button" role="menuitem">Remover do histórico</button>
+        </div>
         <p id="no-results" class="hint" hidden>Nenhuma configuração encontrada.</p>
 
         <section class="card" data-panel="search">
@@ -205,12 +238,51 @@
           <p id="c-empty" class="hint" hidden>Nenhum cookie salvo ainda.</p>
           <ul id="c-list"></ul>
         </section>
+        <section class="card" data-panel="adblock">
+          <div class="card-head">
+            <h3>Bloqueador de anúncios</h3>
+            <button id="ab-switch" class="switch" type="button" role="switch" aria-checked="true" aria-label="Bloqueador de anúncios"></button>
+          </div>
+          <p class="hint">Bloqueia anúncios e rastreadores de terceiros antes de baixarem, o que também economiza dados e memória.</p>
+          <p class="hint"><span id="ab-count">0</span> <span>bloqueados nesta sessão</span></p>
+          <p class="hint">Não bloqueia anúncios dentro de vídeos (por exemplo, os do YouTube).</p>
+        </section>
+
+        <section class="card" data-panel="extensions">
+          <div class="card-head">
+            <h3>Extensões <span id="x-total" class="hint"></span></h3>
+            <div class="head-actions">
+              <div class="import">
+                <button id="x-add" class="white-btn" type="button" aria-haspopup="menu" aria-expanded="false">Instalar &#9662;</button>
+                <div id="x-menu" class="pop" role="menu" hidden>
+                  <button type="button" role="menuitem" data-kind="folder">Pasta descompactada</button>
+                  <button type="button" role="menuitem" data-kind="file">Arquivo .zip ou .crx</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <form id="x-store" class="x-store">
+            <input id="x-id" type="text" spellcheck="false" autocomplete="off"
+                   aria-label="ID ou link da Chrome Web Store" placeholder="ID ou link da Chrome Web Store">
+            <button class="white-btn" type="submit">Baixar</button>
+          </form>
+          <p class="hint">Compatibilidade parcial: scripts de página e parte das APIs funcionam; botão e popup na barra não existem ainda.</p>
+          <p id="x-status" class="hint" role="status" hidden></p>
+          <p id="x-empty" class="hint" hidden>Nenhuma extensão instalada.</p>
+          <ul id="x-list"></ul>
+        </section>
       </div>
     </div>
 
     <footer class="copyright">&copy; Evl Browser</footer>
   </main>
 
-  <script src="ui.js"></script>
+  <script src="ui_i18n_languages.js"></script>
+  <script src="ui_main.js"></script>
+  <script src="settings_cookies.js"></script>
+  <script src="settings_search_engines.js"></script>
+  <script src="settings_extensions.js"></script>
+  <script src="settings_adblock.js"></script>
+  <script src="ui_boot.js"></script>
 </body>
 </html>

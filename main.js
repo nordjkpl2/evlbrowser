@@ -11,20 +11,24 @@ const {
   nativeTheme,
   clipboard,
   dialog,
+  net,
 } = require('electron');
-const fs = require('fs');
 const path = require('path');
-const cfg = require('./src/config');
+const cfg = require('./src/app_config');
 const { UI_HEIGHT } = cfg;
-const { createStore } = require('./src/settings');
-const { createHistory } = require('./src/history');
-const { setSearchUrl } = require('./src/url');
-const { validateEngine, normalizeList, uniqueId } = require('./src/engines');
-const { importCookies, importCookiesFromJson } = require('./src/cookies-import');
-const { TabManager } = require('./src/tabs');
-const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory');
+const { createStore } = require('./src/settings_store');
+const { createHistory } = require('./src/history_store');
+const { setSearchUrl } = require('./src/url_address_parser');
+const { validateEngine, normalizeList, uniqueId } = require('./src/search_engines');
+const { registerCookiesIpc } = require('./src/ipc/cookies_ipc');
+const { registerExtensionsIpc } = require('./src/ipc/extension_ipc');
+const { createExtensions } = require('./src/extension_manager');
+const { createAdblock } = require('./src/adblock_engine');
+const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
+const { TabManager } = require('./src/tabs_manager');
+const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/memory_policy');
 
-// Chromium só com o que o navegador precisa (listas em src/config.js).
+// Chromium só com o que o navegador precisa (listas em src/app_config.js).
 // Precisa vir ANTES do app ficar pronto.
 for (const name of [...cfg.CHROMIUM_OFF_SWITCHES, ...cfg.CHROMIUM_FAST_SWITCHES]) app.commandLine.appendSwitch(name);
 // Para medir a GPU: `set EVL_NO_GPU=1 && npm start` roda sem aceleração de hardware.
@@ -41,7 +45,8 @@ let store = null; // preferências salvas (tema...)
 let sessionStore = null; // abas abertas, para reabrir ao iniciar (session.json)
 let history = null; // páginas visitadas (history.json)
 let sessionTimer = null;
-let importing = false; // importação de cookies em andamento
+let extensions = null; // extensões do Chromium (src/extension_manager.js)
+let lastPreconnect = ''; // último site que já abrimos a conexão
 let engines = []; // motores de busca [{ id, name, url }]
 let engineId = ''; // o padrão
 let lastSession = '';
@@ -54,6 +59,13 @@ const WINDOW_BG = { dark: '#0b0b0d', light: '#f9f9fb' };
 // Permissões que um site pode usar por enquanto. Todo o resto é negado até
 // termos uma tela de pedido de permissão (como o Firefox).
 const ALLOWED_PERMISSIONS = new Set(['fullscreen', 'clipboard-sanitized-write']);
+
+// Textos do menu nativo (botão direito em campos de texto) no idioma escolhido.
+const NATIVE = {
+  en: { Desfazer: 'Undo', Refazer: 'Redo', Cortar: 'Cut', Copiar: 'Copy', Colar: 'Paste', 'Colar e abrir': 'Paste and go', Excluir: 'Delete', 'Selecionar tudo': 'Select all' },
+  es: { Desfazer: 'Deshacer', Refazer: 'Rehacer', Cortar: 'Cortar', Copiar: 'Copiar', Colar: 'Pegar', 'Colar e abrir': 'Pegar e ir', Excluir: 'Eliminar', 'Selecionar tudo': 'Seleccionar todo' },
+};
+const tr = (pt) => NATIVE[store?.get('lang')]?.[pt] ?? pt;
 
 function send(channel, payload) {
   if (ui && !ui.webContents.isDestroyed()) ui.webContents.send(channel, payload);
@@ -213,17 +225,17 @@ function createWindow() {
     if (!params.isEditable) return;
     const f = params.editFlags;
     const items = [
-      { role: 'undo', label: 'Desfazer', enabled: f.canUndo },
-      { role: 'redo', label: 'Refazer', enabled: f.canRedo },
+      { role: 'undo', label: tr('Desfazer'), enabled: f.canUndo },
+      { role: 'redo', label: tr('Refazer'), enabled: f.canRedo },
       { type: 'separator' },
-      { role: 'cut', label: 'Cortar', enabled: f.canCut },
-      { role: 'copy', label: 'Copiar', enabled: f.canCopy },
-      { role: 'paste', label: 'Colar', enabled: f.canPaste },
+      { role: 'cut', label: tr('Cortar'), enabled: f.canCut },
+      { role: 'copy', label: tr('Copiar'), enabled: f.canCopy },
+      { role: 'paste', label: tr('Colar'), enabled: f.canPaste },
     ];
     if (params.y < UI_HEIGHT) {
       // só na barra de endereço (a barra do topo tem UI_HEIGHT px)
       items.push({
-        label: 'Colar e abrir',
+        label: tr('Colar e abrir'),
         enabled: f.canPaste,
         click: () => {
           const text = clipboard.readText().trim();
@@ -232,8 +244,8 @@ function createWindow() {
       });
     }
     items.push(
-      { role: 'delete', label: 'Excluir', enabled: f.canDelete },
-      { role: 'selectAll', label: 'Selecionar tudo', enabled: f.canSelectAll }
+      { role: 'delete', label: tr('Excluir'), enabled: f.canDelete },
+      { role: 'selectAll', label: tr('Selecionar tudo'), enabled: f.canSelectAll }
     );
     Menu.buildFromTemplate(items).popup({ window: win });
   });
@@ -280,6 +292,7 @@ const isId = (id) => Number.isInteger(id);
 
 ipcMain.on('ui:ready', (event) => {
   if (!fromUi(event)) return;
+  send('lang', store.get('lang') ?? 'pt');
   send('accent', store.get('accent') ?? null);
   send('state', tabs.snapshot());
   sampleMemory(true);
@@ -306,10 +319,24 @@ ipcMain.handle('history:list', (event) => (fromUi(event) ? history.list() : []))
 ipcMain.on('history:open', (event, url) => {
   if (fromUi(event) && typeof url === 'string') tabs.create(url);
 });
+ipcMain.on('history:remove', (event, host) => {
+  if (fromUi(event) && typeof host === 'string' && host.length <= 253) history.remove(host);
+});
+ipcMain.on('lang:set', (event, lang) => {
+  if (fromUi(event) && ['pt', 'en', 'es'].includes(lang)) store.set('lang', lang);
+});
 ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
-ipcMain.handle('history:suggest', (event, q) =>
-  fromUi(event) && typeof q === 'string' ? history.suggest(q.slice(0, 200)) : []
-);
+ipcMain.handle('history:suggest', (event, q) => {
+  if (!fromUi(event) || typeof q !== 'string') return [];
+  const list = history.suggest(q.slice(0, 200));
+  // Navegar mais rápido: enquanto você digita, já abre a conexão com o 1º site sugerido.
+  const top = list[0]?.url;
+  if (top && top !== lastPreconnect && top.startsWith('https://')) {
+    lastPreconnect = top;
+    session.defaultSession.preconnect({ url: top, numSockets: 1 });
+  }
+  return list;
+});
 // Motores de busca: lista salva em settings.json; o escolhido vale na hora para a barra de endereço.
 function engineState() {
   return { engines, selected: engineId };
@@ -359,63 +386,6 @@ ipcMain.handle('engines:remove', (event, id) => {
   return engineState();
 });
 
-// Cookies: a lista nunca leva o valor (só domínio e nome); a importação roda aqui no main.
-ipcMain.handle('cookies:list', async (event) => {
-  if (!fromUi(event)) return null;
-  const all = await session.defaultSession.cookies.get({});
-  const byDomain = new Map();
-  for (const c of all) {
-    const domain = c.domain.replace(/^\./, '');
-    let entry = byDomain.get(domain);
-    if (!entry) byDomain.set(domain, (entry = { domain, count: 0, names: [] }));
-    entry.count++;
-    if (entry.names.length < 30) entry.names.push(c.name);
-  }
-  const domains = [...byDomain.values()]
-    .sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain))
-    .slice(0, 300);
-  return { total: all.length, domains };
-});
-ipcMain.handle('cookies:import', async (event, from) => {
-  if (!fromUi(event) || importing || !['firefox', 'chromium', 'json'].includes(from)) return null;
-  importing = true;
-  try {
-    const setCookie = (c) => session.defaultSession.cookies.set(c);
-    if (from === 'json') {
-      // quem escolhe o arquivo é uma janela do sistema aberta aqui (a interface não passa caminhos)
-      const pick = await dialog.showOpenDialog(win, {
-        title: 'Importar cookies (.json)',
-        properties: ['openFile'],
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-      });
-      const file = pick.filePaths[0];
-      if (pick.canceled || !file) return { ok: true, canceled: true };
-      if (fs.statSync(file).size > 20 * 1024 * 1024) throw new Error('O arquivo é grande demais (máximo 20 MB).');
-      return { ok: true, ...(await importCookiesFromJson(fs.readFileSync(file, 'utf8'), setCookie)) };
-    }
-    const env = { appData: app.getPath('appData'), localAppData: process.env.LOCALAPPDATA ?? '' };
-    return { ok: true, ...(await importCookies(from, env, setCookie)) };
-  } catch (error) {
-    return { ok: false, message: String(error?.message ?? error) };
-  } finally {
-    importing = false;
-  }
-});
-// Apagar cookies: de um site (exatamente o domínio da lista) ou todos (domain = null).
-ipcMain.handle('cookies:remove', async (event, domain) => {
-  if (!fromUi(event) || (domain !== null && (typeof domain !== 'string' || domain.length > 253))) return null;
-  const ses = session.defaultSession;
-  if (domain === null) {
-    const removed = (await ses.cookies.get({})).length;
-    await ses.clearStorageData({ storages: ['cookies'] });
-    return { removed };
-  }
-  const mine = (await ses.cookies.get({})).filter((c) => c.domain.replace(/^\./, '') === domain);
-  await Promise.all(
-    mine.map((c) => ses.cookies.remove(`${c.secure ? 'https' : 'http'}://${domain}${c.path}`, c.name))
-  );
-  return { removed: mine.length };
-});
 ipcMain.on('suggest:set', (event, open) => fromUi(event) && tabs.setSuggest(open === true));
 ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));
 ipcMain.on('zoom:set', (event, action) => {
@@ -438,6 +408,9 @@ ipcMain.on('accent:set', (event, color) => {
 });
 ipcMain.handle('settings:report', (event) => (fromUi(event) ? settingsReport() : null));
 
+registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
+registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win });
+
 // ---------- ciclo de vida do app ----------
 
 app.whenReady().then(() => {
@@ -453,6 +426,15 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(ALLOWED_PERMISSIONS.has(permission));
   });
+
+  const ses = session.defaultSession;
+  extensions = createExtensions({
+    ext: ses.extensions ?? ses,
+    dir: path.join(app.getPath('userData'), 'extensions'),
+    store: createStore(path.join(app.getPath('userData'), 'extensions.json'), {}),
+  });
+  registerAdblockIpc({ ipcMain, fromUi, adblock: createAdblock(), store, session }).apply();
+  extensions.loadAll(); // carrega em segundo plano; a janela não espera
 
   createWindow();
 });
