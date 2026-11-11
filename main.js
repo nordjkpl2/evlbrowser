@@ -85,6 +85,8 @@ const NATIVE = {
   en: { Desfazer: 'Undo', Refazer: 'Redo', Cortar: 'Cut', Copiar: 'Copy', Colar: 'Paste', 'Colar e abrir': 'Paste and go', Excluir: 'Delete', 'Selecionar tudo': 'Select all' },
   es: { Desfazer: 'Deshacer', Refazer: 'Rehacer', Cortar: 'Cortar', Copiar: 'Copiar', Colar: 'Pegar', 'Colar e abrir': 'Pegar e ir', Excluir: 'Eliminar', 'Selecionar tudo': 'Seleccionar todo' },
 };
+NATIVE.zh = { Desfazer: '撤销', Refazer: '重做', Cortar: '剪切', Copiar: '复制', Colar: '粘贴', 'Colar e abrir': '粘贴并前往', Excluir: '删除', 'Selecionar tudo': '全选' };
+NATIVE.ja = { Desfazer: '元に戻す', Refazer: 'やり直し', Cortar: '切り取り', Copiar: 'コピー', Colar: '貼り付け', 'Colar e abrir': '貼り付けて移動', Excluir: '削除', 'Selecionar tudo': 'すべて選択' };
 const tr = (pt) => NATIVE[store?.get('lang')]?.[pt] ?? pt;
 
 function send(channel, payload) {
@@ -370,7 +372,7 @@ ipcMain.on('history:remove', (event, host) => {
   if (fromUi(event) && typeof host === 'string' && host.length <= 253) history.remove(host);
 });
 ipcMain.on('lang:set', (event, lang) => {
-  if (fromUi(event) && ['pt', 'en', 'es'].includes(lang)) store.set('lang', lang);
+  if (fromUi(event) && ['pt', 'en', 'es', 'zh', 'ja'].includes(lang)) store.set('lang', lang);
 });
 ipcMain.on('history:clear', (event) => fromUi(event) && history.clear());
 ipcMain.handle('history:suggest', (event, q) => {

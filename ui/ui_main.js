@@ -272,6 +272,41 @@ async function refreshSettings() {
 
 const navItems = [...document.querySelectorAll('.nav-item')];
 const cards = [...document.querySelectorAll('.card')];
+
+// Cartões retráteis: clicar no título abre/fecha o conteúdo (o estado fica salvo neste computador).
+// A chave é "categoria:título em português", lida uma vez no início (antes de traduzir).
+let closedCards = [];
+try {
+  closedCards = JSON.parse(localStorage.getItem('evl.closedCards') || '[]');
+} catch {}
+for (const card of cards) {
+  const title = card.querySelector('h3');
+  if (!title) continue;
+  const key = `${card.dataset.panel}:${title.textContent.trim()}`;
+  card.classList.add('collapsible');
+  title.tabIndex = 0;
+  title.setAttribute('role', 'button');
+  const setOpen = (open) => {
+    card.classList.toggle('collapsed', !open);
+    title.setAttribute('aria-expanded', String(open));
+  };
+  setOpen(!closedCards.includes(key));
+  const toggle = () => {
+    const open = card.classList.contains('collapsed');
+    setOpen(open);
+    closedCards = open ? closedCards.filter((k) => k !== key) : [...closedCards, key];
+    try {
+      localStorage.setItem('evl.closedCards', JSON.stringify(closedCards));
+    } catch {}
+  };
+  title.addEventListener('click', toggle);
+  title.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggle();
+    }
+  });
+}
 const searchEl = $('s-search');
 const panelTitle = $('panel-title');
 const noResults = $('no-results');
@@ -279,6 +314,7 @@ let panel = 'search'; // categoria aberta
 
 function showPanel(name) {
   panel = name;
+  document.body.classList.remove('searching');
   searchEl.value = '';
   noResults.hidden = true;
   for (const item of navItems) {
@@ -313,6 +349,7 @@ function searchSettings() {
     showPanel(panel);
     return;
   }
+  document.body.classList.add('searching'); // resultados aparecem abertos, mesmo de cartões fechados
   navItems.forEach((item) => item.removeAttribute('aria-current'));
   panelTitle.textContent = t('Resultados da busca');
   let found = 0;

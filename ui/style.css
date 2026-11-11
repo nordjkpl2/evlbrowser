@@ -749,3 +749,17 @@ body.side-tabs .screen { min-width: 0; height: 100%; }
 .sp-num { display: flex; align-items: center; gap: 6px; }
 .sp-num input { width: 84px; height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; }
 #sp-restart { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; color: var(--accent); }
+
+/* cartões retráteis das Configurações */
+.card.collapsible h3 { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.card.collapsible h3::before {
+  content: ""; flex: none; width: 6px; height: 6px; margin: 0 2px 2px 0;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); transition: transform var(--fast) ease;
+}
+.card.collapsible.collapsed h3::before { transform: rotate(-45deg); margin: 0 4px 0 0; }
+.card.collapsible h3:hover::before { border-color: var(--text); }
+body:not(.searching) .card.collapsed > :not(.card-head):not(h3),
+body:not(.searching) .card.collapsed .head-actions { display: none; }
+body:not(.searching) .card.collapsed .card-head { margin-bottom: 0; }
+body:not(.searching) .card.collapsed > h3 { margin-bottom: 0; }

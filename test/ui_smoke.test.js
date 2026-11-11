@@ -22,7 +22,7 @@ function fake() {
 }
 
 test('scripts da interface carregam na ordem e só usam window.evl que existe', () => {
-  assert.deepStrictEqual(scripts, ['ui_i18n_languages.js', 'ui_main.js', 'ui_boot.js']);
+  assert.deepStrictEqual(scripts, ['ui_i18n_asian.js', 'ui_i18n_languages.js', 'ui_main.js', 'ui_boot.js']);
   const preload = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
   const api = new Set([...preload.matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]));
   const used = new Set();
@@ -54,7 +54,7 @@ test('scripts da interface carregam na ordem e só usam window.evl que existe', 
   for (const kind of ['web', 'blank', 'settings']) {
     vm.runInContext(`makeTab({ id: 1, state: 'active', kind: '${kind}', title: 'x', url: 'u', favicon: null })`, ctx);
   }
-  // traduções: 3 idiomas completos, mesmos {marcadores}, e toda t('...') usada existe
+  // traduções: 5 idiomas completos (pt/en/es em WORDS, zh/ja em WORDS_ZH_JA), mesmos {marcadores}, e toda t('...') usada existe
   const words = vm.runInContext('WORDS', ctx);
   const keys = new Set();
   for (const row of words) {
@@ -65,7 +65,18 @@ test('scripts da interface carregam na ordem e só usam window.evl que existe', 
     assert.strictEqual(marks(row[2]), marks(row[0]), `marcadores: ${row[0]}`);
     keys.add(row[0]);
   }
-  for (const s of [...scripts, ...lazy].filter((x) => x !== 'ui_i18n_languages.js')) {
+  const asian = new Map(vm.runInContext('WORDS_ZH_JA', ctx).map((r) => [r[0], r]));
+  const marksOf = (x) => (x.match(/\{\w+\}/g) ?? []).sort().join();
+  for (const k of keys) {
+    const r = asian.get(k);
+    assert.ok(r && r[1] && r[2], `sem chinês/japonês: ${k}`);
+    assert.strictEqual(marksOf(r[1]), marksOf(k), `marcadores zh: ${k}`);
+    assert.strictEqual(marksOf(r[2]), marksOf(k), `marcadores ja: ${k}`);
+  }
+  assert.strictEqual(asian.size, keys.size, 'zh/ja tem linhas que não existem em WORDS');
+  assert.strictEqual(vm.runInContext('LANGS.join()', ctx), 'pt,en,es,zh,ja');
+  assert.strictEqual(vm.runInContext("t('Salvar')", ctx), 'Salvar');
+  for (const s of [...scripts, ...lazy].filter((x) => !x.startsWith('ui_i18n_'))) {
     for (const m of fs.readFileSync(path.join(ui, s), 'utf8').matchAll(/\bt\('((?:[^'\\]|\\.)+)'/g)) {
       assert.ok(keys.has(m[1]), `sem tradução: ${m[1]}`);
     }

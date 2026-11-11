@@ -1,10 +1,10 @@
 'use strict';
-// Idiomas da interface: pt (padrão, é o texto escrito no HTML), en e es.
+// Idiomas da interface: pt (padrão, é o texto escrito no HTML), en, es, zh e ja (zh/ja em ui_i18n_asian.js).
 // O texto estático do HTML é traduzido sozinho (a chave é o texto em português);
 // textos criados pelo JavaScript usam t('texto em português').
 
-const LANGS = ['pt', 'en', 'es'];
-const LOCALES = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
+const LANGS = ['pt', 'en', 'es', 'zh', 'ja'];
+const LOCALES = { pt: 'pt-BR', en: 'en-US', es: 'es-ES', zh: 'zh-CN', ja: 'ja-JP' };
 let lang = 'pt';
 
 // [português, english, español]
@@ -252,10 +252,15 @@ const WORDS = [
   ['Remover do histórico', 'Remove from history', 'Quitar del historial'],
 ];
 const DICT = new Map(WORDS.map(([pt, en, es]) => [pt, { en, es }]));
+for (const [pt, zh, ja] of WORDS_ZH_JA) {
+  const d = DICT.get(pt);
+  if (d) Object.assign(d, { zh, ja });
+}
 
 // t('texto em português', { n: 3 }) -> texto no idioma atual
 function t(pt, vars) {
-  let out = lang === 'pt' ? pt : (DICT.get(pt)?.[lang] ?? pt);
+  const d = DICT.get(pt);
+  let out = lang === 'pt' ? pt : (d?.[lang] ?? d?.en ?? pt); // sem tradução: inglês, depois português
   if (vars) for (const k in vars) out = out.replaceAll(`{${k}}`, String(vars[k]));
   return out;
 }
