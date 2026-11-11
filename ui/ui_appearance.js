@@ -1,5 +1,5 @@
 'use strict';
-// Aparência e pedidos de permissão: tema (Claro/Escuro/AMOLED), cor no tema, cantos, texto, abas,
+// Aparência e pedidos de permissão: estilo visual (Atual/Antigo 1800/1900), tema (Claro/Escuro/AMOLED), cor no tema, cantos, texto, abas,
 // imagem de fundo, user agent, restaurar padrões, cor principal. Carrega depois do ui_main.js
 // (usa o $ e o t() dele) e antes do ui_boot.js; as funções são chamadas só depois que tudo carregou.
 
@@ -50,12 +50,44 @@ tintSwitch.addEventListener('click', () => {
   } catch {}
 });
 
-// Cantos: raio base (--r) usado por todo o style.css
+// Estilo visual: Atual ('') ou Antigo 1800/1900 (classes no <html> definidas em settings.css).
+// Nos antigos os cantos são fixos (o estilo manda); a escolha de Cantos volta ao sair deles.
+const lookOptions = [...document.querySelectorAll('[data-look]')];
+const RETRO_R = { 1800: '3', 1900: '0' };
 const radiusEl = $('radius');
+let look = '';
+let radius = '8';
+
+function applyRadius() {
+  htmlEl.style.setProperty('--r', `${look ? RETRO_R[look] : radius}px`);
+  radiusEl.value = radius;
+  radiusEl.disabled = look !== '';
+}
+function setLook(v) {
+  look = v === '1800' || v === '1900' ? v : '';
+  htmlEl.classList.remove('retro', 'look-1800', 'look-1900');
+  if (look) htmlEl.classList.add('retro', `look-${look}`);
+  for (const o of lookOptions) o.setAttribute('aria-checked', String(o.dataset.look === look));
+  applyRadius();
+}
+try {
+  setLook(localStorage.getItem('evl.look'));
+} catch {
+  setLook('');
+}
+lookOptions.forEach((o) =>
+  o.addEventListener('click', () => {
+    setLook(o.dataset.look);
+    try {
+      localStorage.setItem('evl.look', look);
+    } catch {}
+  })
+);
+
+// Cantos: raio base (--r) usado por todo o CSS
 function setRadius(v) {
-  const n = ['0', '4', '8', '14', '22'].includes(v) ? v : '8';
-  htmlEl.style.setProperty('--r', `${n}px`);
-  radiusEl.value = n;
+  radius = ['0', '4', '8', '14', '22'].includes(v) ? v : '8';
+  applyRadius();
 }
 try {
   setRadius(localStorage.getItem('evl.radius'));
@@ -327,7 +359,7 @@ resetAsk.addEventListener('click', () => resetStep(true));
 resetNo.addEventListener('click', () => resetStep(false));
 resetYes.addEventListener('click', () => {
   try {
-    for (const k of ['compact', 'oneColor', 'lessColor', 'amoled', 'tint', 'radius', 'tabGlow', 'bgImage', 'bgDim']) localStorage.removeItem(`evl.${k}`);
+    for (const k of ['compact', 'oneColor', 'lessColor', 'amoled', 'tint', 'look', 'radius', 'icons', 'tabGlow', 'bgImage', 'bgDim']) localStorage.removeItem(`evl.${k}`);
   } catch {}
   window.evl.settingsReset();
 });
@@ -395,4 +427,31 @@ accentEl.addEventListener('contextmenu', (event) => {
   event.preventDefault();
   applyAccent(null);
   window.evl.setAccent(null);
+});
+
+// ---------- estilo dos ícones do menu das Configurações ----------
+const ICON_EMOJI = { search: '🔍', memory: '🧠', render: '🖼️', privacy: '🔒', adblock: '🛡️', appearance: '🎨', history: '🕘', bookmarks: '⭐', cookies: '🍪', extensions: '🧩', passwords: '🔑' };
+for (const item of document.querySelectorAll('.nav-item')) {
+  const emo = document.createElement('span');
+  emo.className = 'nav-emo';
+  emo.setAttribute('aria-hidden', 'true');
+  emo.textContent = ICON_EMOJI[item.dataset.panel] || '•';
+  item.insertBefore(emo, item.firstChild);
+}
+const iconSetEl = $('icon-set');
+function setIconSet(v) {
+  const ok = ['line', 'bold', 'soft', 'emoji', 'none'].includes(v) ? v : 'line';
+  document.body.dataset.icons = ok;
+  iconSetEl.value = ok;
+}
+try {
+  setIconSet(localStorage.getItem('evl.icons'));
+} catch {
+  setIconSet('line');
+}
+iconSetEl.addEventListener('change', () => {
+  setIconSet(iconSetEl.value);
+  try {
+    localStorage.setItem('evl.icons', iconSetEl.value);
+  } catch {}
 });

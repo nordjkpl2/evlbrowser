@@ -365,6 +365,7 @@ for (const card of cards) {
 }
 
 function showPanel(name) {
+  if (name === 'speed') name = 'render'; // nome antigo: Velocidade agora é parte de Renderização
   panel = name;
   document.body.classList.remove('searching');
   searchEl.value = '';
@@ -393,7 +394,7 @@ function showPanel(name) {
   if (name === 'passwords') loadPasswords();
   if (name === 'bookmarks') loadBookmarks();
   if (name === 'privacy') loadPrivacy();
-  if (name === 'speed') loadSpeed();
+  if (name === 'render') loadSpeed();
 }
 
 // Ignora maiúsculas e acentos: "memoria" acha "Memória".

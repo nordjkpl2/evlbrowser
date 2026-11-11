@@ -7,6 +7,7 @@
         content="default-src 'none'; script-src 'self'; style-src 'self'; img-src https: http: data:">
   <title>Evl Browser</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="settings.css">
 </head>
 <body>
   <header id="chrome">
@@ -114,12 +115,12 @@
         </svg>
         <span>Memória</span>
       </button>
-      <button class="nav-item" type="button" data-panel="speed">
+      <button class="nav-item" type="button" data-panel="render">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M2 11a6 6 0 1 1 12 0"/><path d="M8 11l3-4"/>
+          <rect x="1.5" y="2.5" width="13" height="9" rx="1.2"/><path d="M5.5 14h5M8 11.5V14M4.5 8l2-2 2 1.6 3-3"/>
         </svg>
-        <span>Velocidade</span>
+        <span>Renderização</span>
       </button>
       <button class="nav-item" type="button" data-panel="privacy">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -138,7 +139,8 @@
       <button class="nav-item" type="button" data-panel="appearance">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"
              aria-hidden="true">
-          <circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/>
+          <path d="M8 1.6a6.4 6.4 0 1 0 0 12.8c1 0 1.6-.7 1.6-1.5 0-1-.9-1.2-.9-2 0-.7.6-1.2 1.4-1.2h1.5a2.4 2.4 0 0 0 2.4-2.4C14.1 4.4 11.4 1.6 8 1.6z" stroke-linejoin="round"/>
+          <circle cx="4.7" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="6.2" cy="4.9" r=".9" fill="currentColor" stroke="none"/><circle cx="9.6" cy="4.4" r=".9" fill="currentColor" stroke="none"/>
         </svg>
         <span>Aparência</span>
       </button>
@@ -220,7 +222,7 @@
           </form>
         </section>
 
-        <section class="card" data-panel="search">
+        <section class="card" data-panel="render">
           <div class="card-head">
             <h3>Motor de sites</h3>
             <button id="engine-info-btn" class="info-btn" type="button" aria-expanded="false" aria-controls="engine-info" aria-label="Mais informações">!</button>
@@ -238,7 +240,7 @@
           </dl>
         </section>
 
-        <section class="card" data-panel="memory">
+        <section class="card wide" data-panel="memory">
           <h3>Uso de memória</h3>
           <p class="total"><span id="s-total" class="mono">—</span> MB no total
             <span class="hint">· atualiza a cada 2 s enquanto esta tela está aberta</span></p>
@@ -249,6 +251,25 @@
             </thead>
             <tbody id="s-procs"></tbody>
           </table>
+        </section>
+
+        <section class="card" data-panel="appearance">
+          <h3>Estilo visual</h3>
+          <p class="hint">Muda as cores, as formas e as letras de todo o Evl. Nos visuais antigos o tema Claro/Escuro não se aplica.</p>
+          <div class="theme-options" role="radiogroup" aria-label="Estilo visual">
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="">
+              <span class="preview pv-modern" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Atual</span>
+            </button>
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="1800">
+              <span class="preview pv-1800" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Antigo 1800</span>
+            </button>
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="1900">
+              <span class="preview pv-1900" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Antigo 1900</span>
+            </button>
+          </div>
         </section>
 
         <section class="card" data-panel="appearance">
@@ -382,6 +403,22 @@
         </section>
 
         <section class="card" data-panel="appearance">
+          <h3>Ícones</h3>
+          <p class="hint">Estilo dos ícones do menu das Configurações.</p>
+          <div class="font-row">
+            <label>Estilo
+              <select id="icon-set">
+                <option value="line">Linhas (padrão)</option>
+                <option value="bold">Linhas grossas</option>
+                <option value="soft">Suaves</option>
+                <option value="emoji">Emoji</option>
+                <option value="none">Sem ícones</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="card" data-panel="appearance">
           <h3>Cantos</h3>
           <p class="hint">Quanto os cantos de botões, cartões e abas são arredondados.</p>
           <div class="font-row">
@@ -431,7 +468,7 @@
           </div>
         </section>
 
-        <section class="card" data-panel="history">
+        <section class="card wide" data-panel="history">
           <div class="card-head">
             <h3>Páginas visitadas</h3>
             <button id="h-clear" class="text-btn" type="button">Limpar histórico</button>
@@ -440,7 +477,7 @@
           <ul id="h-list"></ul>
         </section>
 
-        <section class="card" data-panel="cookies">
+        <section class="card wide" data-panel="cookies">
           <h3>User agent</h3>
           <p class="hint">Texto com que o Evl se apresenta aos sites. Vazio usa o padrão (Chrome, sem a palavra Electron). Vale ao abrir ou recarregar páginas. Trocar pode quebrar alguns sites.</p>
           <div class="font-row">
@@ -455,7 +492,7 @@
           <p id="ua-status" class="hint" role="status" hidden></p>
         </section>
 
-        <section class="card" data-panel="cookies">
+        <section class="card wide" data-panel="cookies">
           <div class="card-head">
             <h3>Cookies <span id="c-total" class="hint"></span></h3>
             <div class="head-actions">
@@ -474,7 +511,7 @@
           <p id="c-empty" class="hint" hidden>Nenhum cookie salvo ainda.</p>
           <ul id="c-list"></ul>
         </section>
-        <section class="card" data-panel="bookmarks">
+        <section class="card wide" data-panel="bookmarks">
           <div class="card-head">
             <h3>Favoritos <span id="b-total" class="hint"></span></h3>
             <div class="head-actions">
@@ -499,7 +536,7 @@
           <ul id="b-list"></ul>
         </section>
 
-        <section class="card" data-panel="passwords">
+        <section class="card wide" data-panel="passwords">
           <div class="card-head">
             <h3>Senhas <span id="p-total" class="hint"></span></h3>
             <div class="head-actions">
@@ -531,7 +568,7 @@
           <ul id="p-list"></ul>
         </section>
 
-        <section class="card" data-panel="privacy">
+        <section class="card wide" data-panel="privacy">
           <h3>Privacidade</h3>
           <p class="hint">Tudo aqui roda dentro do navegador e foi pensado para não atrasar as páginas: pedidos de rastreio são cortados antes de baixar.</p>
           <ul id="v-list"></ul>
@@ -541,7 +578,7 @@
           <p id="v-status" class="hint" role="status" hidden></p>
         </section>
 
-        <section class="card" data-panel="privacy">
+        <section class="card wide" data-panel="privacy">
           <h3>Permissões dos sites</h3>
           <p class="hint">Câmera, microfone, localização e notificações: o Evl pergunta quando um site pede. Aqui você apaga as respostas lembradas.</p>
           <p id="perm-count" class="hint" role="status"></p>
@@ -550,7 +587,7 @@
           </div>
         </section>
 
-        <section class="card" data-panel="privacy">
+        <section class="card wide" data-panel="privacy">
           <h3>Sempre ativo</h3>
           <ul class="v-always hint">
             <li>Câmera, microfone, localização e notificações são negados até você permitir, quando o site pedir.</li>
@@ -559,17 +596,36 @@
           </ul>
         </section>
 
-        <section class="card" data-panel="speed">
-          <h3>Velocidade e memória</h3>
-          <p class="hint">Ajustes para o Evl abrir páginas mais rápido e guardar na memória só o que você está usando.</p>
-          <ul id="sp-list"></ul>
+        <section class="card score-card" data-panel="render">
+          <h3>Avaliação de renderização</h3>
+          <p class="hint">Nota calculada com as opções desta página: quanto mais leve e rápido o Evl está configurado, maior ela fica.</p>
+          <div class="score">
+            <span class="score-num"><b id="rd-num" class="mono">—</b><small>/100</small></span>
+            <div class="score-body"><strong id="rd-grade"></strong><progress id="rd-bar" max="100" value="0"></progress></div>
+          </div>
+          <div id="rd-tips-box" hidden>
+            <p class="hint">Para subir a nota:</p>
+            <ul id="rd-tips" class="tips"></ul>
+          </div>
           <div id="sp-restart" class="v-hint" hidden>
             <span>Reinicie o Evl para aplicar as mudanças marcadas com ↻.</span>
             <button id="sp-relaunch" class="text-btn" type="button">Reiniciar agora</button>
           </div>
         </section>
 
-        <section class="card" data-panel="adblock">
+        <section class="card" data-panel="render">
+          <h3>Otimizar sites e carregamento</h3>
+          <p class="hint">O que o Evl baixa e desenha em cada página. Cada ajuste muda a nota acima.</p>
+          <ul id="rd-list"></ul>
+        </section>
+
+        <section class="card" data-panel="render">
+          <h3>Velocidade e memória</h3>
+          <p class="hint">Ajustes para o Evl abrir páginas mais rápido e guardar na memória só o que você está usando.</p>
+          <ul id="sp-list"></ul>
+        </section>
+
+        <section class="card wide" data-panel="adblock">
           <div class="card-head">
             <h3>Bloqueador de anúncios</h3>
             <button id="ab-switch" class="switch" type="button" role="switch" aria-checked="true" aria-label="Bloqueador de anúncios"></button>
@@ -593,7 +649,7 @@
           <ul id="ab-allow"></ul>
         </section>
 
-        <section class="card" data-panel="extensions">
+        <section class="card wide" data-panel="extensions">
           <div class="card-head">
             <h3>Extensões <span id="x-total" class="hint"></span></h3>
             <div class="head-actions">

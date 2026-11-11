@@ -13,9 +13,12 @@ const SPEED_DEFAULTS = {
   hardwareAccel: true, // usa a placa de vídeo (desligar economiza RAM de vídeo, mas pode deixar lento)
   lowMemory: false, // modo de baixa memória do Chromium (caches menores)
   diskCacheMB: 0, // tamanho máximo do cache em disco (0 = automático do Chromium)
+  imagesOff: false, // modo texto: não baixa imagens (páginas bem mais leves)
+  rendererLimit: 0, // máximo de processos de páginas (0 = automático); menos processos = menos RAM
+  jsMemoryMB: 0, // teto de memória do JavaScript por página (0 = automático)
 };
-const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB'];
-const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000] };
+const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB'];
+const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096] };
 
 function speedOptions(raw) {
   const out = { ...SPEED_DEFAULTS };
@@ -46,4 +49,13 @@ function readStartupSpeed(userDataDir) {
 // Alguma opção que pede reinício está diferente do que o Chromium está usando agora?
 const needsRestart = (current, startup) => RESTART.some((k) => current[k] !== startup[k]);
 
-module.exports = { SPEED_DEFAULTS, RESTART, speedOptions, checkSpeedValue, readStartupSpeed, needsRestart };
+// Flags do Chromium para as opções acima (main.js só repassa; aqui dá para testar sem Electron).
+function speedSwitches(o) {
+  const out = [];
+  if (o.imagesOff) out.push(['blink-settings', 'imagesEnabled=false']);
+  if (o.rendererLimit > 0) out.push(['renderer-process-limit', String(o.rendererLimit)]);
+  if (o.jsMemoryMB > 0) out.push(['js-flags', `--max-old-space-size=${Math.max(64, o.jsMemoryMB)}`]);
+  return out;
+}
+
+module.exports = { speedSwitches, SPEED_DEFAULTS, RESTART, speedOptions, checkSpeedValue, readStartupSpeed, needsRestart };

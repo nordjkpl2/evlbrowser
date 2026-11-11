@@ -42,3 +42,16 @@ test('cache em disco: 0 = automático, limite máximo e pede reinício', () => {
   assert.strictEqual(checkSpeedValue('diskCacheMB', 512), 512);
   assert.ok(needsRestart(speedOptions({ diskCacheMB: 512 }), speedOptions(null)));
 });
+
+test('renderização: flags do Chromium só para o que foi ligado', () => {
+  const { speedOptions, speedSwitches, needsRestart } = require('../src/app/speed_options');
+  assert.deepStrictEqual(speedSwitches(speedOptions(null)), []);
+  const on = speedOptions({ imagesOff: true, rendererLimit: 4, jsMemoryMB: 10 });
+  assert.deepStrictEqual(speedSwitches(on), [
+    ['blink-settings', 'imagesEnabled=false'],
+    ['renderer-process-limit', '4'],
+    ['js-flags', '--max-old-space-size=64'],
+  ]);
+  assert.strictEqual(speedOptions({ rendererLimit: 99 }).rendererLimit, 16);
+  assert.ok(needsRestart(on, speedOptions(null)));
+});

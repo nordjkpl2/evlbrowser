@@ -33,7 +33,7 @@ const { privacyOptions } = require('./src/network/privacy_engine');
 const { registerPrivacyIpc } = require('./src/ipc/privacy_ipc');
 const { createAdblock } = require('./src/network/adblock_engine');
 const { registerAdblockIpc } = require('./src/ipc/adblock_ipc');
-const { readStartupSpeed } = require('./src/app/speed_options');
+const { readStartupSpeed, speedSwitches } = require('./src/app/speed_options');
 const { registerSpeedIpc } = require('./src/ipc/speed_ipc');
 const { registerPermissionIpc } = require('./src/ipc/permission_ipc');
 const { registerSettingsIpc } = require('./src/ipc/settings_ipc');
@@ -51,6 +51,7 @@ if (process.env.EVL_NO_GPU || !startupSpeed.hardwareAccel) app.disableHardwareAc
 if (startupSpeed.blockAutoplay) app.commandLine.appendSwitch('autoplay-policy', 'document-user-activation-required');
 if (startupSpeed.lowMemory) app.commandLine.appendSwitch('enable-low-end-device-mode');
 if (startupSpeed.diskCacheMB > 0) app.commandLine.appendSwitch('disk-cache-size', String(startupSpeed.diskCacheMB * 1024 * 1024)); // cache maior = sites já visitados abrem mais rápido
+for (const [name, value] of speedSwitches(startupSpeed)) app.commandLine.appendSwitch(name, value); // modo texto, limite de processos, teto do JS
 // Identidade igual à do Chrome: sem os trechos "Electron/x" e "nome-do-app/x", que fazem sites como o
 // WhatsApp Web dizerem que o navegador não é compatível. A versão do Chrome continua a real.
 app.userAgentFallback = app.userAgentFallback.replace(/\s(Electron|evl[\w.-]*)\/[\d.]+/gi, '');
