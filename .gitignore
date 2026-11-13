@@ -2,9 +2,11 @@ node_modules/
 dist/
 out/
 test/
-*.log
-.env
+.claude/
+*.claude
+CLAUDE.md
 mapa.md
 MAPA.md
+*.log
+.env
 bun.lock
-CLAUDE.md

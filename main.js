@@ -25,6 +25,7 @@ const { validateEngine, normalizeList, uniqueId } = require('./src/data/search_e
 const { registerCookiesIpc } = require('./src/ipc/cookies_ipc');
 const { registerExtensionsIpc } = require('./src/ipc/extension_ipc');
 const { createExtensions } = require('./src/extensions/extension_manager');
+const { attachExtensionLog } = require('./src/extensions/extension_log');
 const { createBookmarks } = require('./src/data/bookmarks_store');
 const { registerBookmarksIpc } = require('./src/ipc/bookmarks_ipc');
 const { createVault } = require('./src/data/passwords_vault');
@@ -584,6 +585,8 @@ app.whenReady().then(() => {
     dir: path.join(app.getPath('userData'), 'extensions'),
     store: createStore(path.join(app.getPath('userData'), 'extensions.json'), {}),
   });
+  // Diário das extensões (terminal + extensions.log na pasta de dados), inclui o fundo do uBlock etc.
+  attachExtensionLog(app, path.join(app.getPath('userData'), 'extensions.log'));
   // Rede: bloqueador de anúncios + privacidade, num só lugar (src/network/network_hub.js).
   const adblock = createAdblock();
   adblockApi = adblock;

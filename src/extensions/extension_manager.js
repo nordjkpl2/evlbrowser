@@ -90,6 +90,8 @@ if (typeof globalThis.browser === 'undefined' && typeof chrome !== 'undefined') 
   } });
   // browser.menus (Firefox) é o chrome.contextMenus do Chromium
   try { if (!chrome.menus && chrome.contextMenus) chrome.menus = chrome.contextMenus; } catch {}
+  // browser.browserAction (ícone e badge) não existe no Electron: vazio, o uBO pula o ícone sem quebrar o fundo.
+  try { if (!chrome.browserAction && !chrome.action) chrome.browserAction = {}; } catch {}
   globalThis.browser = chrome.runtime.getManifest().manifest_version >= 3 ? chrome : wrap(chrome);
 }
 `;
@@ -205,6 +207,7 @@ function createExtensions({ ext, dir, store }) {
       errors.delete(item.id);
     } catch (err) {
       errors.set(item.id, String(err.message ?? err).slice(0, 160));
+      console.error(`[extensões] falha ao carregar "${item.name}": ${err.message ?? err}`);
     }
   }
   async function unload(id) {

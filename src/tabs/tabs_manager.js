@@ -201,10 +201,18 @@ class TabManager {
       this.layout();
       tab.view.webContents.focus();
     } else {
+      // Tela de espera (aba em branco / configurações): fecha as páginas de fundo para liberar RAM.
+      // Abas tocando áudio são preservadas por discard(). Voltam ao clicar nelas.
+      if (tab.kind === 'blank') this.discardBackground();
       this.layout();
       this.ui.webContents.focus();
     }
     this._changed();
+  }
+
+  // Descarta todas as abas web de fundo com página viva (exceto as que tocam áudio).
+  discardBackground() {
+    for (const bg of this.backgroundViewTabs()) this.discard(bg.id);
   }
 
   close(id) {
