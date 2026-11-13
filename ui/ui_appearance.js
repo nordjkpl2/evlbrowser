@@ -8,26 +8,41 @@
 
 const themeOptions = [...document.querySelectorAll('.theme-option')];
 
-// AMOLED = tema escuro (para os sites) com fundo preto total na interface; fica salvo neste computador.
+// Temas pretos = escuro (para os sites) com fundo preto na interface; ficam salvos neste computador.
+// AMOLED: preto total. Meia-noite: preto azulado, mais suave.
 const htmlEl = document.documentElement;
+const BLACK_THEMES = ['amoled', 'midnight'];
+function currentBlack() {
+  return BLACK_THEMES.find((b) => htmlEl.classList.contains(b)) || null;
+}
 function showTheme(theme) {
-  const shown = theme === 'dark' && htmlEl.classList.contains('amoled') ? 'amoled' : theme;
+  const shown = theme === 'dark' && currentBlack() ? currentBlack() : theme;
   for (const opt of themeOptions) {
     opt.setAttribute('aria-checked', String(opt.dataset.theme === shown));
   }
 }
-try {
-  htmlEl.classList.toggle('amoled', localStorage.getItem('evl.amoled') === '1');
-} catch {}
+function setBlack(name) {
+  for (const b of BLACK_THEMES) htmlEl.classList.toggle(b, b === name);
+  try {
+    localStorage.setItem('evl.black', name || '');
+  } catch {}
+}
+function loadBlack() {
+  try {
+    // quem usava o AMOLED antes (chave evl.amoled) continua com ele
+    const saved = localStorage.getItem('evl.black') ?? (localStorage.getItem('evl.amoled') === '1' ? 'amoled' : '');
+    return BLACK_THEMES.includes(saved) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+setBlack(loadBlack());
 
 themeOptions.forEach((opt) =>
   opt.addEventListener('click', () => {
-    const amoled = opt.dataset.theme === 'amoled';
-    const theme = amoled ? 'dark' : opt.dataset.theme;
-    htmlEl.classList.toggle('amoled', amoled);
-    try {
-      localStorage.setItem('evl.amoled', amoled ? '1' : '0');
-    } catch {}
+    const black = BLACK_THEMES.includes(opt.dataset.theme) ? opt.dataset.theme : null;
+    const theme = black ? 'dark' : opt.dataset.theme;
+    setBlack(black);
     showTheme(theme);
     window.evl.setTheme(theme);
   })
@@ -548,7 +563,7 @@ resetAsk.addEventListener('click', () => resetStep(true));
 resetNo.addEventListener('click', () => resetStep(false));
 resetYes.addEventListener('click', () => {
   try {
-    for (const k of ['compact', 'oneColor', 'lessColor', 'amoled', 'tint', 'look', 'radius', 'icons', 'tabGlow', 'bgImage', 'bgDim', 'home', 'homeBg', 'homeDim', 'tabStyle']) localStorage.removeItem(`evl.${k}`);
+    for (const k of ['compact', 'oneColor', 'lessColor', 'amoled', 'black', 'tint', 'look', 'radius', 'icons', 'tabGlow', 'bgImage', 'bgDim', 'home', 'homeBg', 'homeDim', 'tabStyle']) localStorage.removeItem(`evl.${k}`);
   } catch {}
   window.evl.settingsReset();
 });

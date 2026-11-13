@@ -12,7 +12,7 @@ Estilo Firefox rodando sobre Chromium, com as engines NS Nord Suite.
 - **Permissões por site**: câmera, microfone, localização e notificações, escolhidas site a site.
 - **Downloads** em paralelo, que continuam sozinhos se a conexão cair.
 - **Extensões** do Chrome e do Firefox (`.zip`, `.crx`, `.xpi`), isoladas da internet por padrão.
-- **Visuais**: Atual, **Lua** (inspirado no Pale Moon), Antigo 1800 e Antigo 1900, além de tema claro, escuro e AMOLED, cor principal, cantos, fonte e fundo.
+- **Visuais**: Atual, **Lua** (inspirado no Pale Moon), Antigo 1800 e Antigo 1900, além de tema claro, escuro, AMOLED e meia-noite, cor principal, cantos, fonte e fundo.
 - **5 idiomas**: português, inglês, espanhol, chinês e japonês.
 
 <details>

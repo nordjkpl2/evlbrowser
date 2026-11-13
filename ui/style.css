@@ -39,6 +39,9 @@
 
 /* AMOLED: preto total (a janela escura dos sites continua a mesma) */
 html.amoled { --bg-base: #000; --surface-base: #070708; --active-base: #111113; --border-base: #1b1b1f; }
+/* Meia-noite: preto azulado, um pouco mais claro e frio que o AMOLED */
+html.midnight { --bg-base: #05070c; --surface-base: #0b0e16; --active-base: #121726; --border-base: #1c2336; }
+html.tint.midnight { --bg: color-mix(in oklab, var(--bg-base), var(--accent) 5%); }
 /* Cor no tema: toque da cor principal no fundo, nos cartões e nas bordas */
 html.tint {
   --bg: color-mix(in oklab, var(--bg-base), var(--accent) 9%);
