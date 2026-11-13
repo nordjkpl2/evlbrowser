@@ -18,7 +18,7 @@ const { WebContentsView } = require('electron');
 const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
 const { hostColor } = require('./favicon_color');
-const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT } = require('../app/app_config');
+const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT } = require('../app/app_config');
 
 const DEFAULT_TAB_LAYOUT = { mode: 'top', tabH: 32, tabW: 200, sideW: 220, line: false, lineColor: '' };
 const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Math.round(Number(v)))) : d);
@@ -44,6 +44,7 @@ class TabManager {
     this.menuOpen = false; // submenu do contador de memória (zoom + Configurações)
     this.suggestOpen = false; // sugestões do histórico na barra de endereço
     this.promptOpen = false; // pedido de permissão de um site (microfone, câmera...)
+    this.downloadsOpen = false; // painel de downloads (botão da barra)
     this.history = history;
     this.webrtcPolicy = 'default_public_interface_only'; // o WebRTC não revela o IP da rede local
     this.tabLayout = { ...DEFAULT_TAB_LAYOUT }; // abas em cima ou na lateral, altura e largura
@@ -181,8 +182,9 @@ class TabManager {
     const tab = this.tabs.get(id);
     if (!tab) return;
 
-    this.menuOpen = false; // trocar de aba fecha o submenu e as sugestões
+    this.menuOpen = false; // trocar de aba fecha o submenu, as sugestões e o painel de downloads
     this.suggestOpen = false;
+    this.downloadsOpen = false;
     const prev = this.tabs.get(this.activeId);
     if (prev && prev !== tab && prev.view) {
       this.win.contentView.removeChildView(prev.view); // vira "sleeping"
@@ -354,6 +356,15 @@ class TabManager {
     this.layout();
   }
 
+  // Idem para o painel de downloads (abre pelo botão da barra).
+  setDownloadsPanel(open) {
+    if (this.downloadsOpen === open) return;
+    this.downloadsOpen = open;
+    if (open) this.menuOpen = false;
+    this.layout();
+    this._changed();
+  }
+
   // Idem para a lista de sugestões. A interface controla; aqui só ajustamos a altura.
   setSuggest(open) {
     if (this.suggestOpen === open) return;
@@ -404,12 +415,16 @@ class TabManager {
     const tab = this.tabs.get(this.activeId);
     const web = tab?.kind === 'web';
 
-    const extra = Math.max(this.menuOpen ? MENU_HEIGHT : this.suggestOpen ? SUGGEST_HEIGHT : 0, this.promptOpen ? PROMPT_HEIGHT : 0);
+    const extra = Math.max(
+      this.menuOpen ? MENU_HEIGHT : this.suggestOpen ? SUGGEST_HEIGHT : 0,
+      this.promptOpen ? PROMPT_HEIGHT : 0,
+      this.downloadsOpen ? DOWNLOADS_HEIGHT : 0,
+    );
     if (this.tabLayout.mode === 'side') {
       // painel lateral de abas (barra + abas) à esquerda; a página ocupa o resto.
       // Com menu/sugestões abertos o painel alarga por cima da página.
       const side = Math.min(this.tabLayout.sideW, width);
-      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : this.promptOpen ? 300 : 0;
+      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : this.promptOpen || this.downloadsOpen ? 300 : 0;
       this.ui.setBounds({ x: 0, y: 0, width: web ? Math.min(Math.max(side, wide), width) : width, height });
       if (web && tab.view) tab.view.setBounds(this._fit({ x: side, y: 0, width: Math.max(0, width - side), height }));
       return;
@@ -429,6 +444,7 @@ class TabManager {
       activeId: this.activeId,
       activeKind: active?.kind ?? 'blank',
       menuOpen: this.menuOpen,
+      downloadsOpen: this.downloadsOpen,
       zoom: this.zoomPercent(),
       canGoBack: !!nav?.canGoBack(),
       canGoForward: !!nav?.canGoForward(),

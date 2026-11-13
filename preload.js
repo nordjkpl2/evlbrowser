@@ -95,6 +95,7 @@ contextBridge.exposeInMainWorld('evl', {
   adblockAllow: (site, add) => ipcRenderer.invoke('adblock:allow', String(site), add === true),
   setAccent: (color) => ipcRenderer.send('accent:set', color === null ? null : String(color)),
   setMenu: (open) => ipcRenderer.send('menu:set', open === true),
+  downloadsPanel: (open) => ipcRenderer.send('downloads:panel', open === true),
   zoom: (action) => ipcRenderer.send('zoom:set', String(action)), // 'in' | 'out' | 'reset'
   setTheme: (theme) => ipcRenderer.send('theme:set', String(theme)),
 

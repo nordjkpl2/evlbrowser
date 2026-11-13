@@ -495,6 +495,7 @@ ipcMain.handle('engines:remove', (event, id) => {
 
 ipcMain.on('suggest:set', (event, open) => fromUi(event) && tabs.setSuggest(open === true));
 ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));
+ipcMain.on('downloads:panel', (event, open) => fromUi(event) && tabs.setDownloadsPanel(open === true));
 ipcMain.on('zoom:set', (event, action) => {
   if (!fromUi(event)) return;
   if (action === 'in') tabs.zoomIn();

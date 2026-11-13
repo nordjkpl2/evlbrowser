@@ -194,6 +194,7 @@ function render(state) {
     lastKey = key;
 
     showMenu(state);
+    syncDownloadsPanel(!!state.downloadsOpen); // o main pode fechar o painel (ex.: troca de aba)
     // zoom da aba Configurações: a própria página da interface é ampliada (as páginas web usam o zoom do Chromium)
     pageSettings.style.zoom = state.activeKind === 'settings' && typeof state.zoom === 'number' ? String(state.zoom / 100) : '';
     // linha de carregamento sob a barra, só enquanto a aba ativa carrega

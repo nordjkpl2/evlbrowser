@@ -19,6 +19,9 @@ module.exports = {
   // Idem para a lista de sugestões do histórico (até 6 linhas) da barra de endereço.
   SUGGEST_HEIGHT: 240,
 
+  // Painel de downloads que abre pelo botão da barra (lista com progresso, até ~5 itens).
+  DOWNLOADS_HEIGHT: 300,
+
   // Aba de fundo parada por este tempo tem a página destruída (libera a RAM).
   DISCARD_AFTER_MS: discardSeconds > 0 ? discardSeconds * 1000 : 3 * 60 * 1000,
   // Só existe se EVL_DISCARD_SECONDS foi definido (teste): vence o valor de Configurações > Velocidade.
