@@ -258,18 +258,12 @@ class TabManager {
       this.layout();
       tab.view.webContents.focus();
     } else {
-      // Tela de espera (aba em branco / configurações): fecha as páginas de fundo para liberar RAM.
-      // Abas tocando áudio são preservadas por discard(). Voltam ao clicar nelas.
-      if (tab.kind === 'blank') this.discardBackground();
+      // Tela de espera (aba em branco / configurações). As páginas de fundo NÃO são descartadas
+      // aqui: quem decide é a política de memória (tempo parado e orçamento de RAM).
       this.layout();
       this.ui.webContents.focus();
     }
     this._changed();
-  }
-
-  // Descarta todas as abas web de fundo com página viva (exceto as que tocam áudio).
-  discardBackground() {
-    for (const bg of this.backgroundViewTabs()) this.discard(bg.id);
   }
 
   close(id) {
@@ -698,8 +692,9 @@ class TabManager {
     return this.tabs.get(this.activeId)?.view?.webContents.navigationHistory;
   }
 
-  _changed() {
-    this.onChange();
+  // soft: mudança vinda da página (título, ícone, carregamento); a interface pode esperar um pouco mais.
+  _changed(soft = false) {
+    this.onChange(soft);
   }
 
   // Próximo passo da lista ZOOM_FACTORS a partir de um fator (1 = 100%).
@@ -789,20 +784,20 @@ class TabManager {
     wc.on('page-title-updated', (_e, title) => {
       tab.title = title;
       this.history?.setTitle(tab.url, title);
-      this._changed();
+      this._changed(true);
     });
     wc.on('page-favicon-updated', (_e, icons) => {
       tab.favicon = icons[0] || '';
       this._paintTab(tab);
-      this._changed();
+      this._changed(true);
     });
     wc.on('did-start-loading', () => {
       tab.loading = true;
-      this._changed();
+      this._changed(true);
     });
     wc.on('did-stop-loading', () => {
       tab.loading = false;
-      this._changed();
+      this._changed(true);
     });
     // Versões novas do Electron mandam a URL em event.url; as antigas, como argumento.
     wc.on('did-navigate', (e, url) => {
@@ -814,7 +809,7 @@ class TabManager {
     wc.on('did-navigate-in-page', (e, url, isMainFrame) => {
       if ((e.isMainFrame ?? isMainFrame) === false) return;
       tab.url = e.url ?? url;
-      this._changed();
+      this._changed(true);
     });
     wc.on('before-input-event', (event, input) => {
       if (this.onShortcut(input)) event.preventDefault();

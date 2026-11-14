@@ -20,6 +20,8 @@ function createAdblock({ domains = BLOCK_DOMAINS, paths = BLOCK_PATHS } = {}) {
   let allow = new Set(); // sites onde o bloqueador fica desligado
   let blocked = 0;
   const hostCache = new Map(); // host -> domínio da lista que bateu (ou '')
+  let lastPageUrl = null; // último pageUrl analisado e o host dele (cache de uma entrada)
+  let lastPageHost = '';
 
   // "a.b.doubleclick.net" -> "doubleclick.net" (o domínio da lista que bate), ou ''.
   function listed(host) {
@@ -56,7 +58,12 @@ function createAdblock({ domains = BLOCK_DOMAINS, paths = BLOCK_PATHS } = {}) {
       const u = splitUrl(url); // rápido: sem new URL a cada pedido
       if (!u) return false;
       const host = u.host;
-      const pageHost = hostOf(pageUrl);
+      // Quase todos os pedidos de uma página trazem o mesmo pageUrl: guardamos só o último host.
+      if (pageUrl !== lastPageUrl) {
+        lastPageUrl = pageUrl;
+        lastPageHost = hostOf(pageUrl);
+      }
+      const pageHost = lastPageHost;
       if (allowed(pageHost)) return false;
 
       // 1) lista de domínios (menos quando você está no próprio domínio da lista)

@@ -1,7 +1,7 @@
-# Evl Browser
+# 🌅 Evl Browser
 
 ✦ Navegador de internet leve, feito com Electron, HTML, CSS e JavaScript, com foco em usar pouca memória RAM.
-Estilo Firefox rodando sobre Chromium, com as engines NS Nord Suite.
+Estilo Firefox rodando sobre Chromium, com as engines NS Nord Suite. 🏮
 
 **Versão 1.0.0, o primeiro release.**
 
@@ -70,3 +70,5 @@ O Evl é um navegador feito pela comunidade, de código aberto: qualquer pessoa 
 ## Licença
 
 MIT. Veja [LICENSE](LICENSE).
+
+🏮

@@ -83,6 +83,12 @@ function startMemoryPolicy(tabs, onMemory, getLimits = DEFAULT_LIMITS) {
     const { discardMs, budgetMB } = getLimits();
     for (const tab of tabs.idleBackgroundTabs(discardMs)) tabs.discard(tab.id);
 
+    // Sem aba de fundo viva, o orçamento não tem o que descartar: não gasta uma medição de RAM
+    // (getAppMetrics percorre todos os processos) à toa.
+    if (tabs.backgroundViewTabs().length === 0) {
+      schedule(false);
+      return;
+    }
     const mb = totalMemoryMB();
     onMemory(mb);
     let pressure = false;

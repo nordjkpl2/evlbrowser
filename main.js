@@ -127,13 +127,24 @@ function send(channel, payload) {
 // Páginas disparam muitos eventos seguidos (título, ícone, loading...).
 // Juntamos tudo e mandamos UMA atualização, no máximo a cada 30 ms.
 
-let statePending = false;
 let lastSample = 0;
 
-function onTabsChanged() {
-  if (statePending) return;
-  statePending = true;
-  setTimeout(flushState, 30);
+// soft = true: mudança vinda da página (título, ícone, carregamento). Espera mais,
+// para uma página que muda o título sem parar não gerar um envio por evento.
+// soft = false: mudança de abas (abrir, fechar, trocar): responde logo.
+// Mudança de aba responde no próximo ciclo: tudo que chega no mesmo ciclo (ex.: restaurar
+// várias abas, de um laço síncrono) já cai num envio só.
+const SOFT_DELAY_MS = 150;
+const HARD_DELAY_MS = 0;
+let statePendingTimer = null;
+let statePendingHard = false;
+
+function onTabsChanged(soft = false) {
+  // Já há envio agendado que chega antes ou junto: não mexe.
+  if (statePendingTimer && (soft || statePendingHard)) return;
+  clearTimeout(statePendingTimer);
+  statePendingHard = !soft;
+  statePendingTimer = setTimeout(flushState, soft ? SOFT_DELAY_MS : HARD_DELAY_MS);
 }
 
 // Página web da aba ativa ({ url, title }), ou null (aba em branco/Configurações).
@@ -143,12 +154,16 @@ function activePage() {
 }
 
 function flushState() {
-  statePending = false;
+  const full = statePendingHard; // houve mudança de abas (não só título/carregamento da página)
+  statePendingTimer = null;
+  statePendingHard = false;
   if (!tabs) return;
   const page = activePage();
   // perms: permissões do site da aba ativa, para o painel ao lado da estrela
   send('state', { ...tabs.snapshot(), bookmarked: !!page && bookmarks.has(page.url), perms: page ? permissions.siteState(page.url) : null, profiles });
-  sampleMemory(false);
+  // getAppMetrics é síncrono e percorre todos os processos: só medimos quando a aba mudou,
+  // não a cada título ou carregamento de página (a política de memória também mede sozinha).
+  if (full) sampleMemory(false);
   policy?.refresh();
   scheduleSession();
 }
