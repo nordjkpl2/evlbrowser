@@ -446,3 +446,95 @@ html.look-terminal .switch { border-radius: 0; background: var(--active-base); }
 html.look-terminal .switch::after { border-radius: 0; background: var(--accent); }
 html.look-terminal .switch[aria-checked="true"] { background: #14532d; border-color: var(--accent); }
 html.look-terminal .theme-option[aria-checked="true"] { box-shadow: 0 0 0 1px var(--accent); }
+
+/* =====================================================================
+   REDESENHO — uma cor por categoria (--pc). Cada item do menu vira um
+   ícone colorido, como nos menus de console e no Firefox; cada cartão
+   herda a cor da sua categoria. Os temas look-* continuam por cima.
+   ===================================================================== */
+#page-settings [data-panel="search"]     { --pc: #38bdf8; }
+#page-settings [data-panel="memory"]     { --pc: #a78bfa; }
+#page-settings [data-panel="render"]     { --pc: #34d399; }
+#page-settings [data-panel="privacy"]    { --pc: #f472b6; }
+#page-settings [data-panel="adblock"]    { --pc: #f87171; }
+#page-settings [data-panel="appearance"] { --pc: #fbbf24; }
+#page-settings [data-panel="history"]    { --pc: #fb923c; }
+#page-settings [data-panel="bookmarks"]  { --pc: #facc15; }
+#page-settings [data-panel="downloads"]  { --pc: #22d3ee; }
+#page-settings [data-panel="cookies"]    { --pc: #c084fc; }
+#page-settings [data-panel="extensions"] { --pc: #a3e635; }
+#page-settings [data-panel="passwords"]  { --pc: #60a5fa; }
+
+/* menu lateral: ícone em bloco colorido + item ativo tingido */
+.nav-item { padding: 8px 10px; gap: 12px; border: 1px solid transparent; }
+.nav-item > svg {
+  width: 30px; height: 30px; padding: 7px; box-sizing: border-box; flex: none;
+  border-radius: 10px; background: var(--pc, var(--accent)); color: #0b1020;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--pc, var(--accent)) 35%, transparent);
+  transition: transform 0.15s ease;
+}
+.nav-item:hover { background: color-mix(in srgb, var(--pc, var(--accent)) 12%, transparent); }
+.nav-item:hover > svg { transform: translateX(2px) scale(1.06); color: #0b1020; }
+.nav-item[aria-current="true"] {
+  background: color-mix(in srgb, var(--pc, var(--accent)) 20%, var(--surface));
+  color: var(--text); font-weight: 700;
+  border-color: color-mix(in srgb, var(--pc, var(--accent)) 55%, transparent);
+  box-shadow: inset 4px 0 0 var(--pc, var(--accent)), 0 6px 18px color-mix(in srgb, var(--pc, var(--accent)) 22%, transparent);
+}
+.nav-item[aria-current="true"] > svg { color: #0b1020; }
+.nav-item .nav-emo { font-size: 17px; }
+.nav-group-head { letter-spacing: 0.12em; }
+
+/* cabeçalho da página */
+.content h2 {
+  gap: 12px; padding-bottom: 10px; margin-bottom: 6px;
+  background: linear-gradient(90deg, var(--pc, var(--accent)), transparent) left bottom / 100% 3px no-repeat;
+}
+.content h2 .title-ico { width: 1.1em; height: 1.1em; margin-right: 0; padding: 0.22em; box-sizing: border-box; border-radius: 0.4em; background: var(--pc, var(--accent)); color: #0b1020; }
+
+/* cartões: faixa colorida no topo, fundo tingido de leve, ícone-bloco no título */
+.card {
+  border: 1px solid color-mix(in srgb, var(--pc, var(--border)) 26%, var(--border));
+  background: linear-gradient(165deg, color-mix(in srgb, var(--pc, var(--accent)) 9%, var(--surface)) 0%, var(--surface) 55%);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22), inset 0 1px 0 color-mix(in srgb, var(--pc, #fff) 18%, transparent);
+  border-radius: calc(var(--r) * 2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { border-color: color-mix(in srgb, var(--pc, var(--accent)) 60%, transparent); }
+.card::after { top: 0; left: 0; width: 100%; height: 4px; border-radius: 0; background: linear-gradient(90deg, var(--pc, var(--accent)), color-mix(in srgb, var(--pc, var(--accent)) 30%, transparent)); }
+.card.alt::after { background: linear-gradient(90deg, var(--pc, var(--accent)), color-mix(in srgb, var(--pc, var(--accent)) 30%, transparent)); }
+.card h3 { font-size: calc(16px * var(--ui-scale, 1)); letter-spacing: -0.005em; }
+.card h3 .title-ico {
+  width: 1.5em; height: 1.5em; margin-right: 10px; padding: 0.3em; box-sizing: border-box;
+  border-radius: 0.55em; background: var(--pc, var(--accent)); color: #0b1020; vertical-align: middle;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--pc, var(--accent)) 35%, transparent);
+}
+.card.alt .title-ico { color: #0b1020; }
+.card.collapsible h3::before { border-color: var(--pc, var(--muted)); }
+.card .switch[aria-checked="true"] { background: var(--pc, var(--accent)); }
+.card .switch[aria-checked="true"]::after { background: #0b1020; }
+.card .white-btn { background: var(--pc, var(--accent)); color: #0b1020; }
+.card .text-btn { color: var(--pc, var(--accent)); }
+.card .v-row:hover { background: color-mix(in srgb, var(--pc, var(--accent)) 8%, transparent); border-radius: calc(var(--r) * 1.2); }
+.card dt { color: color-mix(in srgb, var(--pc, var(--muted)) 70%, var(--text)); }
+.card input[type="range"] { accent-color: var(--pc, var(--accent)); }
+.card .theme-option[aria-checked="true"] { border-color: var(--pc, var(--accent)); box-shadow: 0 0 0 2px var(--pc, var(--accent)), 0 10px 22px color-mix(in srgb, var(--pc, var(--accent)) 25%, transparent); }
+.card .tips li { border-color: color-mix(in srgb, var(--pc, var(--accent)) 45%, transparent); }
+progress::-webkit-progress-value { background: linear-gradient(90deg, var(--pc, var(--accent)), color-mix(in srgb, var(--pc, var(--accent)) 60%, #fff)); }
+#s-search:focus { border-color: var(--pc, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc, var(--accent)) 25%, transparent); }
+
+/* busca mais visível */
+#s-search { height: 46px; font-size: 14px; background: color-mix(in srgb, var(--surface) 88%, #fff 4%); }
+
+/* os temas com nome e look-* já definem as próprias cores; o item ativo do Neon/Terminal continua o deles */
+html.look-neon .nav-item[aria-current="true"], html.look-terminal .nav-item[aria-current="true"], html.look-papel .nav-item[aria-current="true"],
+html.look-1800 .nav-item[aria-current="true"], html.look-1900 .nav-item[aria-current="true"], html.look-lua .nav-item[aria-current="true"], html.look-vidro .nav-item[aria-current="true"] {
+  box-shadow: none;
+}
+html.look-neon .nav-item[aria-current="true"] > svg, html.look-terminal .nav-item[aria-current="true"] > svg,
+html.look-1800 .nav-item > svg, html.look-1900 .nav-item > svg, html.look-lua .nav-item > svg, html.look-papel .nav-item > svg {
+  background: transparent; color: inherit; box-shadow: none;
+}
+html.look-1800 .nav-item[aria-current="true"] > svg, html.look-1900 .nav-item[aria-current="true"] > svg,
+html.look-lua .nav-item[aria-current="true"] > svg, html.look-papel .nav-item[aria-current="true"] > svg,
+html.look-vidro .nav-item[aria-current="true"] > svg { color: inherit; }
