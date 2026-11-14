@@ -28,6 +28,9 @@ module.exports = {
   // Painel de tradução da página (botão da barra): idiomas + Traduzir/Cancelar.
   TRANSLATE_HEIGHT: 230,
 
+  // Barra "Localizar na página" (Ctrl+F), logo abaixo da barra de ferramentas.
+  FIND_HEIGHT: 50,
+
   // Aba de fundo parada por este tempo tem a página destruída (libera a RAM).
   DISCARD_AFTER_MS: discardSeconds > 0 ? discardSeconds * 1000 : 3 * 60 * 1000,
   // Só existe se EVL_DISCARD_SECONDS foi definido (teste): vence o valor de Configurações > Velocidade.

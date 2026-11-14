@@ -107,6 +107,10 @@ const WORDS = [
   ['Zoom atual. Clique para voltar a 100%', 'Current zoom. Click to reset to 100%', 'Zoom actual. Clic para volver a 100%'],
   // criados pelo JavaScript
   ['Resultados da busca', 'Search results', 'Resultados de la búsqueda'],
+  ['Vídeo em picture-in-picture (flutuante, por cima das abas)', 'Video in picture-in-picture (floating, above the tabs)', 'Vídeo en picture-in-picture (flotante, sobre las pestañas)'],
+  ['Vídeo em picture-in-picture', 'Video in picture-in-picture', 'Vídeo en picture-in-picture'],
+  ['Nenhum vídeo nesta página', 'No video on this page', 'No hay ningún vídeo en esta página'],
+  ['Não foi possível abrir o vídeo em picture-in-picture', 'Could not open the video in picture-in-picture', 'No se pudo abrir el vídeo en picture-in-picture'],
   ['Fechar aba (Ctrl+W)', 'Close tab (Ctrl+W)', 'Cerrar pestaña (Ctrl+W)'],
   ['Fechar aba', 'Close tab', 'Cerrar pestaña'],
   ['Apagar', 'Delete', 'Borrar'],

@@ -506,6 +506,7 @@ ipcMain.on('zoom:set', (event, action) => {
   else if (action === 'out') tabs.zoomOut();
   else if (action === 'reset') tabs.zoomReset();
 });
+ipcMain.handle('pip:toggle', (event) => (fromUi(event) ? tabs.togglePip() : 'error'));
 ipcMain.on('theme:set', (event, theme) => {
   if (!fromUi(event) || !THEMES.has(theme)) return;
   nativeTheme.themeSource = theme; // a interface e os sites passam a ver este esquema

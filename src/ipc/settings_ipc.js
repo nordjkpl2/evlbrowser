@@ -8,10 +8,10 @@ const PREF_KEYS = ['theme', 'accent', 'fontScale', 'fontFamily', 'tabLayout', 's
 const validUserAgent = (text) => /^[\x20-\x7e]{8,400}$/.test(text);
 
 // ctx: { ipcMain, fromUi, app, session, getStore, getTabs, defaultUA, beforeRestart }
-function registerSettingsIpc({ ipcMain, fromUi, app, session, getStore, getTabs, defaultUA, beforeRestart = () => {} }) {
+function registerSettingsIpc({ ipcMain, fromUi, app, session, getStore, getTabs, defaultUA, beforeRestart = () => {}, getSessions = () => [session.defaultSession] }) {
   function applyUserAgent() {
     const ua = getStore().get('userAgent') || defaultUA;
-    session.defaultSession.setUserAgent(ua);
+    for (const ses of getSessions()) ses.setUserAgent(ua); // sessão padrão + uma por perfil
     for (const tab of getTabs()?.tabs.values() ?? []) tab.view?.webContents.setUserAgent(ua);
   }
 

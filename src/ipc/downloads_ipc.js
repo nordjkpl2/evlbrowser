@@ -114,7 +114,7 @@ function registerDownloadsIpc({ ipcMain, fromUi, session, app, shell, dialog, st
 
   return {
     // chamar quando o app estiver pronto (a sessão só existe depois)
-    install: () => session.defaultSession.on('will-download', onDownload),
+    install: (ses = session.defaultSession) => ses.on('will-download', onDownload),
     active: () => live.size,
   };
 }

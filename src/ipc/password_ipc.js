@@ -5,7 +5,7 @@ const fs = require('fs');
 const MAX_CSV = 20 * 1024 * 1024;
 const CLEAR_CLIPBOARD_MS = 30000;
 
-// ctx: { ipcMain, fromUi, dialog, clipboard, getVault, getWindow }
+// ctx: { ipcMain, fromUi, dialog, clipboard, getVault(event): cofre do perfil de quem pediu, getWindow }
 function registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault, getWindow }) {
   const wrap = (fn) => {
     try {
@@ -17,17 +17,17 @@ function registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault, get
   const isId = (id) => typeof id === 'string' && id.length <= 40;
 
   ipcMain.handle('passwords:list', (event) =>
-    fromUi(event) ? { available: getVault().available(), items: getVault().list() } : null
+    fromUi(event) ? { available: getVault(event).available(), items: getVault(event).list() } : null
   );
   ipcMain.handle('passwords:add', (event, entry) => {
     if (!fromUi(event) || typeof entry !== 'object' || !entry) return null;
-    return wrap(() => ({ result: getVault().add(entry) }));
+    return wrap(() => ({ result: getVault(event).add(entry) }));
   });
-  ipcMain.handle('passwords:show', (event, id) => (fromUi(event) && isId(id) ? getVault().reveal(id) : null));
+  ipcMain.handle('passwords:show', (event, id) => (fromUi(event) && isId(id) ? getVault(event).reveal(id) : null));
   // Copia sem a senha passar pela interface; limpa a área de transferência depois de 30 s (se ainda for ela).
   ipcMain.handle('passwords:copy', (event, id) => {
     if (!fromUi(event) || !isId(id)) return false;
-    const password = getVault().reveal(id);
+    const password = getVault(event).reveal(id);
     if (password === null) return false;
     clipboard.writeText(password);
     setTimeout(() => {
@@ -35,9 +35,9 @@ function registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault, get
     }, CLEAR_CLIPBOARD_MS).unref?.();
     return true;
   });
-  ipcMain.handle('passwords:remove', (event, id) => (fromUi(event) && isId(id) ? getVault().remove(id) : false));
+  ipcMain.handle('passwords:remove', (event, id) => (fromUi(event) && isId(id) ? getVault(event).remove(id) : false));
   ipcMain.handle('passwords:clear', (event) => {
-    if (fromUi(event)) getVault().clear();
+    if (fromUi(event)) getVault(event).clear();
     return true;
   });
   ipcMain.handle('passwords:import', async (event) => {
@@ -52,7 +52,7 @@ function registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault, get
       const file = pick.filePaths[0];
       if (pick.canceled || !file) return { ok: true, canceled: true };
       if (fs.statSync(file).size > MAX_CSV) throw new Error('O arquivo é grande demais (máximo 20 MB).');
-      return { ok: true, ...getVault().importCsv(fs.readFileSync(file, 'utf8')) };
+      return { ok: true, ...getVault(event).importCsv(fs.readFileSync(file, 'utf8')) };
     } catch (err) {
       return { ok: false, error: String(err.message ?? err).slice(0, 200) };
     }
@@ -70,11 +70,11 @@ function registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault, get
   }
   ipcMain.handle('autofill:query', (event) => {
     const host = pageHost(event);
-    return host ? getVault().forSite(host) : [];
+    return host ? getVault(event).forSite(host) : [];
   });
   ipcMain.handle('autofill:fill', (event, id) => {
     const host = pageHost(event);
-    return host && isId(id) ? getVault().credential(id, host) : null;
+    return host && isId(id) ? getVault(event).credential(id, host) : null;
   });
 }
 

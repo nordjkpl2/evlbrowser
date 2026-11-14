@@ -11,6 +11,7 @@ const forwardBtn = $('forward');
 const reloadBtn = $('reload');
 const addressEl = $('address');
 const starBtn = $('star');
+const pipBtn = $('pip-btn');
 const memEl = $('mem');
 const pageBlank = $('page-blank');
 const pageSettings = $('page-settings');
@@ -206,7 +207,8 @@ function render(state) {
 
     const web = state.activeKind === 'web';
     showStar(web, state.bookmarked === true);
-    backBtn.disabled = !web || !state.canGoBack;
+    pipBtn.disabled = !web;
+  backBtn.disabled = !web || !state.canGoBack;
     forwardBtn.disabled = !web || !state.canGoForward;
 
     pageBlank.hidden = state.activeKind !== 'blank';
@@ -677,6 +679,16 @@ backBtn.addEventListener('click', () => window.evl.back());
 forwardBtn.addEventListener('click', () => window.evl.forward());
 reloadBtn.addEventListener('click', () => window.evl.reload());
 starBtn.addEventListener('click', () => window.evl.toggleBookmark());
+// Picture-in-picture: o vídeo da aba ativa flutua por cima das outras janelas.
+let pipNoteTimer = 0;
+pipBtn.addEventListener('click', async () => {
+  const result = await window.evl.pictureInPicture();
+  if (result !== 'none' && result !== 'error') return;
+  const note = t(result === 'none' ? 'Nenhum vídeo nesta página' : 'Não foi possível abrir o vídeo em picture-in-picture');
+  pipBtn.title = note;
+  clearTimeout(pipNoteTimer);
+  pipNoteTimer = setTimeout(() => (pipBtn.title = t('Vídeo em picture-in-picture (flutuante, por cima das abas)')), 2500);
+});
 memEl.addEventListener('click', () => window.evl.setMenu(!current?.menuOpen));
 zoomOutBtn.addEventListener('click', () => window.evl.zoom('out'));
 zoomInBtn.addEventListener('click', () => window.evl.zoom('in'));

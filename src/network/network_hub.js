@@ -30,9 +30,10 @@ function referrerOrigin(ref) {
 
 // ctx: { session, adblock, getAdblockOn(): boolean, getPrivacy(): opções, isFullExtension(initiator): extensão com "acesso completo" }
 function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy, isFullExtension = () => false }) {
-  return {
-    refresh() {
-      const requests = session.defaultSession.webRequest;
+  // Os filtros valem para a sessão padrão e para a de cada perfil (attach).
+  const targets = new Set([session.defaultSession]);
+  function applyTo(ses) {
+      const requests = ses.webRequest;
       const adsOn = getAdblockOn();
       const p = getPrivacy();
 
@@ -96,6 +97,14 @@ function createNetworkHub({ session, adblock, getAdblockOn, getPrivacy, isFullEx
           callback(headers ? { responseHeaders: headers } : {});
         });
       } else requests.onHeadersReceived(null);
+  }
+  return {
+    refresh() {
+      for (const ses of targets) applyTo(ses);
+    },
+    attach(ses) {
+      targets.add(ses);
+      applyTo(ses);
     },
   };
 }

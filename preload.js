@@ -103,6 +103,7 @@ contextBridge.exposeInMainWorld('evl', {
   translatePanel: (open) => ipcRenderer.send('translate:panel', open === true),
   translateRun: (from, to) => ipcRenderer.invoke('translate:run', String(from), String(to)),
   translateRestore: () => ipcRenderer.invoke('translate:restore'),
+  pictureInPicture: () => ipcRenderer.invoke('pip:toggle'), // vídeo da aba ativa em PiP (ou sai do PiP)
   zoom: (action) => ipcRenderer.send('zoom:set', String(action)), // 'in' | 'out' | 'reset'
   setTheme: (theme) => ipcRenderer.send('theme:set', String(theme)),
 

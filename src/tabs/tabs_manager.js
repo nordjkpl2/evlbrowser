@@ -27,6 +27,29 @@ const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Ma
 
 const SETTINGS_URL = 'evl://settings';
 
+// Roda dentro da página da aba: sai do PiP se já há um; senão escolhe o maior vídeo com fonte carregada.
+const PIP_SCRIPT = `(async () => {
+  if (document.pictureInPictureElement) {
+    await document.exitPictureInPicture();
+    return 'off';
+  }
+  let best = null;
+  let bestArea = 0;
+  for (const v of document.querySelectorAll('video')) {
+    if (v.readyState === 0 || v.disablePictureInPicture || !(v.currentSrc || v.srcObject)) continue;
+    const r = v.getBoundingClientRect();
+    const area = r.width * r.height;
+    if (area > bestArea) { best = v; bestArea = area; }
+  }
+  if (!best) return 'none';
+  try {
+    await best.requestPictureInPicture();
+    return 'on';
+  } catch {
+    return 'error';
+  }
+})()`;
+
 // Passos de zoom (1 = 100%), iguais aos do Chrome: 25% ... 500%.
 const ZOOM_FACTORS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
 
@@ -197,6 +220,13 @@ class TabManager {
       // marca a página como oculta: o Chromium para de pintar e congela timers/animações dela
       prev.view.setVisible?.(false);
       prev.lastActive = Date.now();
+      // Página ainda carregando e fora da tela: para o download dela (sem som/vídeo tocando).
+      // Volta a carregar quando você clicar na aba de novo.
+      const wc = prev.view.webContents;
+      if (wc.isLoading() && !this._playing(prev)) {
+        wc.stop();
+        prev.loadHalted = true;
+      }
     }
 
     this.activeId = id;
@@ -204,6 +234,10 @@ class TabManager {
 
     if (tab.kind === 'web') {
       this._ensureView(tab); // recria a página se estava "discarded"
+      if (tab.loadHalted) {
+        tab.loadHalted = false;
+        tab.view.webContents.loadURL(tab.url); // retoma o carregamento parado
+      }
       this.win.contentView.addChildView(tab.view);
       tab.view.setVisible?.(true);
       this.win.contentView.addChildView(this.ui); // a interface fica sempre por cima (menu e sugestões)
@@ -690,6 +724,16 @@ class TabManager {
     tab.view.webContents.close();
     tab.view = null;
     tab.loading = false;
+    tab.loadHalted = false; // a página nova já carrega sozinha ao ser criada
+  }
+
+  // Picture-in-picture: o maior vídeo da aba ativa vira uma janela flutuante, por cima de todas
+  // as outras. Se já há um em PiP, fecha. Devolve 'on' | 'off' | 'none' | 'error'.
+  // Roda com "gesto do usuário" (userGesture), porque o Chromium só aceita PiP depois de um clique.
+  async togglePip() {
+    const wc = this.activeWebContents();
+    if (!wc) return 'none';
+    return wc.executeJavaScript(PIP_SCRIPT, true).catch(() => 'error');
   }
 }
 

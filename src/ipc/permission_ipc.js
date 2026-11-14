@@ -179,9 +179,10 @@ function registerPermissionIpc({ ipcMain, fromUi, session, getStore, getTabs, se
     pending: perms.pending,
     siteState: perms.siteState,
     // chamar quando o app estiver pronto (a sessão só existe depois)
-    install() {
-      session.defaultSession.setPermissionRequestHandler(perms.ask);
-      session.defaultSession.setPermissionCheckHandler((_wc, permission, origin, details) => perms.check(permission, origin, details));
+    // ses: a sessão padrão ou a de um perfil (cada uma precisa dos seus handlers)
+    install(ses = session.defaultSession) {
+      ses.setPermissionRequestHandler(perms.ask);
+      ses.setPermissionCheckHandler((_wc, permission, origin, details) => perms.check(permission, origin, details));
     },
   };
 }
