@@ -19,6 +19,9 @@ module.exports = {
   // Idem para a lista de sugestões do histórico (até 6 linhas) da barra de endereço.
   SUGGEST_HEIGHT: 240,
 
+  // Aviso "esta página quer ir para outro site" (Permitir / Ficar aqui), logo abaixo da barra.
+  REDIRECT_HEIGHT: 96,
+
   // Painel de downloads que abre pelo botão da barra (lista com progresso, até ~5 itens).
   DOWNLOADS_HEIGHT: 300,
 

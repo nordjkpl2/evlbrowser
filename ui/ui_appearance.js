@@ -190,6 +190,31 @@ window.evl.onPermAsk((ask) => {
   $('perm-remember').checked = false;
   drawPerms();
 });
+// Redirecionamento pedido por uma página (sem clique seu): seguir ou ficar.
+const redirEl = $('redir');
+let redirAsk = null;
+function drawRedirect() {
+  redirEl.hidden = !redirAsk;
+}
+function answerRedirect(allow) {
+  if (redirAsk) window.evl.redirectAnswer(redirAsk.id, allow);
+  redirAsk = null;
+  drawRedirect();
+}
+window.evl.onRedirectAsk((ask) => {
+  redirAsk = ask;
+  $('redir-text').textContent = t('Esta página quer ir para {to}. Seguir?', { to: ask.to || ask.from });
+  drawRedirect();
+});
+window.evl.onRedirectClose(() => {
+  redirAsk = null;
+  drawRedirect();
+});
+$('redir-go').addEventListener('click', () => answerRedirect(true));
+$('redir-stay').addEventListener('click', () => answerRedirect(false));
+redirEl.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') answerRedirect(false);
+});
 window.evl.onPermClose(() => {
   permAsk = null;
   drawPerms();
@@ -569,15 +594,17 @@ resetYes.addEventListener('click', () => {
   window.evl.settingsReset();
 });
 
-// Menos cor: tira brilhos, linhas e setas coloridas das Configurações
+// Menos cor: tira brilhos, linhas e setas coloridas das Configurações. Ligado por padrão ('0' = desligado).
 const lessColor = $('less-color');
 function setLessColor(on) {
   document.body.classList.toggle('less-color', on);
   lessColor.setAttribute('aria-checked', String(on));
 }
 try {
-  setLessColor(localStorage.getItem('evl.lessColor') === '1');
-} catch {}
+  setLessColor(localStorage.getItem('evl.lessColor') !== '0');
+} catch {
+  setLessColor(true);
+}
 lessColor.addEventListener('click', () => {
   const on = lessColor.getAttribute('aria-checked') !== 'true';
   setLessColor(on);

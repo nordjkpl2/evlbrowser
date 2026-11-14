@@ -18,7 +18,9 @@ const { WebContentsView } = require('electron');
 const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
 const { hostColor } = require('./favicon_color');
-const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT } = require('../app/app_config');
+const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT, REDIRECT_HEIGHT } = require('../app/app_config');
+const { shouldAskRedirect } = require('./redirect_guard');
+const { hostOf } = require('../network/privacy_engine');
 
 const DEFAULT_TAB_LAYOUT = { mode: 'top', tabH: 32, tabW: 200, sideW: 220, line: false, lineColor: '' };
 const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Math.round(Number(v)))) : d);
@@ -44,6 +46,8 @@ class TabManager {
     this.menuOpen = false; // submenu do contador de memória (zoom + Configurações)
     this.suggestOpen = false; // sugestões do histórico na barra de endereço
     this.promptOpen = false; // pedido de permissão de um site (microfone, câmera...)
+    this.redirectSeq = 0;
+    this.redirectAsk = null; // página que tentou mudar sozinha para outro site, esperando sua resposta
     this.downloadsOpen = false; // painel de downloads (botão da barra)
     this.history = history;
     this.webrtcPolicy = 'default_public_interface_only'; // o WebRTC não revela o IP da rede local
@@ -188,6 +192,8 @@ class TabManager {
     const prev = this.tabs.get(this.activeId);
     if (prev && prev !== tab && prev.view) {
       this.win.contentView.removeChildView(prev.view); // vira "sleeping"
+      // marca a página como oculta: o Chromium para de pintar e congela timers/animações dela
+      prev.view.setVisible?.(false);
       prev.lastActive = Date.now();
     }
 
@@ -197,6 +203,7 @@ class TabManager {
     if (tab.kind === 'web') {
       this._ensureView(tab); // recria a página se estava "discarded"
       this.win.contentView.addChildView(tab.view);
+      tab.view.setVisible?.(true);
       this.win.contentView.addChildView(this.ui); // a interface fica sempre por cima (menu e sugestões)
       this.layout();
       tab.view.webContents.focus();
@@ -426,6 +433,7 @@ class TabManager {
     const extra = Math.max(
       this.menuOpen ? MENU_HEIGHT : this.suggestOpen ? SUGGEST_HEIGHT : 0,
       this.promptOpen ? PROMPT_HEIGHT : 0,
+      this.redirectAsk ? REDIRECT_HEIGHT : 0,
       this.downloadsOpen ? DOWNLOADS_HEIGHT : 0,
     );
     if (this.tabLayout.mode === 'side') {
@@ -548,6 +556,8 @@ class TabManager {
     });
     const wc = view.webContents;
     wc.setWebRTCIPHandlingPolicy?.(this.webrtcPolicy);
+    // página oculta (aba dormindo): timers e animações mais lentos, pouco trabalho de CPU
+    wc.setBackgroundThrottling?.(true);
 
     // Som/vídeo tocando em segundo plano: a aba fica protegida do descarte, mesmo que o som
     // falhe por instantes (buffering, troca de faixa, pausa curta).
@@ -605,6 +615,16 @@ class TabManager {
     wc.on('before-input-event', (event, input) => {
       if (this.onShortcut(input)) event.preventDefault();
     });
+    // Clique ou tecla seus: marca a hora (a navegação logo depois conta como pedido seu).
+    wc.on('input-event', (_e, input) => {
+      if (input.type === 'mouseDown' || input.type === 'rawKeyDown' || input.type === 'touchStart') tab.gestureAt = Date.now();
+    });
+    // Página que muda sozinha para outro site: pergunta antes (ver redirect_guard.js).
+    wc.on('will-navigate', (event, url) => {
+      if (!shouldAskRedirect({ gestureAt: tab.gestureAt, fromUrl: tab.url, toUrl: url })) return;
+      event.preventDefault();
+      this._askRedirect(tab, url);
+    });
     // Ctrl + roda do mouse
     wc.on('zoom-changed', (_e, direction) => {
       this._zoomStep(direction === 'in' ? 1 : -1, tab);
@@ -612,6 +632,25 @@ class TabManager {
 
     tab.view = view;
     wc.loadURL(tab.url);
+  }
+
+  // Mostra o pedido de redirecionamento na interface (a resposta volta por answerRedirect).
+  _askRedirect(tab, url) {
+    if (this.redirectAsk?.tabId === tab.id) this.redirectAsk.url = url; // a página insistiu: troca o destino
+    else this.redirectAsk = { id: ++this.redirectSeq, tabId: tab.id, from: tab.url, url };
+    this.ui.webContents.send('redirect:ask', { id: this.redirectAsk.id, from: hostOf(tab.url), to: hostOf(url) });
+    this.layout();
+  }
+
+  // allow = seguir para o endereço pedido; false = ficar na página atual.
+  answerRedirect(id, allow) {
+    const ask = this.redirectAsk;
+    if (!ask || ask.id !== id) return;
+    this.redirectAsk = null;
+    this.ui.webContents.send('redirect:close');
+    const tab = this.tabs.get(ask.tabId);
+    if (allow && tab?.view) tab.view.webContents.loadURL(ask.url);
+    this.layout();
   }
 
   _destroyView(tab) {

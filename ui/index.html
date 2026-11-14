@@ -88,6 +88,15 @@
     <p id="perm-note" class="hint">Recarregue a página para a mudança valer no que já está em uso.</p>
   </div>
 
+  <!-- Página que tentou mudar sozinha para outro site: o main.js mostra quando acontece; você decide. -->
+  <div id="redir" role="alertdialog" aria-labelledby="redir-text" hidden>
+    <div id="redir-text"></div>
+    <div class="perm-actions">
+      <button id="redir-stay" type="button">Ficar aqui</button>
+      <button id="redir-go" type="button" class="perm-primary">Seguir</button>
+    </div>
+  </div>
+
   <!-- Telas internas: só aparecem quando a aba ativa é "em branco" ou "configurações".
        Em aba web a interface tem só 80 px de altura e elas ficam fora da tela. -->
   <main id="page-blank" class="screen" hidden>
@@ -575,7 +584,7 @@
               <span>Menos cor</span>
               <span class="v-hint hint">Tira os brilhos, as linhas e as setas coloridas das Configurações; só os detalhes essenciais ficam na cor principal.</span>
             </span>
-            <button id="less-color" class="switch" type="button" role="switch" aria-checked="false" aria-label="Menos cor"></button>
+            <button id="less-color" class="switch" type="button" role="switch" aria-checked="true" aria-label="Menos cor"></button>
           </div>
           <div class="v-row">
             <span class="v-text">

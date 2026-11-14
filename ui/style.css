@@ -16,6 +16,8 @@
   --accent: #ffb429;
   --accent2: oklch(from var(--accent) l calc(c * 0.5) calc(h + 50));
   --glow: rgba(255, 180, 41, 0.35);
+  /* fundo ao passar o mouse: bem mais visível que a superfície ativa (vale para abas, menus e Configurações) */
+  --hover-bg: color-mix(in oklab, var(--surface-active), var(--accent) 30%);
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.22); /* sombra dos menus flutuantes */
 
   --font-ui: "Segoe UI", system-ui, sans-serif;
@@ -131,7 +133,7 @@ button, input { font: inherit; color: inherit; }
   cursor: default;
 }
 .tab { transition: background-color 0.15s, box-shadow 0.15s; }
-.tab:hover { background: var(--surface-active); }
+.tab:hover { background: var(--hover-bg); }
 .tab.active {
   background: var(--surface-active);
   box-shadow: inset 0 2px 0 var(--accent), 0 -6px 14px -10px var(--glow);
@@ -193,7 +195,7 @@ button, input { font: inherit; color: inherit; }
   font-size: calc(16px * var(--ui-scale, 1));
   cursor: pointer;
 }
-.icon-btn:hover:not(:disabled) { background: var(--surface-active); }
+.icon-btn:hover:not(:disabled) { background: var(--hover-bg); }
 .icon-btn:disabled { color: var(--muted); opacity: 0.4; cursor: default; }
 #new-tab { align-self: center; margin-bottom: 2px; }
 
@@ -225,7 +227,7 @@ button, input { font: inherit; color: inherit; }
   text-align: right;
   cursor: pointer;
 }
-#mem:hover { background-color: var(--surface-active); border-color: var(--border); }
+#mem:hover { background-color: var(--hover-bg); border-color: var(--border); }
 
 /* O atributo hidden sempre vence qualquer "display:" definido abaixo. */
 [hidden] { display: none !important; }
@@ -293,7 +295,7 @@ button, input { font: inherit; color: inherit; }
   text-align: center;
   cursor: pointer;
 }
-#zoom-val:hover:not(:disabled) { background: var(--surface-active); }
+#zoom-val:hover:not(:disabled) { background: var(--hover-bg); }
 #zoom-val:disabled { color: var(--muted); opacity: 0.4; cursor: default; }
 
 .menu-item {
@@ -308,7 +310,7 @@ button, input { font: inherit; color: inherit; }
   text-align: left;
   cursor: pointer;
 }
-.menu-item:hover { background: var(--surface-active); }
+.menu-item:hover { background: var(--hover-bg); }
 
 #page-blank {
   position: relative;
@@ -388,7 +390,23 @@ body.side-tabs .screen { min-width: 0; height: 100%; }
   font-size: calc(12px * var(--ui-scale, 1));
   z-index: 12;
 }
-#perm[hidden], #perm-ask[hidden] { display: none; }
+#perm[hidden], #perm-ask[hidden], #redir[hidden] { display: none; }
+#redir {
+  position: fixed;
+  top: calc(var(--tab-h, 32px) + 52px);
+  right: 8px;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: calc(12px * var(--ui-scale, 1));
+}
+#redir-text { overflow-wrap: anywhere; }
 #perm-host { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #perm-ask { display: grid; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 #perm-text { overflow-wrap: anywhere; }

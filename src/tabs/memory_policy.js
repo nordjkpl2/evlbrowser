@@ -61,11 +61,17 @@ function startMemoryPolicy(tabs, onMemory, getLimits = DEFAULT_LIMITS) {
 
   // Agenda UM acordar: quando a aba de fundo mais antiga vencer, mas nunca
   // antes de MIN_WAIT_MS nem depois de BUDGET_CHECK_MS. Sem candidata: sem timer.
-  function schedule() {
+  // pressure = true: estouro de orçamento ainda não resolvido; confere de novo logo (MIN_WAIT_MS),
+  // em vez de esperar BUDGET_CHECK_MS, para a RAM voltar ao limite em passos curtos.
+  function schedule(pressure = false) {
     clear();
     const candidates = tabs.backgroundViewTabs();
     if (candidates.length === 0) return;
 
+    if (pressure) {
+      timer = setTimeout(run, cfg.MIN_WAIT_MS);
+      return;
+    }
     const oldest = Math.min(...candidates.map((t) => t.lastActive));
     const due = oldest + getLimits().discardMs - Date.now();
     const wait = Math.min(Math.max(due, cfg.MIN_WAIT_MS), cfg.BUDGET_CHECK_MS);
@@ -79,11 +85,16 @@ function startMemoryPolicy(tabs, onMemory, getLimits = DEFAULT_LIMITS) {
 
     const mb = totalMemoryMB();
     onMemory(mb);
+    let pressure = false;
     if (mb > budgetMB) {
       const [oldest] = tabs.idleBackgroundTabs(cfg.PRESSURE_DISCARD_AFTER_MS);
-      if (oldest) tabs.discard(oldest.id);
+      if (oldest) {
+        tabs.discard(oldest.id);
+        // ainda sobram abas ociosas: a próxima conferência vem logo, para não ficar acima do limite
+        pressure = tabs.idleBackgroundTabs(cfg.PRESSURE_DISCARD_AFTER_MS).length > 0;
+      }
     }
-    schedule();
+    schedule(pressure);
   }
 
   function refresh() {

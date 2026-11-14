@@ -536,6 +536,10 @@ toggleBookmark = registerBookmarksIpc({
 registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: () => vault, getWindow: () => win });
 registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
 registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win, getTabs: () => tabs });
+// Página que mudou sozinha para outro site: a pessoa escolhe seguir ou ficar (ver tabs/redirect_guard.js).
+ipcMain.on('redirect:answer', (event, id, allow) => {
+  if (fromUi(event) && Number.isInteger(id)) tabs?.answerRedirect(id, allow === true);
+});
 const permissions = registerPermissionIpc({ ipcMain, fromUi, session, getStore: () => store, getTabs: () => tabs, send, getActiveUrl: () => activePage()?.url ?? '', refresh: onTabsChanged });
 const settingsApi = registerSettingsIpc({
   ipcMain,

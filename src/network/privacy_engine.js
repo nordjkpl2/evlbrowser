@@ -13,11 +13,11 @@ const PRIVACY_DEFAULTS = {
   limitFingerprint: true, // esconde detalhes do computador (client hints) e desliga APIs de anúncios do Chromium
   blockExtensionNet: true, // páginas de fundo das extensões não enviam dados para a internet
   noWebgl: false, // desliga o WebGL nas abas novas (mapas e jogos 3D deixam de funcionar)
-  maskHardware: false, // sites veem sempre 4 núcleos e 8 GB de memória
+  maskHardware: true, // sites veem sempre 4 núcleos e 8 GB de memória
   letterbox: false, // página com tamanho em múltiplos de 200x100 px (a janela exata não identifica você)
   blockBeacons: true, // corta pings/beacons e relatórios (só servem para medir você; nenhum site depende deles)
   httpsOnly: false, // só abre https:// (sem voltar para http:// quando o site não oferece)
-  webrtcOff: false, // WebRTC sem conexão direta (o IP real nunca aparece; chamadas de vídeo podem falhar)
+  webrtcOff: true, // WebRTC sem conexão direta (o IP real nunca aparece; chamadas de vídeo podem falhar)
   canvasNoise: false, // ruído invisível no canvas (a "assinatura" do desenho muda a cada página)
   strictDns: false, // DNS seguro sem plano B: nunca pergunta ao DNS do provedor (se o DNS seguro cair, os sites não abrem)
   englishOnly: false, // sites veem o idioma en-US (o mais comum), como no LibreWolf
