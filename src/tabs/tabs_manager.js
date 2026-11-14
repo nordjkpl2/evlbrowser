@@ -537,8 +537,16 @@ class TabManager {
   // Próximo passo da lista ZOOM_FACTORS a partir de um fator (1 = 100%).
   // Se o zoom atual não é um dos passos, o primeiro passo só "encaixa" na lista.
   _nextZoom(current, direction) {
-    let index = ZOOM_FACTORS.findIndex((f) => f >= current - 0.001);
-    if (index === -1) index = ZOOM_FACTORS.length - 1;
+    // Busca binária (lista ordenada): primeiro passo >= atual. Se nenhum, o último.
+    const target = current - 0.001;
+    let lo = 0;
+    let hi = ZOOM_FACTORS.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (ZOOM_FACTORS[mid] >= target) hi = mid;
+      else lo = mid + 1;
+    }
+    const index = Math.min(lo, ZOOM_FACTORS.length - 1);
     const exact = Math.abs(ZOOM_FACTORS[index] - current) < 0.01;
     const next = direction > 0 ? (exact ? index + 1 : index) : index - 1;
     return ZOOM_FACTORS[Math.min(ZOOM_FACTORS.length - 1, Math.max(0, next))];

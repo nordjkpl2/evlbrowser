@@ -22,26 +22,47 @@ function keyOf(rawUrl) {
 }
 
 function createBookmarks(file, { delay = 1500 } = {}) {
-  let items = null; // [{ id, url, title, time }], o mais novo primeiro
+  // Um Map só: a ORDEM DE INSERÇÃO é a recência (o primeiro é o mais antigo, o último o mais novo).
+  // Favoritar, desfavoritar e despejar o mais antigo são O(1): não há splice, nem reindexação.
+  let byUrl = null; // url -> { id, url, title, time }
+  let byId = null; // id -> item (o mesmo objeto de byUrl)
   let timer = null;
 
   function load() {
-    if (items) return items;
-    items = [];
+    if (byUrl) return byUrl;
+    byUrl = new Map();
+    byId = new Map();
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-      const seen = new Set(); // evita O(n²) ao carregar: checar duplicados numa lista cresce rápido
+      // O arquivo está do mais novo para o mais antigo; o primeiro duplicado (o mais novo) vence.
+      const rows = [];
+      const seen = new Set(); // evita O(n²) ao carregar
       for (const i of Array.isArray(data) ? data : []) {
         const url = i && typeof i.url === 'string' ? keyOf(i.url) : null;
         if (url && !seen.has(url)) {
           seen.add(url);
-          items.push({ id: String(i.id || crypto.randomBytes(6).toString('hex')), url, title: String(i.title || url), time: Number(i.time) || 0 });
+          rows.push({ id: String(i.id || crypto.randomBytes(6).toString('hex')), url, title: String(i.title || url), time: Number(i.time) || 0 });
         }
+      }
+      // Insere do mais antigo para o mais novo, para a ordem do Map ficar certa.
+      for (let k = rows.length - 1; k >= 0; k--) {
+        byUrl.set(rows[k].url, rows[k]);
+        byId.set(rows[k].id, rows[k]);
       }
     } catch {
       // sem arquivo (ou quebrado): começa vazio
     }
-    return items;
+    return byUrl;
+  }
+
+  // Lista do mais novo para o mais antigo (cópia do array; os itens são os mesmos objetos).
+  function newestFirst() {
+    return [...load().values()].reverse();
+  }
+
+  function drop(item) {
+    byUrl.delete(item.url);
+    byId.delete(item.id);
   }
 
   function save() {
@@ -49,7 +70,7 @@ function createBookmarks(file, { delay = 1500 } = {}) {
     timer = null;
     try {
       fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, JSON.stringify(items));
+      fs.writeFileSync(file, JSON.stringify(newestFirst()));
     } catch {
       // sem permissão: vale só até fechar o app
     }
@@ -61,20 +82,23 @@ function createBookmarks(file, { delay = 1500 } = {}) {
   }
 
   return {
-    list: () => load().slice(),
+    list: () => newestFirst(),
     has: (url) => {
       const key = keyOf(url);
-      return !!key && load().some((i) => i.url === key);
+      load();
+      return !!key && byUrl.has(key);
     },
     // Favorita a página (ou atualiza o título). Devolve false se não for uma página http(s).
     add(url, title) {
       const key = keyOf(url);
       if (!key) return false;
-      const list = load();
-      const old = list.findIndex((i) => i.url === key);
-      if (old !== -1) list.splice(old, 1);
-      list.unshift({ id: crypto.randomBytes(6).toString('hex'), url: key, title: String(title || key).slice(0, 200), time: Date.now() });
-      if (list.length > MAX_ITEMS) list.length = MAX_ITEMS;
+      const map = load();
+      const old = map.get(key);
+      if (old) drop(old); // sai da posição antiga; volta para o topo (fim do Map)
+      const item = { id: crypto.randomBytes(6).toString('hex'), url: key, title: String(title || key).slice(0, 200), time: Date.now() };
+      map.set(key, item);
+      byId.set(item.id, item);
+      while (map.size > MAX_ITEMS) drop(map.values().next().value); // despeja o mais antigo
       later();
       return true;
     },
@@ -87,19 +111,19 @@ function createBookmarks(file, { delay = 1500 } = {}) {
       return this.add(url, title);
     },
     remove(id) {
-      const list = load();
-      const i = list.findIndex((x) => x.id === id);
-      if (i === -1) return false;
-      list.splice(i, 1);
+      load();
+      const item = byId.get(id);
+      if (!item) return false;
+      drop(item);
       later();
       return true;
     },
     removeUrl(url) {
       const key = keyOf(url);
-      const list = load();
-      const i = list.findIndex((x) => x.url === key);
-      if (i === -1) return false;
-      list.splice(i, 1);
+      load();
+      const item = key ? byUrl.get(key) : undefined;
+      if (!item) return false;
+      drop(item);
       later();
       return true;
     },
@@ -108,7 +132,7 @@ function createBookmarks(file, { delay = 1500 } = {}) {
       const q = String(query).trim().toLowerCase();
       if (!q) return [];
       const out = [];
-      for (const i of load()) {
+      for (const i of newestFirst()) {
         if (i.title.toLowerCase().includes(q) || i.url.toLowerCase().includes(q)) {
           out.push({ url: i.url, host: new URL(i.url).host.replace(/^www\./, ''), title: i.title, star: true });
           if (out.length === n) break;

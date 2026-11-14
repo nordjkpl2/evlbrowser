@@ -27,27 +27,38 @@ function site(rawUrl) {
 }
 
 function createHistory(file, { max = 500, delay = 3000 } = {}) {
-  let items = null; // [{ url, host, title, time }], o mais recente primeiro
+  // Um Map só: a ORDEM DE INSERÇÃO é a recência (o primeiro é o mais antigo, o último o mais novo).
+  // Visitar, remover e despejar o mais antigo são O(1): não há splice nem reindexação.
+  let byHost = null; // site -> { url, host, title, time }
   let timer = null;
 
   function load() {
-    if (items) return items;
-    items = [];
+    if (byHost) return byHost;
+    byHost = new Map();
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      // O arquivo está do mais novo para o mais antigo; o primeiro de cada site (o mais novo) vence.
       // Também aceita o formato antigo (uma entrada por página): vira um por site.
-      const seen = new Set(); // Set em vez de items.some(): O(n) ao carregar, não O(n²)
+      const rows = [];
+      const seen = new Set(); // Set em vez de some(): O(n) ao carregar, não O(n²)
       for (const i of Array.isArray(data) ? data : []) {
         const s = i && typeof i.url === 'string' && typeof i.time === 'number' ? site(i.url) : null;
         if (s && !seen.has(s.key)) {
           seen.add(s.key);
-          items.push({ url: s.url, host: s.key, title: String(i.title || s.key), time: i.time });
+          rows.push({ url: s.url, host: s.key, title: String(i.title || s.key), time: i.time });
         }
       }
+      // Insere do mais antigo para o mais novo, para a ordem do Map ficar certa.
+      for (let k = rows.length - 1; k >= 0; k--) byHost.set(rows[k].host, rows[k]);
     } catch {
       // arquivo não existe ou está quebrado: começa vazio
     }
-    return items;
+    return byHost;
+  }
+
+  // Lista do mais novo para o mais antigo (cópia do array; os itens são os mesmos objetos).
+  function newestFirst() {
+    return [...load().values()].reverse();
   }
 
   function save() {
@@ -55,7 +66,7 @@ function createHistory(file, { max = 500, delay = 3000 } = {}) {
     timer = null;
     try {
       fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, JSON.stringify(items));
+      fs.writeFileSync(file, JSON.stringify(newestFirst()));
     } catch {
       // sem permissão de escrita: o histórico vale só até fechar o app
     }
@@ -72,18 +83,18 @@ function createHistory(file, { max = 500, delay = 3000 } = {}) {
     add(url, title) {
       const s = site(url);
       if (!s) return;
-      const list = load();
-      const old = list.findIndex((i) => i.host === s.key);
-      const prev = old === -1 ? null : list.splice(old, 1)[0];
-      list.unshift({ url: s.url, host: s.key, title: title || prev?.title || s.key, time: Date.now() });
-      if (list.length > max) list.length = max;
+      const map = load();
+      const prev = map.get(s.key);
+      if (prev) map.delete(s.key); // sai da posição antiga; volta para o topo (fim do Map)
+      map.set(s.key, { url: s.url, host: s.key, title: title || prev?.title || s.key, time: Date.now() });
+      while (map.size > max) map.delete(map.keys().next().value); // despeja o mais antigo
       later();
     },
     // O título chega depois da navegação: atualiza o do site, se ele estiver na lista.
     setTitle(url, title) {
       const s = site(url);
-      if (!s || !title || !items) return;
-      const item = items.find((i) => i.host === s.key);
+      if (!s || !title || !byHost) return;
+      const item = byHost.get(s.key);
       if (item && item.title !== title) {
         item.title = title;
         later();
@@ -96,7 +107,7 @@ function createHistory(file, { max = 500, delay = 3000 } = {}) {
       if (!q || /[\s/]/.test(q)) return [];
       const starts = [];
       const other = [];
-      for (const i of load()) {
+      for (const i of newestFirst()) {
         if (i.host.startsWith(q)) starts.push(i);
         else if (i.host.includes(q) || i.title.toLowerCase().includes(q)) other.push(i);
       }
@@ -104,16 +115,15 @@ function createHistory(file, { max = 500, delay = 3000 } = {}) {
     },
     // Remove um site (pelo nome, ex.: "youtube.com") da lista.
     remove(host) {
-      const list = load();
-      const i = list.findIndex((x) => x.host === host);
-      if (i === -1) return false;
-      list.splice(i, 1);
+      const map = load();
+      if (!map.has(host)) return false;
+      map.delete(host);
       later();
       return true;
     },
-    list: () => load().slice(),
+    list: () => newestFirst(),
     clear() {
-      items = [];
+      byHost = new Map();
       save();
     },
     flush() {
