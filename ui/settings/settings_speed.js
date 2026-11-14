@@ -26,6 +26,10 @@ const SPEED_ROWS = [
   ['lazyImages', 'bool', 'Imagens só quando aparecem', 'Imagens fora da tela esperam você rolar até perto delas: menos internet e memória em páginas longas. Vale para páginas abertas depois.', '', false, 'o', 0],
   ['ignoreGpuBlocklist', 'bool', 'Forçar a placa de vídeo', 'Usa a aceleração mesmo em placas que o Chromium considera antigas. Desligue se a imagem falhar.', '', true, 'o', 0],
   ['forceSrgb', 'bool', 'Cores padrão (sRGB)', 'As páginas usam sempre o perfil sRGB: cores iguais em qualquer monitor.', '', true, 'o', 0],
+  ['gpuRaster', 'bool', 'Desenhar páginas na placa de vídeo', 'Os blocos da página são desenhados na placa de vídeo. Desligue para poupar memória de vídeo; a página passa a usar mais processador.', '', true, 'o', 0],
+  ['canvasOnCpu', 'bool', 'Canvas 2D na CPU', 'Mapas, gráficos e jogos simples desenham pelo processador, gastando menos memória de vídeo. Quase não muda a maioria dos sites.', '', true, 'o', 0],
+  ['videoDecodeCpu', 'bool', 'Decodificar vídeo na CPU', 'Economiza memória de vídeo, mas vídeos em HD passam a pesar bem mais no processador. Só vale se a memória de vídeo estiver no limite.', '', true, 'o', 0],
+  ['gpuMemoryMB', 'num', 'Limite de memória de vídeo', 'Teto de memória de vídeo para as páginas. Valores baixos (abaixo de 256 MB) podem deixar a rolagem com falhas. 0 = automático.', 'MB', true, 'o', 0],
   ['skiaGraphite', 'bool', 'Novo motor de desenho (experimental)', 'Liga o Skia Graphite do Chromium, que desenha as páginas com menos trabalho da placa de vídeo. Desligue se algo aparecer errado.', '', true, 'o', 0],
 ];
 

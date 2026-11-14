@@ -23,6 +23,7 @@ const { createHistory } = require('./src/data/history_store');
 const { setSearchUrl } = require('./src/tabs/url_address_parser');
 const { validateEngine, normalizeList, uniqueId } = require('./src/data/search_engines');
 const { registerCookiesIpc } = require('./src/ipc/cookies_ipc');
+const { registerHistoryIpc } = require('./src/ipc/history_ipc');
 const { registerExtensionsIpc } = require('./src/ipc/extension_ipc');
 const { createExtensions } = require('./src/extensions/extension_manager');
 const { attachExtensionLog } = require('./src/extensions/extension_log');
@@ -539,6 +540,7 @@ toggleBookmark = registerBookmarksIpc({
 }).toggleActive;
 registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: () => vault, getWindow: () => win });
 registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
+registerHistoryIpc({ ipcMain, fromUi, dialog, getWindow: () => win, getHistory: () => history });
 registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win, getTabs: () => tabs });
 // Página que mudou sozinha para outro site: a pessoa escolhe seguir ou ficar (ver tabs/redirect_guard.js).
 ipcMain.on('redirect:answer', (event, id, allow) => {

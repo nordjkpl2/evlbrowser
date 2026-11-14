@@ -635,8 +635,12 @@
         <section class="card wide" data-panel="history">
           <div class="card-head">
             <h3>Páginas visitadas</h3>
-            <button id="h-clear" class="text-btn" type="button">Limpar histórico</button>
+            <div class="form-actions">
+              <button id="h-import" class="text-btn" type="button">Importar histórico (.json)</button>
+              <button id="h-clear" class="text-btn" type="button">Limpar histórico</button>
+            </div>
           </div>
+          <p id="h-import-msg" class="hint" hidden></p>
           <p id="h-empty" class="hint" hidden>Nenhuma página visitada ainda.</p>
           <ul id="h-list"></ul>
         </section>

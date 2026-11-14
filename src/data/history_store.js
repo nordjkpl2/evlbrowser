@@ -121,6 +121,26 @@ function createHistory(file, { max = 500, delay = 3000 } = {}) {
       later();
       return true;
     },
+    // Mescla visitas antigas (ex.: importadas de outro navegador). Cada `row` é { url, title, time (ms) }.
+    // Para cada site fica a visita MAIS RECENTE; a ordem é refeita com um único sort e o limite `max` é aplicado.
+    // Retorna quantos sites entraram ou foram atualizados.
+    merge(rows) {
+      const merged = new Map(load()); // cópia rasa: os itens existentes não são alterados
+      let changed = 0;
+      for (const r of rows) {
+        const s = site(r.url);
+        if (!s || !Number.isFinite(r.time)) continue;
+        const prev = merged.get(s.key);
+        if (prev && prev.time >= r.time) continue;
+        merged.set(s.key, { url: s.url, host: s.key, title: r.title || prev?.title || s.key, time: r.time });
+        changed++;
+      }
+      if (!changed) return 0;
+      const sorted = [...merged.values()].sort((a, b) => a.time - b.time); // antigo -> novo
+      byHost = new Map(sorted.slice(-max).map((i) => [i.host, i]));
+      later();
+      return changed;
+    },
     list: () => newestFirst(),
     clear() {
       byHost = new Map();

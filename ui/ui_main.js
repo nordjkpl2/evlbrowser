@@ -588,6 +588,17 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeCtx();
 });
 
+const hImportMsg = $('h-import-msg');
+$('h-import').addEventListener('click', async () => {
+  const r = await window.evl.historyImport();
+  if (!r || r.canceled) return;
+  hImportMsg.hidden = false;
+  hImportMsg.textContent = r.ok
+    ? t('Importado: {n} sites novos ou mais recentes de {lidas} entradas ({ignoradas} já estavam ou eram mais antigas).', { n: r.importadas, lidas: r.lidas, ignoradas: r.ignoradas })
+    : t('Não foi possível importar: {msg}', { msg: r.message });
+  await loadHistory();
+});
+
 $('h-clear').addEventListener('click', async () => {
   window.evl.historyClear();
   await loadHistory();

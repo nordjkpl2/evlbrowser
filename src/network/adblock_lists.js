@@ -49,6 +49,10 @@ ipredictive.com semasio.net ml314.com m6d.com browser-intake-datadoghq.com sentr
 stackadapt.com ttd.com adsrvr.org smartclip.net nrich.ai trackcmp.net sitelabweb.com tracking.klaviyo.com
 conversant.com conversantmedia.com valueclick.com tradedoubler.com awin1.com zanox.com
 impactradius-event.com impact.com partnerize.com cj.com dpbolvw.net anrdoezrs.net jdoqocy.net kqzyfj.com tkqlhce.com
+fpjs.io fpcdn.io fpnpmcdn.net fingerprint.com fingerprintjs.com
+googletagmanager.com analytics.google.com kissmetrics.com kissmetrics.io woopra.com statcounter.com
+visualwebsiteoptimizer.com static.cloudflareinsights.com cloudflareinsights.com rs.fullstory.com
+top-fwz1.mail.ru counter.yadro.ru
 `
   .split(/\s+/)
   .filter(Boolean);
@@ -73,7 +77,7 @@ const BLOCK_PATHS = [
 // Subdomínios com cara de anúncio/rastreio ("ads.exemplo.com"): só valem para pedidos de TERCEIROS.
 const BLOCK_LABELS = new Set([
   'ads', 'adserver', 'adservice', 'adsystem', 'adx', 'adtech', 'banners', 'pagead', 'tracker', 'tracking',
-  'trk', 'telemetry', 'beacon', 'pixel',
+  'trk', 'telemetry', 'beacon', 'pixel', 'analytics', 'metrics', 'track', 'fingerprint',
 ]);
 
 // Trechos de endereço típicos de anúncio: também só para pedidos de TERCEIROS.
@@ -82,6 +86,9 @@ const BLOCK_THIRD_PARTY_PATHS = [
   '/advert/', '/adview', '/ads/js/', '/ads.js', '/show_ads',
   // medição e etiquetas de rastreio de terceiros
   '/gtag/js', '/gtm.js', '/analytics.js', '/fbevents.js', '/tr?id=', '/collect?v=', '/pixel.gif', '/track.gif',
+  '/ga.js', '/piwik.js', '/matomo.js', '/g/collect', '/beacon.min.js',
+  // impressão digital do navegador (scripts que medem canvas, fontes, áudio, GPU...)
+  'fingerprintjs', 'fingerprint2', 'fingerprint.min.js', '/fp.min.js', '/fingerprint.js', 'creepjs',
 ];
 
 module.exports = { BLOCK_DOMAINS, BLOCK_PATHS, BLOCK_LABELS, BLOCK_THIRD_PARTY_PATHS };

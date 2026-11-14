@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('evl', {
   historyRemove: (host) => ipcRenderer.send('history:remove', String(host)),
   setLang: (lang) => ipcRenderer.send('lang:set', String(lang)),
   historyClear: () => ipcRenderer.send('history:clear'),
+  historyImport: () => ipcRenderer.invoke('history:import'),
   enginesList: () => ipcRenderer.invoke('engines:list'),
   enginesSelect: (id) => ipcRenderer.invoke('engines:select', String(id)),
   enginesRemove: (id) => ipcRenderer.invoke('engines:remove', String(id)),

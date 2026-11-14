@@ -26,9 +26,13 @@ const SPEED_DEFAULTS = {
   ignoreGpuBlocklist: true, // usa a placa de vídeo mesmo se o Chromium a considera antiga
   forceSrgb: true, // cores iguais em qualquer monitor (perfil sRGB)
   skiaGraphite: true, // novo motor de desenho do Chromium (experimental)
+  gpuRaster: true, // desenha os blocos da página na placa de vídeo (desligar tira memória de vídeo, mas usa mais CPU)
+  canvasOnCpu: true, // canvas 2D (mapas, gráficos, jogos simples) desenhado na CPU: menos memória de vídeo, pouca perda na maioria dos sites
+  videoDecodeCpu: false, // decodifica vídeo na CPU em vez da placa: economiza memória de vídeo, mas gasta bem mais CPU em vídeo HD
+  gpuMemoryMB: 0, // teto da memória de vídeo que o Chromium usa para as páginas (0 = automático); baixo demais deixa a rolagem com falhas
 };
-const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB', 'parallelDownloads', 'downloadConnections', 'zeroCopy', 'noSmoothScroll', 'rasterThreads', 'ignoreGpuBlocklist', 'forceSrgb', 'skiaGraphite'];
-const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096], rasterThreads: [0, 4], downloadConnections: [2, 8] };
+const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB', 'parallelDownloads', 'downloadConnections', 'zeroCopy', 'noSmoothScroll', 'rasterThreads', 'ignoreGpuBlocklist', 'forceSrgb', 'skiaGraphite', 'gpuRaster', 'canvasOnCpu', 'videoDecodeCpu', 'gpuMemoryMB'];
+const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096], gpuMemoryMB: [0, 4096], rasterThreads: [0, 4], downloadConnections: [2, 8] };
 
 function speedOptions(raw) {
   const out = { ...SPEED_DEFAULTS };
@@ -70,6 +74,10 @@ function speedSwitches(o) {
   if (o.rasterThreads > 0) out.push(['num-raster-threads', String(o.rasterThreads)]);
   if (o.ignoreGpuBlocklist) out.push(['ignore-gpu-blocklist']);
   if (o.forceSrgb) out.push(['force-color-profile', 'srgb']);
+  if (o.gpuRaster) out.push(['enable-gpu-rasterization']);
+  if (o.canvasOnCpu) out.push(['disable-accelerated-2d-canvas']);
+  if (o.videoDecodeCpu) out.push(['disable-accelerated-video-decode']);
+  if (o.gpuMemoryMB > 0) out.push(['force-gpu-mem-available-mb', String(o.gpuMemoryMB)]);
   return out;
 }
 
