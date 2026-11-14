@@ -132,14 +132,16 @@ function createBookmarks(file, { delay = 1500 } = {}) {
     suggest(query, n = 3) {
       const q = String(query).trim().toLowerCase();
       if (!q) return [];
-      const out = [];
-      for (const i of newestFirst()) {
-        if (i.title.toLowerCase().includes(q) || i.url.toLowerCase().includes(q)) {
-          out.push({ url: i.url, host: new URL(i.url).host.replace(/^www\./, ''), title: i.title, star: true });
-          if (out.length === n) break;
-        }
+      // Sem copiar a lista a cada tecla: uma passada só (do mais antigo ao mais novo) guarda os acertos;
+      // o fim do array são os mais novos, então pega os n últimos e inverte só esses.
+      const found = [];
+      for (const i of load().values()) {
+        if (i.title.toLowerCase().includes(q) || i.url.toLowerCase().includes(q)) found.push(i);
       }
-      return out;
+      return found
+        .slice(-n)
+        .reverse()
+        .map((i) => ({ url: i.url, host: new URL(i.url).host.replace(/^www\./, ''), title: i.title, star: true }));
     },
     // Importa um .json: aceita a lista deste app ([{url,title}]) e a árvore do Chrome (roots > children).
     // Também aceita o backup do Firefox (bookmarks-*.json): o endereço vem em "uri" e as pastas em "children".

@@ -203,6 +203,7 @@ button, input { font: inherit; color: inherit; }
 .icon-btn:hover:not(:disabled) { background: var(--hover-bg); }
 .icon-btn:disabled { color: var(--muted); opacity: 0.4; cursor: default; }
 #new-tab { align-self: center; margin-bottom: 2px; }
+#star.on { color: var(--accent); }
 
 #address {
   flex: 1;
@@ -262,6 +263,7 @@ button, input { font: inherit; color: inherit; }
 .sg-item[aria-selected="true"] { background: var(--surface-active); }
 .sg-item[aria-selected="true"] { box-shadow: inset 2px 0 0 var(--accent); }
 .sg-host { flex: none; }
+.sg-item.star > .sg-host::before { content: '\2605'; margin-right: 6px; color: var(--accent); }
 .sg-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: calc(12px * var(--ui-scale, 1)); }
 
 /* ---------- submenu do contador de memória ---------- */

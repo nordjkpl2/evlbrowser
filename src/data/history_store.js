@@ -105,13 +105,14 @@ function createHistory(file, { max = 500, delay = 3000 } = {}) {
     suggest(query, n = 6) {
       const q = String(query).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '');
       if (!q || /[\s/]/.test(q)) return [];
+      // Sem copiar a lista a cada tecla: uma passada só (antigo -> novo) e depois inverte só os acertos.
       const starts = [];
       const other = [];
-      for (const i of newestFirst()) {
+      for (const i of load().values()) {
         if (i.host.startsWith(q)) starts.push(i);
         else if (i.host.includes(q) || i.title.toLowerCase().includes(q)) other.push(i);
       }
-      return [...starts, ...other].slice(0, n).map(({ url, host, title }) => ({ url, host, title }));
+      return [...starts.reverse(), ...other.reverse()].slice(0, n).map(({ url, host, title }) => ({ url, host, title }));
     },
     // Remove um site (pelo nome, ex.: "youtube.com") da lista.
     remove(host) {
