@@ -36,9 +36,11 @@ function createHistory(file, { max = 500, delay = 3000 } = {}) {
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf8'));
       // Também aceita o formato antigo (uma entrada por página): vira um por site.
+      const seen = new Set(); // Set em vez de items.some(): O(n) ao carregar, não O(n²)
       for (const i of Array.isArray(data) ? data : []) {
         const s = i && typeof i.url === 'string' && typeof i.time === 'number' ? site(i.url) : null;
-        if (s && !items.some((x) => x.host === s.key)) {
+        if (s && !seen.has(s.key)) {
+          seen.add(s.key);
           items.push({ url: s.url, host: s.key, title: String(i.title || s.key), time: i.time });
         }
       }

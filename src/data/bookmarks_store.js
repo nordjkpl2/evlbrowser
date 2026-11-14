@@ -30,9 +30,11 @@ function createBookmarks(file, { delay = 1500 } = {}) {
     items = [];
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const seen = new Set(); // evita O(n²) ao carregar: checar duplicados numa lista cresce rápido
       for (const i of Array.isArray(data) ? data : []) {
         const url = i && typeof i.url === 'string' ? keyOf(i.url) : null;
-        if (url && !items.some((x) => x.url === url)) {
+        if (url && !seen.has(url)) {
+          seen.add(url);
           items.push({ id: String(i.id || crypto.randomBytes(6).toString('hex')), url, title: String(i.title || url), time: Number(i.time) || 0 });
         }
       }
