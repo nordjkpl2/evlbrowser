@@ -30,6 +30,9 @@ const SPEED_ROWS = [
   ['canvasOnCpu', 'bool', 'Canvas 2D na CPU', 'Mapas, gráficos e jogos simples desenham pelo processador, gastando menos memória de vídeo. Quase não muda a maioria dos sites.', '', true, 'o', 0],
   ['videoDecodeCpu', 'bool', 'Decodificar vídeo na CPU', 'Economiza memória de vídeo, mas vídeos em HD passam a pesar bem mais no processador. Só vale se a memória de vídeo estiver no limite.', '', true, 'o', 0],
   ['gpuMemoryMB', 'num', 'Limite de memória de vídeo', 'Teto de memória de vídeo para as páginas. Valores baixos (abaixo de 256 MB) podem deixar a rolagem com falhas. 0 = automático.', 'MB', true, 'o', 0],
+  ['gpuCompositing', 'bool', 'Montar camadas na placa de vídeo', 'A placa de vídeo junta as camadas da tela. Desligue para poupar memória de vídeo: o processador faz esse trabalho e pode ficar mais pesado em telas grandes.', '', true, 'o', 0],
+  ['imageDecodeCpu', 'bool', 'Decodificar fotos na CPU', 'As fotos JPEG são abertas pelo processador em vez da placa de vídeo. Poupa memória de vídeo em páginas com muitas fotos, com mais uso de CPU.', '', true, 'o', 0],
+  ['aggressiveCacheDiscard', 'bool', 'Descartar caches com mais pressa', 'O Chromium libera caches internos logo que deixam de ser úteis: gasta menos memória RAM, e sites já visitados podem recarregar um pouco mais devagar.', '', true, 'o', 0],
   ['skiaGraphite', 'bool', 'Novo motor de desenho (experimental)', 'Liga o Skia Graphite do Chromium, que desenha as páginas com menos trabalho da placa de vídeo. Desligue se algo aparecer errado.', '', true, 'o', 0],
 ];
 

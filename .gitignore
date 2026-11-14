@@ -5,12 +5,10 @@ test/
 .claude/
 *.claude
 CLAUDE.md
+claude.md
 mapa.md
 MAPA.md
-*.log
-.env
-bun.lock
-# Dados pessoais do navegador (cookies, senhas, histórico etc.) — nunca commitar
+#
 settings.json
 session.json
 history.json
@@ -23,5 +21,8 @@ cookies*.json
 *.sqlite
 *.db
 *.log
+*.env
+bun.lock
+.env
 userData/
 evl-browser/
