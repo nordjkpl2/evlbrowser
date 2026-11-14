@@ -42,6 +42,9 @@ const { registerPermissionIpc } = require('./src/ipc/permission_ipc');
 const { registerSettingsIpc } = require('./src/ipc/settings_ipc');
 const { registerDownloadsIpc } = require('./src/ipc/downloads_ipc');
 const { registerTranslateIpc } = require('./src/ipc/translate_ipc');
+const { registerFindIpc } = require('./src/ipc/find_ipc');
+const { registerProfilesIpc } = require('./src/ipc/profiles_ipc');
+const { normalizeProfiles, partitionOf, vaultFileOf, DEFAULT_ID } = require('./src/data/profiles_store');
 const { TabManager } = require('./src/tabs/tabs_manager');
 const { createFaviconColor } = require('./src/tabs/favicon_color');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/tabs/memory_policy');
@@ -91,7 +94,10 @@ let toggleBookmark = () => {}; // Ctrl+D e a estrela
 let adblockApi = null; // motor do bloqueador (para cortar janelas de anúncio)
 let speedApi = null; // opções de velocidade (src/ipc/speed_ipc.js)
 let privacyApi = null; // opções de privacidade (src/ipc/privacy_ipc.js)
-let vault = null; // cofre de senhas (src/data/passwords_vault.js)
+let network = null; // filtros de rede (bloqueador + privacidade), aplicados a todas as sessões
+let profiles = []; // perfis [{ id, name, color }] (src/data/profiles_store.js); o padrão é o que já existia
+const profileSessions = new Map(); // id -> sessão do Electron própria do perfil (o padrão usa a sessão padrão)
+const vaults = new Map(); // id -> cofre de senhas do perfil (src/data/passwords_vault.js)
 let extensions = null; // extensões do Chromium (src/extensions/extension_manager.js)
 let engines = []; // motores de busca [{ id, name, url }]
 let engineId = ''; // o padrão
@@ -141,7 +147,7 @@ function flushState() {
   if (!tabs) return;
   const page = activePage();
   // perms: permissões do site da aba ativa, para o painel ao lado da estrela
-  send('state', { ...tabs.snapshot(), bookmarked: !!page && bookmarks.has(page.url), perms: page ? permissions.siteState(page.url) : null });
+  send('state', { ...tabs.snapshot(), bookmarked: !!page && bookmarks.has(page.url), perms: page ? permissions.siteState(page.url) : null, profiles });
   sampleMemory(false);
   policy?.refresh();
   scheduleSession();
@@ -194,6 +200,10 @@ function onShortcut(input) {
     ui.webContents.openDevTools({ mode: 'detach' });
     return true;
   }
+  if (input.key === 'Escape' && tabs?.findOpen) {
+    tabs.setFind(false);
+    return true;
+  }
 
   if (!(input.control || input.meta)) return false;
   const key = input.key.toLowerCase();
@@ -221,6 +231,15 @@ function onShortcut(input) {
       return true;
     case 'w':
       tabs.close(tabs.activeId);
+      return true;
+    case 'f':
+      if (!tabs.activeWebContents()) return true; // a busca é só para páginas da internet
+      tabs.setFind(true);
+      send('find-focus'); // se a barra já estava aberta, só leva o foco para o campo
+      return true;
+    case 'g':
+      if (!tabs.findOpen) return false;
+      tabs.findStep(!input.shift);
       return true;
     case 'l':
       focusAddress();
@@ -314,6 +333,8 @@ function createWindow() {
 
   tabs = new TabManager(win, ui, onTabsChanged, onShortcut, history);
   tabs.eagerJs = () => speedApi.options().eagerJsCache;
+  tabs.sessionFor = sessionFor; // cada perfil navega com a sua sessão (cookies, logins)
+  tabs.setProfiles(profiles);
   tabs.setWebrtcPolicy(privacyApi.webrtc());
   // janela de anúncio: cortada se o bloqueador OU "fechar popups" estiver ligado
   tabs.setPopupFilter((url) => (store.get('adblock') !== false || store.get('adblockPopups') !== false) && !!adblockApi?.shouldBlock(url, 'script', ''));
@@ -530,6 +551,8 @@ ipcMain.on('accent:set', (event, color) => {
 ipcMain.handle('settings:report', (event) => (fromUi(event) ? settingsReport() : null));
 
 registerTranslateIpc({ ipcMain, fromUi, net, getWebContents: () => tabs?.activeWebContents() ?? null });
+registerFindIpc({ ipcMain, fromUi, getTabs: () => tabs });
+registerProfilesIpc({ ipcMain, fromUi, getProfiles: () => profiles, saveProfiles, getTabs: () => tabs, deleteData: deleteProfileData });
 
 toggleBookmark = registerBookmarksIpc({
   ipcMain,
@@ -539,7 +562,7 @@ toggleBookmark = registerBookmarksIpc({
   openUrl: (url) => tabs.create(url),
   refresh: () => onTabsChanged(),
 }).toggleActive;
-registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: () => vault, getWindow: () => win });
+registerPasswordIpc({ ipcMain, fromUi, dialog, clipboard, getVault: (event) => vaultFor(profileOfSender(event)), getWindow: () => win });
 registerCookiesIpc({ ipcMain, fromUi, app, session, dialog, getWindow: () => win });
 registerHistoryIpc({ ipcMain, fromUi, dialog, getWindow: () => win, getHistory: () => history });
 registerExtensionsIpc({ ipcMain, fromUi, dialog, net, getExtensions: () => extensions, getWindow: () => win, getTabs: () => tabs });
@@ -556,6 +579,7 @@ const settingsApi = registerSettingsIpc({
   getStore: () => store,
   getTabs: () => tabs,
   defaultUA: DEFAULT_UA,
+  getSessions: allSessions,
   beforeRestart: () => {
     saveSession(); // app.exit não passa pelo evento "close"
     sessionStore.flush();
@@ -563,6 +587,70 @@ const settingsApi = registerSettingsIpc({
     downloadsStore.flush();
   },
 });
+
+// ---------- perfis ----------
+// Cada perfil (exceto o padrão) tem uma sessão própria: cookies, logins e cache. Os filtros de rede,
+// as permissões, os downloads e o user agent valem para ela também.
+
+function allSessions() {
+  return [session.defaultSession, ...profileSessions.values()];
+}
+
+// Sessão do perfil (criada na primeira vez). O padrão devolve undefined: a aba usa a sessão padrão.
+function sessionFor(id) {
+  if (id === DEFAULT_ID || !profiles.some((p) => p.id === id)) return undefined;
+  if (!profileSessions.has(id)) {
+    const ses = session.fromPartition(partitionOf(id));
+    profileSessions.set(id, ses);
+    setupSession(ses);
+  }
+  return profileSessions.get(id);
+}
+
+function setupSession(ses) {
+  permissions.install(ses);
+  downloadsApi.install(ses);
+  network.attach(ses);
+  privacyApi.apply(); // proxy, DNS, WebRTC (aplica nas sessões de todos os perfis)
+  settingsApi.applyUserAgent();
+}
+
+// Cofre de senhas do perfil: criado na primeira vez que alguém precisa dele.
+function vaultFor(id) {
+  if (!vaults.has(id)) {
+    vaults.set(id, createVault(path.join(app.getPath('userData'), vaultFileOf(id)), {
+      available: () => safeStorage.isEncryptionAvailable(),
+      encrypt: (text) => safeStorage.encryptString(text).toString('base64'),
+      decrypt: (b64) => safeStorage.decryptString(Buffer.from(b64, 'base64')),
+    }));
+  }
+  return vaults.get(id);
+}
+
+// De qual perfil veio o pedido: da interface = o perfil que está na tela; de uma página = a sessão dela.
+function profileOfSender(event) {
+  const wc = event?.sender;
+  if (!wc || fromUi(event)) return tabs?.profile ?? DEFAULT_ID;
+  if (wc.session === session.defaultSession) return DEFAULT_ID;
+  for (const [id, ses] of profileSessions) if (ses === wc.session) return id;
+  return DEFAULT_ID;
+}
+
+function saveProfiles(list) {
+  profiles = list;
+  store.set('profiles', list);
+  tabs?.setProfiles(list);
+  onTabsChanged();
+}
+
+// Apaga cookies, cache e senhas de um perfil (as abas dele já foram fechadas).
+async function deleteProfileData(id) {
+  const ses = profileSessions.get(id);
+  profileSessions.delete(id);
+  if (ses) await Promise.all([ses.clearCache(), ses.clearStorageData()]).catch(() => {});
+  vaultFor(id).clear();
+  vaults.delete(id);
+}
 
 // ---------- ciclo de vida do app ----------
 
@@ -574,6 +662,7 @@ app.whenReady().then(() => {
   bookmarks = createBookmarks(path.join(app.getPath('userData'), 'bookmarks.json'));
   history = createHistory(path.join(app.getPath('userData'), 'history.json'));
   loadEngines();
+  profiles = normalizeProfiles(store.get('profiles'));
   const savedTheme = store.get('theme');
   nativeTheme.themeSource = THEMES.has(savedTheme) ? savedTheme : 'dark';
 
@@ -583,12 +672,7 @@ app.whenReady().then(() => {
   downloadsApi.install();
   settingsApi.applyUserAgent();
 
-  // Senhas: cifradas com a proteção do sistema (safeStorage); sem ela, o cofre fica desativado.
-  vault = createVault(path.join(app.getPath('userData'), 'passwords.json'), {
-    available: () => safeStorage.isEncryptionAvailable(),
-    encrypt: (text) => safeStorage.encryptString(text).toString('base64'),
-    decrypt: (b64) => safeStorage.decryptString(Buffer.from(b64, 'base64')),
-  });
+  // Senhas: cofre por perfil (vaultFor); cifrado com a proteção do sistema (safeStorage).
 
   const ses = session.defaultSession;
   extensions = createExtensions({
@@ -601,7 +685,7 @@ app.whenReady().then(() => {
   // Rede: bloqueador de anúncios + privacidade, num só lugar (src/network/network_hub.js).
   const adblock = createAdblock();
   adblockApi = adblock;
-  const network = createNetworkHub({
+  network = createNetworkHub({
     session,
     adblock,
     getAdblockOn: () => store.get('adblock') !== false,
@@ -609,7 +693,7 @@ app.whenReady().then(() => {
     isFullExtension: (initiator) => extensions.isFull(initiator),
   });
   registerAdblockIpc({ ipcMain, fromUi, adblock, store, getNetwork: () => network, getMask: () => privacyOptions(store.get('privacy')).maskHardware, getCanvas: () => privacyOptions(store.get('privacy')).canvasNoise, getPage: () => ({ lazy: speedApi.options().lazyImages, lang: privacyOptions(store.get('privacy')).englishOnly }) });
-  privacyApi = registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork: () => network, getTabs: () => tabs });
+  privacyApi = registerPrivacyIpc({ ipcMain, fromUi, store, session, app, getNetwork: () => network, getTabs: () => tabs, getSessions: allSessions });
   privacyApi.apply();
   speedApi = registerSpeedIpc({ ipcMain, fromUi, store, app, startup: startupSpeed });
   extensions.loadAll(); // carrega em segundo plano; a janela não espera
@@ -623,8 +707,7 @@ app.on('before-quit', (event) => {
   if (clearedOnExit || !privacyApi?.options().clearOnExit) return;
   event.preventDefault();
   clearedOnExit = true;
-  const ses = session.defaultSession;
-  Promise.all([ses.clearCache(), ses.clearStorageData()]).finally(() => app.quit());
+  Promise.all(allSessions().flatMap((ses) => [ses.clearCache(), ses.clearStorageData()])).finally(() => app.quit());
 });
 
 app.on('window-all-closed', () => app.quit());

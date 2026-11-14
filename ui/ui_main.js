@@ -197,6 +197,8 @@ function render(state) {
     showMenu(state);
     syncTranslatePanel(!!state.translateOpen, state.activeId, state.activeKind); // painel de tradução (ui_translate_popup.js)
     syncDownloadsPanel(!!state.downloadsOpen); // o main pode fechar o painel (ex.: troca de aba)
+    syncProfiles(state); // perfil ativo à esquerda da barra e painel de perfis (ui_profiles_popup.js)
+    syncFind(state.find ?? null); // barra "Localizar na página" (ui_find_bar.js)
     // zoom da aba Configurações: a própria página da interface é ampliada (as páginas web usam o zoom do Chromium)
     pageSettings.style.zoom = state.activeKind === 'settings' && typeof state.zoom === 'number' ? String(state.zoom / 100) : '';
     // linha de carregamento sob a barra, só enquanto a aba ativa carrega
@@ -208,6 +210,7 @@ function render(state) {
     const web = state.activeKind === 'web';
     showStar(web, state.bookmarked === true);
     pipBtn.disabled = !web;
+    findBtn.disabled = !web; // a busca precisa de uma página da internet
   backBtn.disabled = !web || !state.canGoBack;
     forwardBtn.disabled = !web || !state.canGoForward;
 

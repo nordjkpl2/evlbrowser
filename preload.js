@@ -104,6 +104,15 @@ contextBridge.exposeInMainWorld('evl', {
   translateRun: (from, to) => ipcRenderer.invoke('translate:run', String(from), String(to)),
   translateRestore: () => ipcRenderer.invoke('translate:restore'),
   pictureInPicture: () => ipcRenderer.invoke('pip:toggle'), // vídeo da aba ativa em PiP (ou sai do PiP)
+  // Localizar na página (Ctrl+F): o resultado (n de m) chega pelo estado
+  findOpen: () => ipcRenderer.send('find:open'),
+  findRun: (text, forward, next) => ipcRenderer.send('find:run', String(text ?? ''), forward !== false, next === true),
+  findClose: () => ipcRenderer.send('find:close'),
+  // Perfis: cada um tem cookies, logins e senhas próprios
+  profilesPanel: (open) => ipcRenderer.send('profile:panel', open === true),
+  profileSwitch: (id) => ipcRenderer.send('profile:switch', String(id)),
+  profileCreate: (name) => ipcRenderer.invoke('profile:create', String(name ?? '')),
+  profileDelete: (id) => ipcRenderer.invoke('profile:delete', String(id)),
   zoom: (action) => ipcRenderer.send('zoom:set', String(action)), // 'in' | 'out' | 'reset'
   setTheme: (theme) => ipcRenderer.send('theme:set', String(theme)),
 
@@ -118,4 +127,5 @@ contextBridge.exposeInMainWorld('evl', {
   onFont: (cb) => ipcRenderer.on('font', (_event, f) => cb(f)),
   onAccent: (cb) => ipcRenderer.on('accent', (_event, color) => cb(color)),
   onFocusAddress: (cb) => ipcRenderer.on('focus-address', () => cb()),
+  onFindFocus: (cb) => ipcRenderer.on('find-focus', () => cb()),
 });

@@ -494,6 +494,118 @@ body.side-tabs #perm { top: 92px; left: 8px; right: auto; }
 #dl-empty { margin: 0; }
 body.side-tabs #dl-pop { top: 92px; left: 8px; right: auto; }
 
+/* Perfis: a cor do perfil ativo (--profile) pinta a faixa de cima e o botão à esquerda da barra. */
+#chrome { box-shadow: inset 0 2px 0 var(--profile, transparent); }
+.prof-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  max-width: 160px;
+  padding: 0 8px 0 9px;
+  border: 1px solid color-mix(in oklab, var(--profile, var(--border)) 60%, transparent);
+  border-radius: var(--r);
+  background: color-mix(in oklab, var(--profile, var(--border)) 14%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: calc(12px * var(--ui-scale, 1));
+  font-weight: 600;
+  cursor: pointer;
+}
+.prof-btn:hover { background: color-mix(in oklab, var(--profile, var(--border)) 24%, transparent); }
+.prof-btn[aria-expanded="true"] { border-color: var(--profile, var(--accent)); }
+.prof-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--profile, var(--accent)); }
+#prof-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prof-chev { flex: none; color: var(--muted); font-size: 10px; }
+#prof-pop {
+  position: fixed;
+  top: calc(var(--tab-h, 32px) + 52px);
+  left: 8px;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  max-height: 340px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: calc(12px * var(--ui-scale, 1));
+  z-index: 12;
+}
+#prof-pop[hidden] { display: none; }
+#prof-pop > .hint { margin: 0; }
+#prof-title { margin: 0; font-size: 1em; font-weight: 600; }
+#prof-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.prof-item { display: flex; align-items: center; gap: 4px; }
+.prof-pick {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: calc(var(--r) * 0.75);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.prof-pick:hover { background: var(--hover-bg); }
+.prof-pick[aria-current="true"] { background: var(--surface-active); font-weight: 600; }
+.prof-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prof-mark { color: var(--profile, var(--accent)); }
+.prof-del {
+  flex: none;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--r) * 0.75);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.prof-del:hover { color: var(--danger, #e5484d); border-color: var(--border); }
+#prof-new { display: flex; gap: 6px; }
+#prof-input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg); color: var(--text); font: inherit; }
+#prof-input:focus { border-color: var(--accent); outline: none; }
+#prof-add { height: 30px; padding: 0 12px; border: 0; border-radius: var(--r); background: var(--accent); color: #111; font: inherit; font-weight: 600; cursor: pointer; }
+#prof-err { margin: 0; color: var(--danger, #e5484d); }
+#prof-err[hidden] { display: none; }
+body.side-tabs #prof-pop { top: 92px; left: 8px; }
+
+/* Localizar na página (Ctrl+F): barra logo abaixo da barra de ferramentas. */
+#find {
+  position: fixed;
+  top: calc(var(--tab-h, 32px) + 52px);
+  right: 8px;
+  width: 380px;
+  max-width: calc(100vw - 16px);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  z-index: 12;
+}
+#find[hidden] { display: none; }
+#find-input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: calc(var(--r) * 0.75); background: var(--bg); color: var(--text); font: inherit; font-size: calc(13px * var(--ui-scale, 1)); }
+#find-input:focus { border-color: var(--accent); outline: none; }
+#find-count { min-width: 44px; text-align: center; color: var(--muted); font-size: calc(12px * var(--ui-scale, 1)); font-variant-numeric: tabular-nums; }
+#find .icon-btn { width: 28px; height: 28px; }
+body.side-tabs #find { top: 92px; left: 8px; right: 8px; width: auto; }
+
 /* abas: mudar uma não refaz o layout das outras */
 .tab { contain: layout style; }
 

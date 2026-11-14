@@ -16,11 +16,20 @@
     </div>
 
     <div id="toolbar">
+      <!-- Perfil ativo: fica à esquerda, com o nome e a cor do perfil (a faixa de cima também tem essa cor). -->
+      <button id="prof-btn" class="prof-btn" type="button" title="Trocar ou criar perfis" aria-label="Trocar ou criar perfis" aria-haspopup="dialog" aria-expanded="false" aria-controls="prof-pop">
+        <span class="prof-dot" aria-hidden="true"></span>
+        <span id="prof-name">Pessoal</span>
+        <span class="prof-chev" aria-hidden="true">&#9662;</span>
+      </button>
       <button id="back" class="icon-btn" type="button" title="Voltar" aria-label="Voltar">&larr;</button>
       <button id="forward" class="icon-btn" type="button" title="Avançar" aria-label="Avançar">&rarr;</button>
       <button id="reload" class="icon-btn" type="button" title="Recarregar (Ctrl+R)" aria-label="Recarregar">&#8635;</button>
       <input id="address" type="text" spellcheck="false" autocomplete="off"
              aria-label="Endereço ou busca" placeholder="Digite um endereço ou faça uma busca">
+      <button id="find-btn" class="icon-btn" type="button" title="Localizar na página (Ctrl+F)" aria-label="Localizar na página" aria-pressed="false">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
+      </button>
       <button id="star" class="icon-btn" type="button" title="Adicionar aos favoritos (Ctrl+D)" aria-label="Adicionar aos favoritos" aria-pressed="false">&#9734;</button>
       <button id="pip-btn" class="icon-btn" type="button" title="Vídeo em picture-in-picture (flutuante, por cima das abas)" aria-label="Vídeo em picture-in-picture" disabled>
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><rect x="8" y="7.5" width="5" height="4" rx="0.8" fill="currentColor"/></svg>
@@ -119,6 +128,27 @@
       <button id="redir-stay" type="button">Ficar aqui</button>
       <button id="redir-go" type="button" class="perm-primary">Seguir</button>
     </div>
+  </div>
+
+  <!-- Localizar na página (Ctrl+F): barra logo abaixo da barra de ferramentas. Aberta pelo botão da lupa ou Ctrl+F. -->
+  <div id="find" role="search" aria-label="Localizar na página" hidden>
+    <input id="find-input" type="search" spellcheck="false" autocomplete="off" placeholder="Localizar na página" aria-label="Texto a localizar">
+    <span id="find-count" role="status" aria-live="polite"></span>
+    <button id="find-prev" class="icon-btn" type="button" title="Anterior (Shift+Enter)" aria-label="Anterior">&#8593;</button>
+    <button id="find-next" class="icon-btn" type="button" title="Próximo (Enter)" aria-label="Próximo">&#8595;</button>
+    <button id="find-close" class="icon-btn" type="button" title="Fechar (Esc)" aria-label="Fechar a busca">&times;</button>
+  </div>
+
+  <!-- Perfis (botão à esquerda da barra): trocar, criar e apagar. Cada perfil tem cookies, logins e senhas próprios. -->
+  <div id="prof-pop" role="dialog" aria-labelledby="prof-title" hidden>
+    <h2 id="prof-title">Perfis</h2>
+    <ul id="prof-list" aria-label="Perfis"></ul>
+    <form id="prof-new">
+      <input id="prof-input" type="text" maxlength="30" autocomplete="off" spellcheck="false" placeholder="Nome do novo perfil (ex.: Trabalho)" aria-label="Nome do novo perfil">
+      <button id="prof-add" type="submit">Criar</button>
+    </form>
+    <p id="prof-err" role="alert" hidden></p>
+    <p class="hint">Cada perfil tem cookies, logins e senhas próprios. Histórico, favoritos e extensões ficam compartilhados.</p>
   </div>
 
   <!-- Telas internas: só aparecem quando a aba ativa é "em branco" ou "configurações".
@@ -898,6 +928,8 @@
   <script src="ui_appearance.js"></script>
   <script src="ui_downloads_popup.js"></script>
   <script src="ui_translate_popup.js"></script>
+  <script src="ui_find_bar.js"></script>
+  <script src="ui_profiles_popup.js"></script>
   <script src="ui_boot.js"></script>
 </body>
 </html>

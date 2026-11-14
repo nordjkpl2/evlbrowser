@@ -18,7 +18,7 @@ const { WebContentsView } = require('electron');
 const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
 const { hostColor } = require('./favicon_color');
-const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT, REDIRECT_HEIGHT, TRANSLATE_HEIGHT } = require('../app/app_config');
+const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT, REDIRECT_HEIGHT, TRANSLATE_HEIGHT, FIND_HEIGHT } = require('../app/app_config');
 const { shouldAskRedirect } = require('./redirect_guard');
 const { hostOf } = require('../network/privacy_engine');
 
@@ -82,6 +82,15 @@ class TabManager {
     this.popupBlocked = null; // (url) => true corta janelas de anúncio
     this.closed = []; // abas web fechadas (para Ctrl+Shift+T), a mais recente no fim
     this.eagerJs = () => false; // Velocidade > "Guardar o JavaScript já compilado" (vem do main.js)
+    // Perfis: cada aba tem o seu (tab.profile). "profile" é o que você está vendo agora.
+    this.profile = 'default';
+    this.profiles = [{ id: 'default', name: 'Pessoal', color: '#ffb429' }]; // lista salva (main.js atualiza)
+    this.sessionFor = () => undefined; // id do perfil -> sessão do Electron (main.js; undefined = padrão)
+    this.profilesOpen = false; // painel de perfis (botão à esquerda da barra)
+    // Localizar na página (Ctrl+F)
+    this.findOpen = false;
+    this.findText = ''; // último texto procurado (fica ao reabrir a barra)
+    this.findResult = null; // { active, total } vindo do Chromium
   }
 
   // Abas em cima ("top") ou na lateral esquerda ("side"); tamanhos em px.
@@ -193,12 +202,13 @@ class TabManager {
   // Página interna de uma extensão (popup ou opções) numa aba: o Electron não tem o botão na barra.
   openExtensionPage(url) {
     if (typeof url !== 'string' || !/^chrome-extension:\/\/[a-p]{32}\/[\w\-./?=&%#]*$/.test(url)) return null;
-    return this._add({ kind: 'web', title: url, url });
+    // as extensões só existem na sessão padrão: a página delas abre nela, mesmo com outro perfil em uso
+    return this._add({ kind: 'web', title: url, url, profile: 'default' });
   }
 
   openSettings() {
     for (const tab of this.tabs.values()) {
-      if (tab.kind === 'settings') {
+      if (tab.kind === 'settings' && tab.profile === this.profile) {
         this.activate(tab.id);
         return tab.id;
       }
@@ -214,6 +224,7 @@ class TabManager {
     this.suggestOpen = false;
     this.downloadsOpen = false;
     this.translateOpen = false;
+    this.profilesOpen = false;
     const prev = this.tabs.get(this.activeId);
     if (prev && prev !== tab && prev.view) {
       this.win.contentView.removeChildView(prev.view); // vira "sleeping"
@@ -229,6 +240,8 @@ class TabManager {
       }
     }
 
+    if (prev !== tab) this._closeFind(prev); // a busca é da página que você está vendo
+    this.profile = tab.profile;
     this.activeId = id;
     tab.lastActive = Date.now();
 
@@ -264,7 +277,7 @@ class TabManager {
     const index = [...this.tabs.keys()].indexOf(id);
 
     if (tab.kind === 'web') {
-      this.closed.push({ url: tab.url, title: tab.title });
+      this.closed.push({ url: tab.url, title: tab.title, profile: tab.profile });
       if (this.closed.length > 10) this.closed.shift();
     }
     this._destroyView(tab);
@@ -276,8 +289,15 @@ class TabManager {
       return;
     }
     if (this.activeId === id) {
-      const rest = [...this.tabs.keys()];
-      this.activate(rest[Math.min(index, rest.length - 1)]);
+      // a próxima aba é do MESMO perfil; se ele não tem mais nenhuma, abre uma em branco nele
+      const rest = [...this.tabs.keys()].filter((k) => this.tabs.get(k).profile === tab.profile);
+      if (rest.length === 0) {
+        this.activeId = null;
+        this.profile = tab.profile;
+        this.create();
+        return;
+      }
+      this.activate(rest.find((k) => k > id) ?? rest[rest.length - 1]);
     } else {
       this._changed();
     }
@@ -302,6 +322,7 @@ class TabManager {
         loading: false,
         view: null,
         lastActive: Date.now(),
+        profile: this._known(item.profile),
       };
       this.tabs.set(tab.id, tab);
       ids.push(tab.id);
@@ -316,7 +337,7 @@ class TabManager {
     // páginas de extensão não entram na sessão (o endereço muda e não passa pelo filtro da barra)
     const web = [...this.tabs.values()].filter((t) => t.kind === 'web' && !t.url.startsWith('chrome-extension://'));
     return {
-      items: web.map((t) => ({ url: t.url, title: t.title })),
+      items: web.map((t) => ({ url: t.url, title: t.title, profile: t.profile })),
       active: Math.max(0, web.findIndex((t) => t.id === this.activeId)),
     };
   }
@@ -324,7 +345,7 @@ class TabManager {
   // Ctrl+Shift+T: reabre a última aba web fechada.
   reopenClosed() {
     const last = this.closed.pop();
-    if (last) this._add({ kind: 'web', title: last.title, url: last.url });
+    if (last) this._add({ kind: 'web', title: last.title, url: last.url, profile: this._known(last.profile) });
   }
 
   // ---------- navegação da aba ativa ----------
@@ -442,6 +463,102 @@ class TabManager {
     this.layout();
   }
 
+  // ---------- perfis ----------
+
+  // Lista de perfis (main.js chama sempre que ela muda).
+  setProfiles(list) {
+    this.profiles = list;
+  }
+
+  // Altura do painel de perfis: uma linha por perfil, mais o campo "Novo perfil" e a dica.
+  profilesHeight() {
+    return Math.min(360, 176 + this.profiles.length * 38);
+  }
+
+  // Id de perfil que existe; senão o padrão (perfil apagado ou valor estranho num session.json).
+  _known(id) {
+    return this.profiles.some((p) => p.id === id) ? id : 'default';
+  }
+
+  // Troca de perfil: vai para a aba mais recente dele; sem nenhuma, abre uma em branco nele.
+  switchProfile(id) {
+    if (!this.profiles.some((p) => p.id === id)) return;
+    if (this.tabs.get(this.activeId)?.profile === id) return;
+    const mine = [...this.tabs.values()].filter((t) => t.profile === id).sort((a, b) => b.lastActive - a.lastActive);
+    if (mine.length) {
+      this.activate(mine[0].id);
+      return;
+    }
+    this.profile = id;
+    this.create();
+  }
+
+  // Apaga as abas de um perfil (antes de apagá-lo). Se ele está em uso, vai para o padrão primeiro.
+  closeProfile(id) {
+    if (this.profile === id) this.switchProfile('default');
+    for (const t of [...this.tabs.values()]) if (t.profile === id) this.close(t.id);
+  }
+
+  setProfilesPanel(open) {
+    if (this.profilesOpen === open) return;
+    this.profilesOpen = open;
+    if (open) {
+      this.menuOpen = false;
+      this.suggestOpen = false;
+      this.downloadsOpen = false;
+      this.translateOpen = false;
+    }
+    this.layout();
+    this._changed();
+  }
+
+  // ---------- localizar na página (Ctrl+F) ----------
+
+  // Abre a barra (ou só a deixa aberta). Fechar devolve o foco para a página.
+  setFind(open) {
+    if (open === this.findOpen) return;
+    this.findOpen = open;
+    if (open) {
+      this.menuOpen = false;
+      this.suggestOpen = false;
+      this.downloadsOpen = false;
+      this.translateOpen = false;
+    } else {
+      this.findResult = null;
+      const wc = this.activeWebContents();
+      wc?.stopFindInPage('clearSelection');
+      wc?.focus();
+    }
+    this.layout();
+    this._changed();
+  }
+
+  // Procura o texto na aba ativa. next=true continua a busca (Enter, setas); forward=false volta.
+  find(text, forward = true, next = false) {
+    this.findText = text;
+    const wc = this.activeWebContents();
+    if (!wc) return;
+    if (!text) {
+      wc.stopFindInPage('clearSelection');
+      this.findResult = null;
+    } else {
+      wc.findInPage(text, { forward, findNext: next, matchCase: false });
+    }
+    this._changed();
+  }
+
+  // Próxima (ou anterior) ocorrência, com o texto que já está na barra (Ctrl+G / Shift+Ctrl+G).
+  findStep(forward) {
+    if (this.findOpen && this.findText) this.find(this.findText, forward, true);
+  }
+
+  _closeFind(prev) {
+    if (!this.findOpen) return;
+    prev?.view?.webContents.stopFindInPage('clearSelection');
+    this.findOpen = false;
+    this.findResult = null;
+  }
+
   // ---------- política de memória (usada por memory_policy.js) ----------
 
   // Abas web de fundo com página viva (candidatas a descarte).
@@ -487,12 +604,14 @@ class TabManager {
       this.redirectAsk ? REDIRECT_HEIGHT : 0,
       this.downloadsOpen ? DOWNLOADS_HEIGHT : 0,
       this.translateOpen ? TRANSLATE_HEIGHT : 0,
+      this.findOpen ? FIND_HEIGHT : 0,
+      this.profilesOpen ? this.profilesHeight() : 0,
     );
     if (this.tabLayout.mode === 'side') {
       // painel lateral de abas (barra + abas) à esquerda; a página ocupa o resto.
       // Com menu/sugestões abertos o painel alarga por cima da página.
       const side = Math.min(this.tabLayout.sideW, width);
-      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : this.promptOpen || this.downloadsOpen || this.translateOpen ? 300 : 0;
+      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : this.promptOpen || this.downloadsOpen || this.translateOpen || this.findOpen || this.profilesOpen ? 300 : 0;
       this.ui.setBounds({ x: 0, y: 0, width: web ? Math.min(Math.max(side, wide), width) : width, height });
       if (web && tab.view) tab.view.setBounds(this._fit({ x: side, y: 0, width: Math.max(0, width - side), height }));
       return;
@@ -514,10 +633,13 @@ class TabManager {
       menuOpen: this.menuOpen,
       downloadsOpen: this.downloadsOpen,
       translateOpen: this.translateOpen,
+      profile: this.profile,
+      profilesOpen: this.profilesOpen,
+      find: this.findOpen ? { text: this.findText, ...(this.findResult ?? { active: 0, total: 0 }) } : null,
       zoom: this.zoomPercent(),
       canGoBack: !!nav?.canGoBack(),
       canGoForward: !!nav?.canGoForward(),
-      tabs: [...this.tabs.values()].map((t) => ({
+      tabs: [...this.tabs.values()].filter((t) => t.profile === this.profile).map((t) => ({
         id: t.id,
         kind: t.kind,
         title: t.title,
@@ -553,6 +675,7 @@ class TabManager {
       loading: false,
       view: null,
       lastActive: Date.now(),
+      profile: this.profile, // a aba nova é do perfil que você está usando
       ...props,
     };
     this.tabs.set(tab.id, tab);
@@ -604,8 +727,10 @@ class TabManager {
     if (tab.view) return;
 
     // A página da aba NÃO tem acesso ao Node nem ao Electron.
+    const ses = this.sessionFor(tab.profile); // sessão do perfil: cookies, logins e cache próprios
     const view = new WebContentsView({
       webPreferences: {
+        ...(ses ? { session: ses } : {}),
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
@@ -639,10 +764,17 @@ class TabManager {
     // target=_blank / window.open -> nova aba (e nunca uma janela solta).
     wc.setWindowOpenHandler(({ url }) => {
       if (this.popupBlocked?.(url)) return { action: 'deny' }; // janela de anúncio
-      this.create(url);
+      const next = toUrl(url);
+      if (next) this._add({ kind: 'web', title: next, url: next, profile: tab.profile }); // nova aba: do mesmo perfil de quem abriu
       return { action: 'deny' };
     });
 
+    // Resultado da busca (Ctrl+F): "3 de 12" na barra. Só conta para a aba que você está vendo.
+    wc.on('found-in-page', (_e, r) => {
+      if (tab.id !== this.activeId || !this.findOpen) return;
+      this.findResult = { active: r.activeMatchOrdinal ?? 0, total: r.matches ?? 0 };
+      this._changed();
+    });
     wc.on('page-title-updated', (_e, title) => {
       tab.title = title;
       this.history?.setTitle(tab.url, title);
