@@ -41,19 +41,20 @@
   }
 }
 
+/* Temas pretos: só trocam as superfícies. --tint-bg é quanto da cor principal entra no fundo com "Cor no tema". */
 /* AMOLED: preto total (a janela escura dos sites continua a mesma) */
-html.amoled { --bg-base: #000; --surface-base: #070708; --active-base: #111113; --border-base: #1b1b1f; }
+html.amoled { --bg-base: #000; --surface-base: #070708; --active-base: #111113; --border-base: #1b1b1f; --tint-bg: 4%; }
 /* Meia-noite: preto azulado, um pouco mais claro e frio que o AMOLED */
-html.midnight { --bg-base: #05070c; --surface-base: #0b0e16; --active-base: #121726; --border-base: #1c2336; }
-html.tint.midnight { --bg: color-mix(in oklab, var(--bg-base), var(--accent) 5%); }
+html.midnight { --bg-base: #05070c; --surface-base: #0b0e16; --active-base: #121726; --border-base: #1c2336; --tint-bg: 5%; }
+/* Ônix: preto quente, com fundo levemente acastanhado (sem o azul do Meia-noite nem o preto puro do AMOLED) */
+html.onix { --bg-base: #0b0908; --surface-base: #15110f; --active-base: #201a16; --border-base: #2e2620; --tint-bg: 6%; }
 /* Cor no tema: toque da cor principal no fundo, nos cartões e nas bordas */
 html.tint {
-  --bg: color-mix(in oklab, var(--bg-base), var(--accent) 9%);
+  --bg: color-mix(in oklab, var(--bg-base), var(--accent) var(--tint-bg, 9%));
   --surface: color-mix(in oklab, var(--surface-base), var(--accent) 13%);
   --surface-active: color-mix(in oklab, var(--active-base), var(--accent) 19%);
   --border: color-mix(in oklab, var(--border-base), var(--accent) 24%);
 }
-html.tint.amoled { --bg: color-mix(in oklab, var(--bg-base), var(--accent) 4%); }
 
 * { box-sizing: border-box; }
 

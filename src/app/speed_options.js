@@ -28,11 +28,11 @@ const SPEED_DEFAULTS = {
   skiaGraphite: true, // novo motor de desenho do Chromium (experimental)
   gpuRaster: true, // desenha os blocos da página na placa de vídeo (desligar tira memória de vídeo, mas usa mais CPU)
   canvasOnCpu: true, // canvas 2D (mapas, gráficos, jogos simples) desenhado na CPU: menos memória de vídeo, pouca perda na maioria dos sites
-  videoDecodeCpu: false, // decodifica vídeo na CPU em vez da placa: economiza memória de vídeo, mas gasta bem mais CPU em vídeo HD
+  videoDecodeCpu: true, // decodifica vídeo na CPU em vez da placa: economiza memória de vídeo, mas gasta bem mais CPU em vídeo HD
   gpuMemoryMB: 0, // teto da memória de vídeo que o Chromium usa para as páginas (0 = automático); baixo demais deixa a rolagem com falhas
   gpuCompositing: true, // monta as camadas da página na placa de vídeo; desligar tira memória de vídeo e passa a composição para a CPU
-  imageDecodeCpu: false, // decodifica JPEG na CPU em vez da placa: poupa memória de vídeo, gasta mais CPU em fotos grandes
-  aggressiveCacheDiscard: false, // descarta caches internos do Chromium com mais pressa: menos RAM, sites já visitados recarregam um pouco mais
+  imageDecodeCpu: true, // decodifica JPEG na CPU em vez da placa: poupa memória de vídeo, gasta mais CPU em fotos grandes
+  aggressiveCacheDiscard: true, // descarta caches internos do Chromium com mais pressa: menos RAM, sites já visitados recarregam um pouco mais
 };
 const RESTART = ['blockAutoplay', 'hardwareAccel', 'lowMemory', 'diskCacheMB', 'imagesOff', 'rendererLimit', 'jsMemoryMB', 'parallelDownloads', 'downloadConnections', 'zeroCopy', 'noSmoothScroll', 'rasterThreads', 'ignoreGpuBlocklist', 'forceSrgb', 'skiaGraphite', 'gpuRaster', 'canvasOnCpu', 'videoDecodeCpu', 'gpuMemoryMB', 'gpuCompositing', 'imageDecodeCpu', 'aggressiveCacheDiscard'];
 const RANGES = { discardMinutes: [1, 60], memoryBudgetMB: [300, 8000], diskCacheMB: [0, 8000], rendererLimit: [0, 16], jsMemoryMB: [0, 4096], gpuMemoryMB: [0, 4096], rasterThreads: [0, 4], downloadConnections: [2, 8] };

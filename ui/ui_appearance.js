@@ -9,19 +9,19 @@
 const themeOptions = [...document.querySelectorAll('.theme-option')];
 
 // Temas pretos = escuro (para os sites) com fundo preto na interface; ficam salvos neste computador.
-// AMOLED: preto total. Meia-noite: preto azulado, mais suave.
+// AMOLED: preto total. Meia-noite: preto azulado. Ônix: preto quente. Para novo tema preto, acrescente
+// a classe aqui e o bloco em style.css, o botão em index.html e a prévia em settings.css.
 const htmlEl = document.documentElement;
-const BLACK_THEMES = ['amoled', 'midnight'];
-function currentBlack() {
-  return BLACK_THEMES.find((b) => htmlEl.classList.contains(b)) || null;
-}
+const BLACK_THEMES = ['amoled', 'midnight', 'onix'];
+let blackTheme = null; // tema preto atual (ou null)
 function showTheme(theme) {
-  const shown = theme === 'dark' && currentBlack() ? currentBlack() : theme;
+  const shown = theme === 'dark' && blackTheme ? blackTheme : theme;
   for (const opt of themeOptions) {
     opt.setAttribute('aria-checked', String(opt.dataset.theme === shown));
   }
 }
 function setBlack(name) {
+  blackTheme = name;
   for (const b of BLACK_THEMES) htmlEl.classList.toggle(b, b === name);
   try {
     localStorage.setItem('evl.black', name || '');
@@ -48,7 +48,7 @@ themeOptions.forEach((opt) =>
   })
 );
 
-// Cor no tema: o fundo e os cartões levam um toque da cor principal (vale para Claro, Escuro e AMOLED)
+// Cor no tema: o fundo e os cartões levam um toque da cor principal (vale para Claro e para os temas escuros)
 const tintSwitch = $('tint-switch');
 function setTint(on) {
   htmlEl.classList.toggle('tint', on);
