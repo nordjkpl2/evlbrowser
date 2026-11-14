@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const MAX_ITEMS = 2000;
+const MAX_IMPORT = 20000; // lidos de um .json, no máximo
 
 // Endereço sem o "#trecho"; null se não for http/https.
 function keyOf(rawUrl) {
@@ -139,6 +140,43 @@ function createBookmarks(file, { delay = 1500 } = {}) {
         }
       }
       return out;
+    },
+    // Importa um .json: aceita a lista deste app ([{url,title}]) e a árvore do Chrome (roots > children).
+    // Também aceita o backup do Firefox (bookmarks-*.json): o endereço vem em "uri" e as pastas em "children".
+    // Pega qualquer objeto com "url" ou "uri" http(s) em qualquer nível. Páginas já favoritas são ignoradas.
+    importJson(text) {
+      const found = [];
+      const seenUrl = new Set();
+      const walk = (node, depth) => {
+        if (depth > 50 || found.length > MAX_IMPORT) return;
+        if (Array.isArray(node)) {
+          for (const v of node) walk(v, depth + 1);
+        } else if (node && typeof node === 'object') {
+          const raw = typeof node.url === 'string' ? node.url : node.uri;
+          if (typeof raw === 'string') {
+            const key = keyOf(raw);
+            if (key && !seenUrl.has(key)) {
+              seenUrl.add(key);
+              found.push({ url: key, title: String(node.title || node.name || '').trim().slice(0, 200) || key });
+            }
+          }
+          for (const v of Object.values(node)) if (v && typeof v === 'object') walk(v, depth + 1);
+        }
+      };
+      walk(JSON.parse(text), 0);
+      const has = load();
+      let added = 0;
+      let skipped = 0;
+      // Do fim para o início: o primeiro item do arquivo fica no topo, como nos favoritos feitos à mão.
+      for (let k = found.length - 1; k >= 0; k--) {
+        if (has.has(found[k].url)) {
+          skipped++;
+          continue;
+        }
+        this.add(found[k].url, found[k].title);
+        added++;
+      }
+      return { lidas: found.length, adicionados: added, ignorados: skipped };
     },
     flush() {
       if (timer) save();

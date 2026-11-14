@@ -315,7 +315,11 @@ button, input { font: inherit; color: inherit; }
   text-align: left;
   cursor: pointer;
 }
-.menu-item:hover { background: var(--hover-bg); }
+.menu-item:hover:not(:disabled) { background: var(--hover-bg); }
+.menu-item:disabled { color: var(--muted); opacity: 0.45; cursor: default; }
+.menu-caret { color: var(--muted); font-size: calc(12px * var(--ui-scale, 1)); transition: transform 0.15s; }
+#menu-page-toggle[aria-expanded="true"] .menu-caret { transform: rotate(180deg); }
+#menu-page { padding-left: 12px; border-left: 2px solid var(--border); margin: 2px 0 2px 12px; }
 
 #page-blank {
   position: relative;

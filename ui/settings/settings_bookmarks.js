@@ -43,6 +43,17 @@ function closeBookmarkForm() {
   bForm.reset();
   bError.hidden = true;
 }
+const bMsg = $('b-msg');
+$('b-import').addEventListener('click', async () => {
+  bMsg.hidden = false;
+  bMsg.textContent = t('Importando…');
+  const r = await window.evl.bookmarksImport();
+  if (!r || r.canceled) return (bMsg.hidden = true);
+  bMsg.textContent = r.ok
+    ? t('{a} novos, {s} já estavam salvos ({l} lidos).', { a: r.adicionados, s: r.ignorados, l: r.lidas })
+    : t('Não foi possível importar: {msg}', { msg: r.message });
+  loadBookmarks();
+});
 $('b-add').addEventListener('click', () => {
   bForm.hidden = false;
   $('b-url').focus();

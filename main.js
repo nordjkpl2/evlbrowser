@@ -216,6 +216,19 @@ function onShortcut(input) {
     tabs.reopenClosed();
     return true;
   }
+  // Funções do grupo "Página" do menu que não tinham atalho.
+  if (input.shift && key === 'p') {
+    tabs.togglePip().catch(() => {}); // vídeo da aba ativa em picture-in-picture
+    return true;
+  }
+  if (input.shift && key === 'y') {
+    send('translate-toggle'); // painel de tradução (quem decide se abre é a interface)
+    return true;
+  }
+  if (!input.shift && key === 'i') {
+    send('perm-toggle'); // painel de permissões do site (idem)
+    return true;
+  }
   if (key === 'd') {
     toggleBookmark();
     return true;
@@ -518,7 +531,7 @@ ipcMain.handle('engines:remove', (event, id) => {
 });
 
 ipcMain.on('suggest:set', (event, open) => fromUi(event) && tabs.setSuggest(open === true));
-ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));
+ipcMain.on('menu:set', (event, open, page) => fromUi(event) && tabs.setMenu(open === true, page === true));
 ipcMain.on('downloads:panel', (event, open) => fromUi(event) && tabs.setDownloadsPanel(open === true));
 ipcMain.on('translate:panel', (event, open) => fromUi(event) && tabs.setTranslatePanel(open === true));
 ipcMain.on('zoom:set', (event, action) => {
@@ -557,6 +570,8 @@ registerProfilesIpc({ ipcMain, fromUi, getProfiles: () => profiles, saveProfiles
 toggleBookmark = registerBookmarksIpc({
   ipcMain,
   fromUi,
+  dialog,
+  getWindow: () => win,
   getBookmarks: () => bookmarks,
   getActivePage: activePage,
   openUrl: (url) => tabs.create(url),

@@ -5,6 +5,10 @@
 
 const WORDS_ZH_JA = [
   ['Adicionar', '添加', '追加'],
+  ['Importar (.json)', '导入 (.json)', 'インポート (.json)'],
+  ['Importando…', '导入中…', 'インポート中…'],
+  ['{a} novos, {s} já estavam salvos ({l} lidos).', '新增 {a} 个，{s} 个已存在（共读取 {l} 个）。', '{a} 件を追加、{s} 件は保存済み（{l} 件読み込み）。'],
+  ['Não foi possível importar: {msg}', '无法导入：{msg}', 'インポートできませんでした: {msg}'],
   ['Apagar todos', '全部删除', 'すべて削除'],
   ['Aparência', '外观', '外観'],
   ['Baixar', '下载', 'ダウンロード'],
@@ -92,6 +96,7 @@ const WORDS_ZH_JA = [
   ['Trocar ou criar perfis', '切换或创建配置文件', 'プロフィールの切り替えと作成'],
   ['Localizar na página (Ctrl+F)', '在页面中查找 (Ctrl+F)', 'ページ内を検索 (Ctrl+F)'],
   ['Localizar na página', '在页面中查找', 'ページ内を検索'],
+  ['Página', '页面', 'ページ'],
   ['Anterior (Shift+Enter)', '上一个 (Shift+Enter)', '前へ (Shift+Enter)'],
   ['Próximo (Enter)', '下一个 (Enter)', '次へ (Enter)'],
   ['Anterior', '上一个', '前へ'],

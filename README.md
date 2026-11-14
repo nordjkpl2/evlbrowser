@@ -42,10 +42,15 @@ npm run dist:linux # AppImage para Linux em dist/
 | Ctrl++ / Ctrl+- | Aumentar / diminuir o zoom (também Ctrl + roda do mouse) |
 | Ctrl+0 | Zoom em 100% |
 | Ctrl+D | Adicionar aos favoritos |
+| Ctrl+F | Localizar na página (Enter / Shift+Enter andam entre os resultados, Esc fecha) |
+| Ctrl+G / Ctrl+Shift+G | Próximo / anterior resultado da busca |
 | Ctrl+, | Configurações |
 | Ctrl+H | Histórico |
 | Ctrl+J | Downloads |
 | Ctrl+Shift+T | Reabrir a última aba fechada |
+| Ctrl+Shift+P | Vídeo da página em picture-in-picture |
+| Ctrl+I | Permissões deste site |
+| Ctrl+Shift+Y | Traduzir esta página |
 | Ctrl+Shift+I | DevTools da aba ativa |
 | F12 | DevTools da interface do navegador |
 

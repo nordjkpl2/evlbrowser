@@ -84,13 +84,36 @@ function parsePasswordCsv(text) {
   return { entries, skipped };
 }
 
+// Ordem da lista: site e depois usuário (comparação simples, sem localeCompare, para a busca binária).
+const byKey = (a, b) => (a.site < b.site ? -1 : a.site > b.site ? 1 : a.username < b.username ? -1 : a.username > b.username ? 1 : 0);
+
+// Primeiro índice i com list[i] >= target (busca binária, O(log n)).
+function lowerBound(list, target) {
+  let lo = 0;
+  let hi = list.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (byKey(list[mid], target) < 0) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+// Índice do item com esse site + usuário, ou -1.
+function findIndex(list, site, username) {
+  const i = lowerBound(list, { site, username });
+  return i < list.length && list[i].site === site && list[i].username === username ? i : -1;
+}
+
 // cipher: { available(): boolean, encrypt(texto): string, decrypt(texto): string }
 function createVault(file, cipher) {
-  let items = null; // [{ id, site, username, secret, created }]
+  let items = null; // [{ id, site, username, secret, created }], ordenado por byKey
+  let byId = null; // id -> item (mesmo objeto da lista)
 
   function load() {
     if (items) return items;
     items = [];
+    byId = new Map();
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf8'));
       for (const i of Array.isArray(data) ? data : []) {
@@ -101,6 +124,8 @@ function createVault(file, cipher) {
     } catch {
       // sem arquivo (ou quebrado): começa vazio
     }
+    items.sort(byKey);
+    for (const i of items) byId.set(i.id, i);
     return items;
   }
 
@@ -116,13 +141,15 @@ function createVault(file, cipher) {
   // Cria ou, se já existir esse site + usuário, troca a senha. Devolve 'added' | 'updated'.
   function put({ site, username, password }) {
     const list = load();
-    const old = list.find((i) => i.site === site && i.username === username);
-    if (old) {
-      old.secret = cipher.encrypt(password);
+    const old = findIndex(list, site, username);
+    if (old >= 0) {
+      list[old].secret = cipher.encrypt(password);
       return 'updated';
     }
     if (list.length >= MAX_ITEMS) throw new Error('Limite de senhas atingido.');
-    list.push({ id: crypto.randomBytes(6).toString('hex'), site, username, secret: cipher.encrypt(password), created: Date.now() });
+    const item = { id: crypto.randomBytes(6).toString('hex'), site, username, secret: cipher.encrypt(password), created: Date.now() };
+    list.splice(lowerBound(list, item), 0, item);
+    byId.set(item.id, item);
     return 'added';
   }
 
@@ -168,31 +195,43 @@ function createVault(file, cipher) {
       return { added, updated, skipped: rejected };
     },
     reveal(id) {
-      const item = load().find((i) => i.id === id);
+      load();
+      const item = byId.get(id);
       return item ? cipher.decrypt(item.secret) : null;
     },
-    // Logins guardados para um site (nome sem "www."). Sem senhas.
+    // Logins guardados para um site (nome sem "www."). Sem senhas. Intervalo achado por busca binária.
     forSite(host) {
       const site = normalizeSite(host);
-      return site ? load().filter((i) => i.site === site).map(({ id, username }) => ({ id, username })) : [];
+      if (!site) return [];
+      const list = load();
+      const out = [];
+      for (let i = lowerBound(list, { site, username: '' }); i < list.length && list[i].site === site; i++) {
+        out.push({ id: list[i].id, username: list[i].username });
+      }
+      return out;
     },
     // Credencial para preencher, só se o item for mesmo desse site.
     credential(id, host) {
       const site = normalizeSite(host);
-      const item = load().find((i) => i.id === id);
+      load();
+      const item = byId.get(id);
       if (!item || !site || item.site !== site) return null;
       return { username: item.username, password: cipher.decrypt(item.secret) };
     },
     remove(id) {
       const list = load();
-      const i = list.findIndex((x) => x.id === id);
+      const item = byId.get(id);
+      if (!item) return false;
+      const i = findIndex(list, item.site, item.username);
       if (i === -1) return false;
       list.splice(i, 1);
+      byId.delete(id);
       save();
       return true;
     },
     clear() {
       items = [];
+      byId = new Map();
       save();
     },
   };

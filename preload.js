@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('evl', {
   bookmarksOpen: (url) => ipcRenderer.send('bookmarks:open', String(url)),
   bookmarksAdd: (url, title) => ipcRenderer.invoke('bookmarks:add', String(url), String(title ?? '')),
   bookmarksRemove: (id) => ipcRenderer.invoke('bookmarks:remove', String(id)),
+  bookmarksImport: () => ipcRenderer.invoke('bookmarks:import'),
   passwordsList: () => ipcRenderer.invoke('passwords:list'),
   passwordsAdd: (e) =>
     ipcRenderer.invoke('passwords:add', {
@@ -98,7 +99,7 @@ contextBridge.exposeInMainWorld('evl', {
   privacyClear: () => ipcRenderer.invoke('privacy:clear'),
   adblockAllow: (site, add) => ipcRenderer.invoke('adblock:allow', String(site), add === true),
   setAccent: (color) => ipcRenderer.send('accent:set', color === null ? null : String(color)),
-  setMenu: (open) => ipcRenderer.send('menu:set', open === true),
+  setMenu: (open, page) => ipcRenderer.send('menu:set', open === true, page === true),
   downloadsPanel: (open) => ipcRenderer.send('downloads:panel', open === true),
   translatePanel: (open) => ipcRenderer.send('translate:panel', open === true),
   translateRun: (from, to) => ipcRenderer.invoke('translate:run', String(from), String(to)),
@@ -128,4 +129,6 @@ contextBridge.exposeInMainWorld('evl', {
   onAccent: (cb) => ipcRenderer.on('accent', (_event, color) => cb(color)),
   onFocusAddress: (cb) => ipcRenderer.on('focus-address', () => cb()),
   onFindFocus: (cb) => ipcRenderer.on('find-focus', () => cb()),
+  onPermToggle: (cb) => ipcRenderer.on('perm-toggle', () => cb()),
+  onTranslateToggle: (cb) => ipcRenderer.on('translate-toggle', () => cb()),
 });

@@ -11,7 +11,9 @@ module.exports = {
 
   // Espaço extra (px) que a interface ocupa por cima da página enquanto o
   // submenu do contador de memória está aberto.
-  MENU_HEIGHT: 186,
+  MENU_HEIGHT: 224, // inclui a linha "Página" recolhida
+  // Espaço a mais quando o grupo "Página" do submenu está expandido (4 itens).
+  MENU_PAGE_HEIGHT: 160,
 
   // Painel de permissões do site (lista + pedido), pequeno, abaixo do botão ao lado da estrela.
   PROMPT_HEIGHT: 350,

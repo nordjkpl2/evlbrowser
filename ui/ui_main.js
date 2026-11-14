@@ -172,8 +172,27 @@ function showMenu(state) {
   // Ao abrir, o foco vai para o menu (teclado); ao fechar, volta para o botão.
   if (state.menuOpen && !menuWasOpen) (hasZoom ? zoomInBtn : menuSettingsBtn).focus();
   else if (!state.menuOpen && menuWasOpen && menuEl.contains(document.activeElement)) memEl.focus();
+  if (!state.menuOpen) setMenuPage(false); // ao fechar, o grupo "Página" volta recolhido
   menuWasOpen = state.menuOpen;
 }
+
+// Grupo "Página" do menu (Localizar, PiP, Permissões, Tradução): recolhido por padrão.
+// Aberto, o main.js aumenta a interface para caber os itens (setMenu(true, true)).
+const menuPageToggle = $('menu-page-toggle');
+const menuPageEl = $('menu-page');
+
+function setMenuPage(open) {
+  menuPageEl.hidden = !open;
+  menuPageToggle.setAttribute('aria-expanded', String(open));
+}
+
+menuPageToggle.addEventListener('click', () => {
+  const open = menuPageEl.hidden;
+  setMenuPage(open);
+  window.evl.setMenu(true, open);
+});
+// Escolher uma função da página fecha o menu; o painel dela (se houver) abre no lugar.
+menuPageEl.addEventListener('click', () => window.evl.setMenu(false));
 
 // A estrela da barra: cheia e na cor principal quando a página já é favorita.
 function showStar(web, on) {

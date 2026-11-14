@@ -1,8 +1,12 @@
 // Mensagens dos favoritos: a estrela da barra de endereço (Ctrl+D) e a categoria Favoritos.
 
-// ctx: { ipcMain, fromUi, getBookmarks, getActivePage, openUrl, refresh }
+// Importação de um .json (Configurações > Favoritos). A janela de arquivo abre aqui; a interface não envia caminhos.
+
+const fs = require("fs");
+
+// ctx: { ipcMain, fromUi, dialog, getWindow, getBookmarks, getActivePage, openUrl, refresh }
 //   getActivePage(): { url, title } da aba web ativa, ou null; refresh(): reenvia o estado à interface.
-function registerBookmarksIpc({ ipcMain, fromUi, getBookmarks, getActivePage, openUrl, refresh }) {
+function registerBookmarksIpc({ ipcMain, fromUi, dialog, getWindow, getBookmarks, getActivePage, openUrl, refresh }) {
   function toggleActive() {
     const page = getActivePage();
     if (!page) return false;
@@ -21,6 +25,28 @@ function registerBookmarksIpc({ ipcMain, fromUi, getBookmarks, getActivePage, op
     const ok = getBookmarks().remove(id);
     refresh();
     return ok;
+  });
+  let importing = false;
+  ipcMain.handle("bookmarks:import", async (event) => {
+    if (!fromUi(event) || importing) return null;
+    importing = true;
+    try {
+      const pick = await dialog.showOpenDialog(getWindow(), {
+        title: "Importar favoritos (.json)",
+        properties: ["openFile"],
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      const file = pick.filePaths[0];
+      if (pick.canceled || !file) return { ok: true, canceled: true };
+      if (fs.statSync(file).size > 20 * 1024 * 1024) throw new Error("O arquivo é grande demais (máximo 20 MB).");
+      const r = getBookmarks().importJson(fs.readFileSync(file, "utf8"));
+      refresh();
+      return { ok: true, ...r };
+    } catch (error) {
+      return { ok: false, message: String(error?.message ?? error).slice(0, 200) };
+    } finally {
+      importing = false;
+    }
   });
   // Adicionar à mão: aceita "exemplo.com" (vira https://exemplo.com) ou um endereço completo.
   ipcMain.handle('bookmarks:add', (event, url, title) => {

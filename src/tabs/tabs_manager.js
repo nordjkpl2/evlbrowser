@@ -18,7 +18,7 @@ const { WebContentsView } = require('electron');
 const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
 const { hostColor } = require('./favicon_color');
-const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT, REDIRECT_HEIGHT, TRANSLATE_HEIGHT, FIND_HEIGHT } = require('../app/app_config');
+const { MENU_HEIGHT, MENU_PAGE_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT, REDIRECT_HEIGHT, TRANSLATE_HEIGHT, FIND_HEIGHT } = require('../app/app_config');
 const { shouldAskRedirect } = require('./redirect_guard');
 const { hostOf } = require('../network/privacy_engine');
 
@@ -67,6 +67,7 @@ class TabManager {
     this.activeId = null;
     this.nextId = 1;
     this.menuOpen = false; // submenu do contador de memória (zoom + Configurações)
+    this.menuPage = false; // grupo "Página" do submenu aberto (mais altura)
     this.suggestOpen = false; // sugestões do histórico na barra de endereço
     this.promptOpen = false; // pedido de permissão de um site (microfone, câmera...)
     this.redirectSeq = 0;
@@ -274,7 +275,6 @@ class TabManager {
   close(id) {
     const tab = this.tabs.get(id);
     if (!tab) return;
-    const index = [...this.tabs.keys()].indexOf(id);
 
     if (tab.kind === 'web') {
       this.closed.push({ url: tab.url, title: tab.title, profile: tab.profile });
@@ -297,7 +297,15 @@ class TabManager {
         this.create();
         return;
       }
-      this.activate(rest.find((k) => k > id) ?? rest[rest.length - 1]);
+      // `rest` está em ordem crescente (ids sequenciais): busca binária pela primeira aba depois de `id`.
+      let lo = 0;
+      let hi = rest.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (rest[mid] <= id) lo = mid + 1;
+        else hi = mid;
+      }
+      this.activate(lo < rest.length ? rest[lo] : rest[rest.length - 1]);
     } else {
       this._changed();
     }
@@ -413,9 +421,12 @@ class TabManager {
 
   // Abre/fecha o submenu do contador de memória. Aberto, a interface cresce por
   // cima da página (ela já fica no topo da pilha de views) para caber o menu.
-  setMenu(open) {
-    if (this.menuOpen === open) return;
+  // page: grupo "Página" expandido (só vale com o menu aberto).
+  setMenu(open, page = false) {
+    const nextPage = open && page;
+    if (this.menuOpen === open && this.menuPage === nextPage) return;
     this.menuOpen = open;
+    this.menuPage = nextPage;
     if (open) this.suggestOpen = false;
     this.layout();
     this._changed();
@@ -599,7 +610,7 @@ class TabManager {
     const web = tab?.kind === 'web';
 
     const extra = Math.max(
-      this.menuOpen ? MENU_HEIGHT : this.suggestOpen ? SUGGEST_HEIGHT : 0,
+      this.menuOpen ? MENU_HEIGHT + (this.menuPage ? MENU_PAGE_HEIGHT : 0) : this.suggestOpen ? SUGGEST_HEIGHT : 0,
       this.promptOpen ? PROMPT_HEIGHT : 0,
       this.redirectAsk ? REDIRECT_HEIGHT : 0,
       this.downloadsOpen ? DOWNLOADS_HEIGHT : 0,

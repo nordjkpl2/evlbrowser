@@ -15,6 +15,9 @@ window.evl.onDownload((name) => {
   setTimeout(() => (memEl.textContent = lastMb), 3000);
 });
 window.evl.onFocusAddress(() => addressEl.focus());
+// Ctrl+I / Ctrl+Shift+Y: os mesmos painéis dos botões do grupo "Página" (desligados se a página não tem o que mostrar).
+window.evl.onPermToggle(() => !permBtn.disabled && setPermOpen(!permOpen));
+window.evl.onTranslateToggle(() => !trBtn.disabled && setTrOpen(!trOpen));
 window.evl.onAccent(applyAccent);
 window.evl.onLang(setLang);
 window.evl.onFont(applyFont);
