@@ -5,6 +5,8 @@ Estilo Firefox rodando sobre Chromium, com as engines NS Nord Suite.
 
 **Versão 1.0.0, o primeiro release.**
 
+> O Que Acontece se Voce Unir Tecnologia Navegação Inteligente e um Navegador ?
+
 ## Destaques
 
 - **Pouca RAM**: abas paradas dormem e depois são descartadas (aba com som ou vídeo nunca é descartada), orçamento de memória ajustável e serviços de fundo do Chromium desligados.
