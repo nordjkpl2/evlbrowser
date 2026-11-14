@@ -16,6 +16,7 @@
   --accent: #ffb429;
   --accent2: oklch(from var(--accent) l calc(c * 0.5) calc(h + 50));
   --glow: rgba(255, 180, 41, 0.35);
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.42), 0 2px 6px rgba(0, 0, 0, 0.22); /* sombra dos menus flutuantes */
 
   --font-ui: "Segoe UI", system-ui, sans-serif;
   --font-mono: "Cascadia Mono", Consolas, monospace;
@@ -34,6 +35,7 @@
     --muted: #5b5b66;
     --accent: #b45309;
     --glow: rgba(180, 83, 9, 0.2);
+    --shadow: 0 12px 30px rgba(30, 30, 50, 0.16), 0 2px 6px rgba(30, 30, 50, 0.08);
   }
 }
 
@@ -128,10 +130,11 @@ button, input { font: inherit; color: inherit; }
   background: var(--surface);
   cursor: default;
 }
+.tab { transition: background-color 0.15s, box-shadow 0.15s; }
 .tab:hover { background: var(--surface-active); }
 .tab.active {
   background: var(--surface-active);
-  box-shadow: inset 0 2px 0 var(--accent);
+  box-shadow: inset 0 2px 0 var(--accent), 0 -6px 14px -10px var(--glow);
 }
 .tab.sleeping { color: var(--muted); }
 .tab.discarded { color: var(--muted); opacity: 0.6; }
@@ -204,7 +207,8 @@ button, input { font: inherit; color: inherit; }
   background: var(--surface);
   user-select: text;
 }
-#address:focus { border-color: var(--accent); outline: none; }
+#address:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--glow); }
+#address { transition: border-color 0.15s, box-shadow 0.15s; }
 #address::placeholder { color: var(--muted); }
 
 /* O número de MB é um botão: abre as Configurações. */
@@ -236,7 +240,7 @@ button, input { font: inherit; color: inherit; }
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--surface);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow);
   z-index: 10;
 }
 .sg-item {
@@ -263,7 +267,7 @@ button, input { font: inherit; color: inherit; }
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--surface);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow);
   z-index: 10;
 }
 #menu hr { margin: 6px 0; border: 0; border-top: 1px solid var(--border); }
@@ -312,6 +316,7 @@ button, input { font: inherit; color: inherit; }
   place-content: center;
   gap: 12px;
   text-align: center;
+  background: radial-gradient(60% 55% at 50% 42%, var(--glow), transparent 72%), var(--bg);
 }
 #page-blank .hint { margin: 0; }
 
@@ -379,7 +384,7 @@ body.side-tabs .screen { min-width: 0; height: 100%; }
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--surface);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow);
   font-size: calc(12px * var(--ui-scale, 1));
   z-index: 12;
 }
@@ -416,7 +421,7 @@ body.side-tabs #perm { top: 92px; left: 8px; right: auto; }
   border: 1px solid var(--border);
   border-radius: var(--r);
   background: var(--surface);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow);
   font-size: calc(12px * var(--ui-scale, 1));
   z-index: 12;
 }
@@ -477,3 +482,109 @@ body.tab-close-none .tab .close, body.tab-close-hover .tab:not(:hover, .active) 
 #home-edit { position: absolute; right: 12px; bottom: 12px; opacity: 0.6; }
 #home-edit:hover, #home-edit:focus-visible { opacity: 1; }
 #perm-list[hidden] { display: none; }
+
+/* =====================================================================
+   ESTILOS COM NOME (Aparência > Estilo visual). Cada um tem cores fixas e
+   forma própria: Vidro (camadas translúcidas, cantos grandes), Neon (brilho
+   magenta e ciano, linhas em caixa-alta), Papel (editorial, serifa, abas
+   como fichas de arquivo) e Terminal (monoespaçada, sem cantos, abas invertidas).
+   ===================================================================== */
+
+/* ----- Vidro: azul-ardósia profundo, camadas translúcidas e luz suave ----- */
+html.look-vidro {
+  color-scheme: dark;
+  --bg-base: #0c1222; --surface-base: #161f36; --active-base: #202b48; --border-base: #2e3b5e;
+  --text: #eef3ff; --muted: #8d9bbd; --accent: #7dd3fc; --accent2: #c4b5fd; --glow: rgba(125, 211, 252, 0.3);
+  --shadow: 0 18px 44px rgba(3, 6, 18, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html.look-vidro #chrome {
+  background:
+    radial-gradient(90% 160% at 0% 0%, rgba(125, 211, 252, 0.16), transparent 60%),
+    radial-gradient(70% 140% at 100% 0%, rgba(196, 181, 253, 0.14), transparent 60%),
+    var(--bg-base);
+}
+html.look-vidro .tab { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08); backdrop-filter: blur(10px); }
+html.look-vidro .tab:hover { background: rgba(255, 255, 255, 0.09); }
+html.look-vidro .tab.active {
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.22), rgba(255, 255, 255, 0.05));
+  border-color: rgba(125, 211, 252, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 18px -8px var(--glow);
+}
+html.look-vidro #address { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.1); }
+html.look-vidro #address:focus { box-shadow: 0 0 0 3px var(--glow); }
+html.look-vidro #suggest, html.look-vidro #menu, html.look-vidro #perm, html.look-vidro #dl-pop {
+  background: rgba(22, 31, 54, 0.86);
+  backdrop-filter: blur(16px) saturate(140%);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ----- Neon: preto arroxeado, brilho magenta e ciano, caixa-alta ----- */
+html.look-neon {
+  color-scheme: dark;
+  --bg-base: #07060d; --surface-base: #0e0c18; --active-base: #181428; --border-base: #2d2350;
+  --text: #f4edff; --muted: #7d7499; --accent: #ff2e9a; --accent2: #2ee6ff; --glow: rgba(255, 46, 154, 0.45);
+  --font-ui: Bahnschrift, "Segoe UI Semibold", "Segoe UI", sans-serif;
+}
+html.look-neon #chrome { background: linear-gradient(180deg, #120a1f, var(--bg-base)); }
+html.look-neon #tabs { border-bottom: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 2px 14px -4px var(--glow); }
+html.look-neon .tab { letter-spacing: 0.05em; text-transform: uppercase; font-size: calc(11.5px * var(--ui-scale, 1)); }
+html.look-neon .tab.active {
+  color: #fff;
+  background: linear-gradient(180deg, rgba(255, 46, 154, 0.28), transparent 90%);
+  box-shadow: inset 0 -2px 0 var(--accent), 0 0 18px -4px var(--glow);
+}
+html.look-neon .tab.active .favicon { filter: drop-shadow(0 0 4px var(--accent)); }
+html.look-neon #address { background: #05040a; border-color: var(--border); }
+html.look-neon #address:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px -2px var(--glow); }
+html.look-neon .icon-btn:hover:not(:disabled) { color: var(--accent2); background: transparent; text-shadow: 0 0 8px var(--accent2); }
+html.look-neon #mem { text-shadow: 0 0 8px var(--glow); }
+html.look-neon #page-blank { background: radial-gradient(55% 50% at 50% 40%, rgba(46, 230, 255, 0.10), transparent 70%), radial-gradient(60% 55% at 50% 42%, var(--glow), transparent 72%), var(--bg); }
+
+/* ----- Papel: creme, tinta marrom e vermelho-óxido; serifa e abas de pasta ----- */
+html.look-papel {
+  color-scheme: light;
+  --bg-base: #f3ead6; --surface-base: #fbf6ea; --active-base: #ebe0c8; --border-base: #cdbf9f;
+  --text: #2a2118; --muted: #7a6a52; --accent: #8c2f1c; --accent2: #b98a45; --glow: rgba(140, 47, 28, 0.16);
+  --font-ui: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  --shadow: 0 1px 0 rgba(60, 40, 20, 0.12), 0 8px 18px rgba(60, 40, 20, 0.14);
+}
+html.look-papel #chrome { background: var(--bg-base); border-bottom: 1px solid var(--border); }
+html.look-papel #tabs { border-bottom: 1px solid var(--border); }
+html.look-papel .tab { background: transparent; border-color: transparent; border-bottom: 1px solid var(--border); border-radius: 0; font-style: italic; }
+html.look-papel .tab:hover { background: var(--active-base); }
+html.look-papel .tab.active {
+  background: var(--surface);
+  border-color: var(--border);
+  border-bottom-color: var(--surface);
+  font-style: normal;
+  font-weight: 600;
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+html.look-papel #address { background: var(--surface); border-color: var(--border); font-style: italic; }
+html.look-papel #address:focus { box-shadow: inset 0 0 0 1px var(--accent); }
+html.look-papel #mem, html.look-papel #zoom-val { font-family: Georgia, serif; }
+html.look-papel #page-blank { background: var(--bg-base); }
+html.look-papel .logo { font-family: Georgia, serif; font-style: italic; text-shadow: none; }
+
+/* ----- Terminal: fundo quase preto, verde fósforo, sem cantos; aba ativa invertida ----- */
+html.look-terminal {
+  color-scheme: dark;
+  --bg-base: #040704; --surface-base: #07100a; --active-base: #0c1f10; --border-base: #1b4a22;
+  --text: #a7f3b5; --muted: #3f8a4c; --accent: #4ade80; --accent2: #bef264; --glow: rgba(74, 222, 128, 0.3);
+  --font-ui: "Cascadia Mono", Consolas, monospace;
+  --font-mono: "Cascadia Mono", Consolas, monospace;
+}
+html.look-terminal #chrome { background: var(--bg-base); }
+html.look-terminal #tabs { border-bottom: 1px dashed var(--border); }
+html.look-terminal .tab { background: transparent; border-color: var(--border); }
+html.look-terminal .tab:hover { background: var(--active-base); }
+html.look-terminal .tab .title::before { content: "> "; color: var(--muted); }
+html.look-terminal .tab.active { background: var(--accent); color: #021005; box-shadow: none; }
+html.look-terminal .tab.active .title::before, html.look-terminal .tab.active .close { color: #021005; }
+html.look-terminal .tab.active .dot { background: #021005; }
+html.look-terminal #address { background: #020402; border-style: dashed; }
+html.look-terminal #address:focus { border-style: solid; box-shadow: 0 0 0 1px var(--accent); }
+html.look-terminal .icon-btn:hover:not(:disabled) { background: var(--active-base); color: var(--accent); }
+html.look-terminal #mem { text-shadow: 0 0 6px var(--glow); }
+html.look-terminal #page-blank { background: var(--bg-base); }
+html.look-terminal .logo { text-shadow: 0 0 14px var(--glow); }

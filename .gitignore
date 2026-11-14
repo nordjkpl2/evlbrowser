@@ -10,3 +10,18 @@ MAPA.md
 *.log
 .env
 bun.lock
+# Dados pessoais do navegador (cookies, senhas, histórico etc.) — nunca commitar
+settings.json
+session.json
+history.json
+bookmarks.json
+downloads.json
+passwords.json
+extensions.json
+extensions.log
+cookies*.json
+*.sqlite
+*.db
+*.log
+userData/
+evl-browser/

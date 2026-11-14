@@ -290,11 +290,18 @@
 
         <section class="card" data-panel="appearance">
           <h3>Estilo visual</h3>
-          <p class="hint">Muda as cores, as formas e as letras de todo o Evl. No Lua e nos visuais antigos o tema Claro/Escuro não se aplica.</p>
+          <p class="hint">Muda as cores, as formas e as letras de todo o Evl. O estilo Atual segue o tema Claro/Escuro; os estilos com nome têm cores fixas.</p>
           <div class="theme-options" role="radiogroup" aria-label="Estilo visual">
             <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="">
               <span class="preview pv-modern" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
               <span class="label">Atual</span>
+            </button>
+          </div>
+          <h4 class="theme-group-title" id="look-light-title">Estilos claros</h4>
+          <div class="theme-options" role="radiogroup" aria-labelledby="look-light-title">
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="papel">
+              <span class="preview pv-papel" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Papel</span>
             </button>
             <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="lua">
               <span class="preview pv-lua" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
@@ -309,16 +316,35 @@
               <span class="label">Antigo 1900</span>
             </button>
           </div>
+          <h4 class="theme-group-title" id="look-dark-title">Estilos escuros</h4>
+          <div class="theme-options" role="radiogroup" aria-labelledby="look-dark-title">
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="vidro">
+              <span class="preview pv-vidro" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Vidro</span>
+            </button>
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="neon">
+              <span class="preview pv-neon" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Neon</span>
+            </button>
+            <button type="button" class="theme-option" role="radio" aria-checked="false" data-look="terminal">
+              <span class="preview pv-terminal" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
+              <span class="label">Terminal</span>
+            </button>
+          </div>
         </section>
 
         <section class="card" data-panel="appearance">
           <h3>Tema</h3>
           <p class="hint">Escolha o esquema de cores do Evl. Os sites que respeitam a preferência de tema seguem a mesma escolha.</p>
-          <div class="theme-options" role="radiogroup" aria-label="Tema">
+          <h4 class="theme-group-title" id="theme-light-title">Temas claros</h4>
+          <div class="theme-options" role="radiogroup" aria-labelledby="theme-light-title">
             <button type="button" class="theme-option" role="radio" aria-checked="false" data-theme="light">
               <span class="preview pv-light" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
               <span class="label">Claro</span>
             </button>
+          </div>
+          <h4 class="theme-group-title" id="theme-dark-title">Temas escuros</h4>
+          <div class="theme-options" role="radiogroup" aria-labelledby="theme-dark-title">
             <button type="button" class="theme-option" role="radio" aria-checked="false" data-theme="dark">
               <span class="preview pv-dark" aria-hidden="true"><i class="bar"></i><i class="line"></i><i class="line short"></i></span>
               <span class="label">Escuro</span>

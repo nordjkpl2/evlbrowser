@@ -1,7 +1,8 @@
-/* Configurações do Evl. Quatro visuais: Atual (padrão; Nintendo + Pale Moon: pílulas, cartões em
-   grade, linhas de ajuste), Antigo 1800 (cartas hanafuda da Nintendo: papel, tinta e vermelho)
-   Antigo 1900 (era Famicom) e Lua (Pale Moon: barra clássica azulada, abas arredondadas). O visual vem de classes no <html>
-   (look-lua, look-1800, look-1900, retro); o JS só troca a classe (ui_appearance.js). */
+/* Configurações do Evl. Visuais: Atual (padrão; pílulas, cartões em grade, linhas de ajuste),
+   Vidro (camadas translúcidas), Neon (brilho magenta), Papel (editorial, serifa), Terminal (verde fósforo),
+   Antigo 1800 (cartas hanafuda: papel, tinta e vermelho), Antigo 1900 (era Famicom) e Lua (Pale Moon).
+   O visual vem de classes no <html> (look-vidro, look-neon, look-papel, look-terminal, look-lua, look-1800,
+   look-1900, retro); o JS só troca a classe (ui_appearance.js). As cores dos estilos com nome estão em style.css. */
 
 :root { --on-accent: oklch(from var(--accent) clamp(0.12, calc((0.62 - l) * 1000), 0.98) 0 0); }
 
@@ -222,6 +223,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .theme-options { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
 .theme-option { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: none; width: 150px; padding: 14px 8px 10px; border: 1px solid var(--border); border-radius: calc(var(--r) * 1.5); background: transparent; cursor: pointer; }
 .theme-option:hover { background: var(--surface-active); }
+.theme-group-title { margin: 14px 0 0; font-size: calc(12px * var(--ui-scale, 1)); font-weight: 600; color: var(--muted, inherit); }
 .theme-option[aria-checked="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .preview { display: flex; flex-direction: column; gap: 5px; width: 100px; height: 58px; padding: 7px; border-radius: calc(var(--r) * 0.5); }
 .preview i { display: block; height: 4px; border-radius: 2px; }
@@ -388,3 +390,54 @@ html.look-lua .switch[aria-checked="true"]::after { background: #fff; border-col
 html.look-lua .theme-option[aria-checked="true"] { background: var(--lua-sel); border-color: #7da2ce; box-shadow: none; }
 html.look-lua progress::-webkit-progress-value { background: linear-gradient(#7fb0ec, #3a6cb3); }
 .pv-lua { background: linear-gradient(#d3dcea 0 18px, #f1f4f9 18px); box-shadow: inset 0 0 0 1px #8e9fb8; } .pv-lua i { background: #a3b1c6; } .pv-lua .bar { background: #3a6cb3; border-radius: 3px 3px 0 0; }
+
+/* =====================================================================
+   ESTILOS COM NOME — Configurações (as cores e cantos vêm de style.css)
+   ===================================================================== */
+.pv-vidro { background: linear-gradient(135deg, #22305a, #0c1222); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); border-radius: 14px; } .pv-vidro i { background: rgba(255, 255, 255, 0.22); } .pv-vidro .bar { background: linear-gradient(90deg, #7dd3fc, #c4b5fd); }
+.pv-neon { background: #07060d; box-shadow: inset 0 0 0 1px #ff2e9a, 0 0 12px rgba(255, 46, 154, 0.35); border-radius: 4px; } .pv-neon i { background: #2d2350; } .pv-neon .bar { background: #ff2e9a; box-shadow: 0 0 8px #ff2e9a; }
+.pv-papel { background: #fbf6ea; box-shadow: inset 0 0 0 1px #cdbf9f; border-radius: 2px; } .pv-papel i { background: #a89478; border-radius: 0; } .pv-papel .bar { background: #8c2f1c; border-radius: 0; }
+.pv-terminal { background: #040704; box-shadow: inset 0 0 0 1px #1b4a22; border-radius: 0; } .pv-terminal i { background: #1b4a22; border-radius: 0; } .pv-terminal .bar { background: #4ade80; border-radius: 0; }
+
+/* ----- Vidro: cartões translúcidos e arredondados; menu com pílula de luz ----- */
+html.look-vidro .side { background: rgba(255, 255, 255, 0.03); border-right: 1px solid rgba(255, 255, 255, 0.08); }
+html.look-vidro .card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: 0 14px 36px rgba(3, 6, 18, 0.35); border-radius: 18px; }
+html.look-vidro .nav-item[aria-current="true"] { background: linear-gradient(90deg, #7dd3fc, #c4b5fd); color: #0b1222; }
+html.look-vidro .nav-item[aria-current="true"] svg { color: #0b1222; }
+html.look-vidro .switch[aria-checked="true"] { background: linear-gradient(90deg, #7dd3fc, #c4b5fd); border-color: transparent; }
+html.look-vidro .theme-option { background: rgba(255, 255, 255, 0.03); }
+
+/* ----- Neon: cartões com contorno que brilha; títulos em caixa-alta espaçada ----- */
+html.look-neon .side { background: #0a0814; border-right: 1px solid #2d2350; }
+html.look-neon .card { background: #0c0a16; border: 1px solid #2d2350; box-shadow: inset 0 0 0 1px rgba(255, 46, 154, 0.08), 0 0 24px rgba(255, 46, 154, 0.08); }
+html.look-neon .content h2 { text-transform: uppercase; letter-spacing: 0.14em; text-shadow: 0 0 12px var(--glow); }
+html.look-neon .nav-item[aria-current="true"] { background: transparent; color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); text-shadow: 0 0 8px var(--glow); }
+html.look-neon .nav-item[aria-current="true"] svg { color: var(--accent); }
+html.look-neon .switch[aria-checked="true"] { background: var(--accent); box-shadow: 0 0 12px var(--glow); border-color: var(--accent); }
+html.look-neon .theme-option[aria-checked="true"] { box-shadow: 0 0 0 1px var(--accent), 0 0 16px var(--glow); }
+
+/* ----- Papel: página de revista, títulos em itálico, cartões como folhas ----- */
+html.look-papel .side { background: #e9dfc8; border-right: 1px solid var(--border); }
+html.look-papel .side h1, html.look-papel .nav-item { color: var(--text); }
+html.look-papel .nav-item svg { color: var(--accent); }
+html.look-papel .nav-item:hover { background: #ddd0b2; }
+html.look-papel .nav-item[aria-current="true"] { background: var(--text); color: var(--bg-base); }
+html.look-papel .nav-item[aria-current="true"] svg { color: var(--bg-base); }
+html.look-papel .content h2 { font-style: italic; font-weight: 400; font-size: calc(26px * var(--ui-scale, 1)); }
+html.look-papel .card { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 1px 0 var(--border), 0 6px 14px rgba(60, 40, 20, 0.08); }
+html.look-papel .card h3 { font-style: italic; font-weight: 600; }
+html.look-papel .switch { border-radius: 2px; background: var(--active-base); }
+html.look-papel .switch::after { border-radius: 1px; }
+html.look-papel .switch[aria-checked="true"] { background: var(--accent); }
+
+/* ----- Terminal: tudo monoespaçado; cartões tracejados; títulos com "#" ----- */
+html.look-terminal .side { background: #030603; border-right: 1px dashed var(--border); }
+html.look-terminal .side h1, html.look-terminal .nav-item { text-transform: lowercase; }
+html.look-terminal .card { background: transparent; border: 1px dashed var(--border); box-shadow: none; border-radius: 0; }
+html.look-terminal .content h2::before { content: "# "; color: var(--muted); }
+html.look-terminal .nav-item[aria-current="true"] { background: var(--accent); color: #021005; }
+html.look-terminal .nav-item[aria-current="true"] svg { color: #021005; }
+html.look-terminal .switch { border-radius: 0; background: var(--active-base); }
+html.look-terminal .switch::after { border-radius: 0; background: var(--accent); }
+html.look-terminal .switch[aria-checked="true"] { background: #14532d; border-color: var(--accent); }
+html.look-terminal .theme-option[aria-checked="true"] { box-shadow: 0 0 0 1px var(--accent); }
