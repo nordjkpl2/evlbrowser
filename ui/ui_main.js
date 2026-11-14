@@ -267,7 +267,8 @@ function startPolling() {
   if (panel === 'history') loadHistory(); // pode ter novas visitas desde a última vez
   loadEngines();
   refreshSettings();
-  pollTimer = setInterval(refreshSettings, 2000);
+  // pula a consulta quando a janela está escondida (minimizada ou em outra aba do sistema)
+  pollTimer = setInterval(() => { if (!document.hidden) refreshSettings(); }, 2000);
 }
 
 function stopPolling() {

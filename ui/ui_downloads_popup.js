@@ -87,7 +87,7 @@ function syncDownloadsPanel(open) {
   if (open) {
     dlKey = '';
     loadDlList();
-    dlTimer = setInterval(loadDlList, 700);
+    dlTimer = setInterval(() => { if (!document.hidden) loadDlList(); }, 700);
   } else {
     clearInterval(dlTimer);
     dlTimer = null;
