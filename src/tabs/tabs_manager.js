@@ -18,7 +18,7 @@ const { WebContentsView } = require('electron');
 const AUDIO_GRACE_MS = 5 * 60 * 1000; // depois do último som, a aba ainda fica protegida por 5 min
 const { toUrl } = require('./url_address_parser');
 const { hostColor } = require('./favicon_color');
-const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT, REDIRECT_HEIGHT } = require('../app/app_config');
+const { MENU_HEIGHT, SUGGEST_HEIGHT, PROMPT_HEIGHT, DOWNLOADS_HEIGHT, REDIRECT_HEIGHT, TRANSLATE_HEIGHT } = require('../app/app_config');
 const { shouldAskRedirect } = require('./redirect_guard');
 const { hostOf } = require('../network/privacy_engine');
 
@@ -49,6 +49,7 @@ class TabManager {
     this.redirectSeq = 0;
     this.redirectAsk = null; // página que tentou mudar sozinha para outro site, esperando sua resposta
     this.downloadsOpen = false; // painel de downloads (botão da barra)
+    this.translateOpen = false; // painel de tradução da página (botão da barra)
     this.history = history;
     this.webrtcPolicy = 'default_public_interface_only'; // o WebRTC não revela o IP da rede local
     this.tabLayout = { ...DEFAULT_TAB_LAYOUT }; // abas em cima ou na lateral, altura e largura
@@ -189,6 +190,7 @@ class TabManager {
     this.menuOpen = false; // trocar de aba fecha o submenu, as sugestões e o painel de downloads
     this.suggestOpen = false;
     this.downloadsOpen = false;
+    this.translateOpen = false;
     const prev = this.tabs.get(this.activeId);
     if (prev && prev !== tab && prev.view) {
       this.win.contentView.removeChildView(prev.view); // vira "sleeping"
@@ -380,6 +382,21 @@ class TabManager {
     this._changed();
   }
 
+  // Idem para o painel de tradução da página (botão da barra).
+  setTranslatePanel(open) {
+    if (this.translateOpen === open) return;
+    this.translateOpen = open;
+    if (open) this.menuOpen = false;
+    this.layout();
+    this._changed();
+  }
+
+  // WebContents da página web da aba ativa (ou null em aba em branco/Configurações).
+  activeWebContents() {
+    const wc = this.tabs.get(this.activeId)?.view?.webContents;
+    return wc && !wc.isDestroyed() ? wc : null;
+  }
+
   // Idem para a lista de sugestões. A interface controla; aqui só ajustamos a altura.
   setSuggest(open) {
     if (this.suggestOpen === open) return;
@@ -435,12 +452,13 @@ class TabManager {
       this.promptOpen ? PROMPT_HEIGHT : 0,
       this.redirectAsk ? REDIRECT_HEIGHT : 0,
       this.downloadsOpen ? DOWNLOADS_HEIGHT : 0,
+      this.translateOpen ? TRANSLATE_HEIGHT : 0,
     );
     if (this.tabLayout.mode === 'side') {
       // painel lateral de abas (barra + abas) à esquerda; a página ocupa o resto.
       // Com menu/sugestões abertos o painel alarga por cima da página.
       const side = Math.min(this.tabLayout.sideW, width);
-      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : this.promptOpen || this.downloadsOpen ? 300 : 0;
+      const wide = this.menuOpen ? 300 : this.suggestOpen ? 400 : this.promptOpen || this.downloadsOpen || this.translateOpen ? 300 : 0;
       this.ui.setBounds({ x: 0, y: 0, width: web ? Math.min(Math.max(side, wide), width) : width, height });
       if (web && tab.view) tab.view.setBounds(this._fit({ x: side, y: 0, width: Math.max(0, width - side), height }));
       return;
@@ -461,6 +479,7 @@ class TabManager {
       activeKind: active?.kind ?? 'blank',
       menuOpen: this.menuOpen,
       downloadsOpen: this.downloadsOpen,
+      translateOpen: this.translateOpen,
       zoom: this.zoomPercent(),
       canGoBack: !!nav?.canGoBack(),
       canGoForward: !!nav?.canGoForward(),

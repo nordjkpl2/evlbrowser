@@ -25,6 +25,9 @@
       <button id="perm-btn" class="icon-btn" type="button" title="Permissões deste site" aria-label="Permissões deste site" aria-haspopup="dialog" aria-expanded="false" aria-controls="perm" disabled>
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2 5h6M12 5h2M2 11h2M8 11h6"/><circle cx="10" cy="5" r="2"/><circle cx="6" cy="11" r="2"/></svg>
       </button>
+      <button id="tr-btn" class="icon-btn" type="button" title="Traduzir esta página" aria-label="Traduzir esta página" aria-haspopup="dialog" aria-expanded="false" aria-controls="tr-pop" aria-pressed="false">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 3.5h7M5 2v1.5M3 3.5c.6 2.4 2.2 4 4.2 4.8M7 3.5C6.4 5.9 4.8 7.5 2.8 8.3"/><path d="M9 14l2.5-6 2.5 6M9.8 12h3.4"/></svg>
+      </button>
       <button id="dl-btn" class="icon-btn" type="button" title="Downloads" aria-label="Downloads" aria-haspopup="dialog" aria-expanded="false" aria-controls="dl-pop">
         <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10"/></svg>      </button>
       <button id="mem" type="button" title="Memória do Evl Browser. Clique para abrir o menu"
@@ -67,6 +70,24 @@
     </div>
     <ul id="dl-list"></ul>
     <p id="dl-empty" class="hint" hidden></p>
+  </div>
+
+  <!-- Tradução da página (botão da barra, ao lado dos downloads): idiomas de origem e destino. -->
+  <div id="tr-pop" role="dialog" aria-labelledby="tr-title" hidden>
+    <h2 id="tr-title">Traduzir esta página?</h2>
+    <label class="tr-field">Traduzir de
+      <select id="tr-from"></select>
+    </label>
+    <label class="tr-field">Traduzir para
+      <select id="tr-to"></select>
+    </label>
+    <p id="tr-status" class="hint" role="status" hidden></p>
+    <div class="tr-actions">
+      <button id="tr-restore" class="text-btn" type="button" hidden>Mostrar original</button>
+      <span class="tr-spacer"></span>
+      <button id="tr-cancel" class="text-btn" type="button">Cancelar</button>
+      <button id="tr-run" type="button" class="perm-primary">Traduzir</button>
+    </div>
   </div>
 
   <!-- Sugestões do histórico para o que está sendo digitado na barra de endereço. -->
@@ -869,6 +890,7 @@
   <script src="ui_main.js"></script>
   <script src="ui_appearance.js"></script>
   <script src="ui_downloads_popup.js"></script>
+  <script src="ui_translate_popup.js"></script>
   <script src="ui_boot.js"></script>
 </body>
 </html>

@@ -430,6 +430,35 @@ body.side-tabs #perm { top: 92px; left: 8px; right: auto; }
 /* painel de downloads (botão ↓ da barra) */
 #dl-btn svg { display: block; margin: auto; }
 #dl-btn[aria-expanded="true"] { color: var(--accent); }
+#tr-btn svg { display: block; margin: auto; }
+#tr-btn[aria-expanded="true"], #tr-btn[aria-pressed="true"] { color: var(--accent); }
+#tr-pop {
+  position: fixed;
+  top: calc(var(--tab-h, 32px) + 52px);
+  right: 88px;
+  width: 300px;
+  max-width: calc(100vw - 16px);
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: calc(12px * var(--ui-scale, 1));
+  z-index: 12;
+}
+#tr-pop[hidden] { display: none; }
+#tr-pop h2 { margin: 0; font-size: 1em; }
+.tr-field { display: grid; gap: 4px; color: var(--muted, inherit); }
+.tr-field select { width: 100%; }
+.tr-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tr-spacer { flex: 1; }
+#tr-status { margin: 0; }
+#tr-restore[hidden] { display: none; }
+#tr-run { border-color: transparent; background: var(--accent); color: #111; font-weight: 600; padding: 6px 14px; border-radius: var(--r); cursor: pointer; }
+#tr-run:disabled { opacity: 0.6; cursor: default; }
+#tr-pop select { padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface-2, var(--surface)); }
 #dl-pop {
   position: fixed;
   top: calc(var(--tab-h, 32px) + 52px);

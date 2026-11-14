@@ -99,6 +99,9 @@ contextBridge.exposeInMainWorld('evl', {
   setAccent: (color) => ipcRenderer.send('accent:set', color === null ? null : String(color)),
   setMenu: (open) => ipcRenderer.send('menu:set', open === true),
   downloadsPanel: (open) => ipcRenderer.send('downloads:panel', open === true),
+  translatePanel: (open) => ipcRenderer.send('translate:panel', open === true),
+  translateRun: (from, to) => ipcRenderer.invoke('translate:run', String(from), String(to)),
+  translateRestore: () => ipcRenderer.invoke('translate:restore'),
   zoom: (action) => ipcRenderer.send('zoom:set', String(action)), // 'in' | 'out' | 'reset'
   setTheme: (theme) => ipcRenderer.send('theme:set', String(theme)),
 

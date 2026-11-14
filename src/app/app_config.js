@@ -25,6 +25,9 @@ module.exports = {
   // Painel de downloads que abre pelo botão da barra (lista com progresso, até ~5 itens).
   DOWNLOADS_HEIGHT: 300,
 
+  // Painel de tradução da página (botão da barra): idiomas + Traduzir/Cancelar.
+  TRANSLATE_HEIGHT: 230,
+
   // Aba de fundo parada por este tempo tem a página destruída (libera a RAM).
   DISCARD_AFTER_MS: discardSeconds > 0 ? discardSeconds * 1000 : 3 * 60 * 1000,
   // Só existe se EVL_DISCARD_SECONDS foi definido (teste): vence o valor de Configurações > Velocidade.

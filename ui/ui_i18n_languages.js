@@ -10,6 +10,18 @@ let lang = 'pt';
 // [português, english, español]
 const WORDS = [
   ['Adicionar', 'Add', 'Añadir'],
+  ['Detectar idioma', 'Detect language', 'Detectar idioma'],
+  ['Esta aba não é uma página web', 'This tab is not a web page', 'Esta pestaña no es una página web'],
+  ['Idioma inválido', 'Invalid language', 'Idioma no válido'],
+  ['Mostrar original', 'Show original', 'Mostrar original'],
+  ['Não foi possível traduzir. Verifique a conexão.', 'Could not translate. Check your connection.', 'No se pudo traducir. Revisa la conexión.'],
+  ['Não há texto para traduzir nesta página', 'There is no text to translate on this page', 'No hay texto para traducir en esta página'],
+  ['Traduzindo…', 'Translating…', 'Traduciendo…'],
+  ['Traduzir', 'Translate', 'Traducir'],
+  ['Traduzir de', 'Translate from', 'Traducir de'],
+  ['Traduzir esta página', 'Translate this page', 'Traducir esta página'],
+  ['Traduzir esta página?', 'Translate this page?', '¿Traducir esta página?'],
+  ['Traduzir para', 'Translate to', 'Traducir a'],
   ['Apagar todos', 'Delete all', 'Borrar todo'],
   ['Aparência', 'Appearance', 'Apariencia'],
   ['Baixar', 'Download', 'Descargar'],

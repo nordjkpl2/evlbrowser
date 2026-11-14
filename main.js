@@ -40,6 +40,7 @@ const { registerSpeedIpc } = require('./src/ipc/speed_ipc');
 const { registerPermissionIpc } = require('./src/ipc/permission_ipc');
 const { registerSettingsIpc } = require('./src/ipc/settings_ipc');
 const { registerDownloadsIpc } = require('./src/ipc/downloads_ipc');
+const { registerTranslateIpc } = require('./src/ipc/translate_ipc');
 const { TabManager } = require('./src/tabs/tabs_manager');
 const { createFaviconColor } = require('./src/tabs/favicon_color');
 const { startMemoryPolicy, totalMemoryMB, processReport } = require('./src/tabs/memory_policy');
@@ -497,6 +498,7 @@ ipcMain.handle('engines:remove', (event, id) => {
 ipcMain.on('suggest:set', (event, open) => fromUi(event) && tabs.setSuggest(open === true));
 ipcMain.on('menu:set', (event, open) => fromUi(event) && tabs.setMenu(open === true));
 ipcMain.on('downloads:panel', (event, open) => fromUi(event) && tabs.setDownloadsPanel(open === true));
+ipcMain.on('translate:panel', (event, open) => fromUi(event) && tabs.setTranslatePanel(open === true));
 ipcMain.on('zoom:set', (event, action) => {
   if (!fromUi(event)) return;
   if (action === 'in') tabs.zoomIn();
@@ -524,6 +526,8 @@ ipcMain.on('accent:set', (event, color) => {
   store.set('accent', color);
 });
 ipcMain.handle('settings:report', (event) => (fromUi(event) ? settingsReport() : null));
+
+registerTranslateIpc({ ipcMain, fromUi, net, getWebContents: () => tabs?.activeWebContents() ?? null });
 
 toggleBookmark = registerBookmarksIpc({
   ipcMain,
