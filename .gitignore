@@ -1,3 +1,5 @@
+# included ia, backup, and map files 
+# for all people want contribute to project (for automatic not upload trash files)
 node_modules/
 dist/
 out/
@@ -8,7 +10,8 @@ CLAUDE.md
 claude.md
 mapa.md
 MAPA.md
-#
+CODEX.md
+codex.md
 settings.json
 session.json
 history.json
